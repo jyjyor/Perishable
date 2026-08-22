@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perishable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E6EAE8;
+  --panel:#DCE1DF;
+  --panel-2:#D2D8D6;
+  --line:#B5BFBB;
+  --ink:#141817;
+  --ink-2:#5C6664;
+  --ink-3:#8B9491;
+
+  --fresh:#5F7350;
+  --turn:#A8842A;
+  --crit:#6E3448;
+  --gone:#2B2320;
+
+  --sp:8px;
+  --maxw:1080px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+html{-webkit-text-size-adjust:100%}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Archivo',system-ui,sans-serif;
+  font-variation-settings:'wdth' 100;
+  font-size:15px;
+  line-height:1.5;
+  padding:0 24px 96px;
+  /* cold fluorescent wash, top-lit like a fridge interior */
+  background-image:radial-gradient(120% 60% at 50% -10%, #F1F4F2 0%, var(--paper) 55%);
+  background-attachment:fixed;
+}
+
+.wrap{max-width:var(--maxw);margin:0 auto}
+
+.mono{font-family:'DM Mono',ui-monospace,monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- header ---------- */
+
+.bar{
+  display:flex;align-items:center;gap:20px;
+  padding:18px 0 14px;
+  border-bottom:1px solid var(--line);
+  flex-wrap:wrap;
+}
+.logo{
+  font-variation-settings:'wdth' 125;
+  font-weight:800;
+  font-size:15px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+.bar .mono{color:var(--ink-2)}
+.bar .spacer{flex:1}
+
+button{
+  font-family:'DM Mono',ui-monospace,monospace;
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--ink);
+  padding:6px 12px;
+  cursor:pointer;
+  transition:background .12s ease,border-color .12s ease;
+}
+button:hover{background:var(--panel-2);border-color:var(--ink-3)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button.solid:hover{background:#000}
+button.ghost{border-color:transparent;color:var(--ink-2);padding:4px 8px}
+button.ghost:hover{color:var(--ink);background:var(--panel-2)}
+
+/* ---------- hero ---------- */
+
+.hero{padding:56px 0 28px}
+.hero h1{
+  font-variation-settings:'wdth' 125;
+  font-weight:800;
+  font-size:clamp(30px,5.4vw,60px);
+  line-height:1.02;
+  letter-spacing:-.015em;
+  text-transform:uppercase;
+  max-width:16ch;
+}
+.hero h1 .num{color:var(--crit)}
+.hero p{
+  margin-top:14px;
+  color:var(--ink-2);
+  max-width:46ch;
+  font-size:16px;
+}
+
+/* ---------- decay line (signature) ---------- */
+
+.chart{
+  position:relative;
+  height:230px;
+  margin:14px 0 8px;
+  border-bottom:1px solid var(--ink);
+}
+.grid{position:absolute;inset:0;pointer-events:none}
+.grid .g{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.grid .gl{
+  position:absolute;bottom:-22px;transform:translateX(-50%);
+  font-family:'DM Mono',ui-monospace,monospace;font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap;
+}
+.mark{position:absolute;transform:translateX(-1px);will-change:transform}
+.mark .stem{position:absolute;bottom:0;width:1px;background:currentColor;opacity:.5}
+.mark .dot{position:absolute;width:7px;height:7px;border-radius:50%;background:currentColor;left:-3px}
+.mark .lab{
+  position:absolute;left:6px;white-space:nowrap;
+  font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;letter-spacing:.03em;
+  color:var(--ink);
+}
+.mark .lab b{font-weight:500;color:currentColor}
+.chart-legend{
+  display:flex;gap:18px;flex-wrap:wrap;
+  margin-top:34px;color:var(--ink-3);
+}
+.chart-legend span{display:flex;align-items:center;gap:6px}
+.chart-legend i{width:8px;height:8px;border-radius:50%;display:block}
+
+/* ---------- tonight ---------- */
+
+.tonight{
+  margin-top:56px;
+  border-top:1px solid var(--ink);
+  padding-top:20px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:28px;
+  align-items:end;
+}
+.tonight .eyebrow{color:var(--ink-2);margin-bottom:10px}
+.tonight h2{
+  font-variation-settings:'wdth' 112;
+  font-weight:700;
+  font-size:clamp(24px,3.6vw,38px);
+  line-height:1.08;
+  letter-spacing:-.01em;
+}
+.rescue{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;letter-spacing:.04em;
+  border:1px solid var(--line);padding:4px 9px;color:var(--ink-2);
+}
+.chip.use{border-color:var(--ink);color:var(--ink)}
+.chip.pantry{border-style:dashed;color:var(--ink-3)}
+.stats{display:flex;gap:26px;margin-top:18px}
+.stat b{
+  display:block;
+  font-variation-settings:'wdth' 125;font-weight:800;font-size:22px;line-height:1.1;
+}
+.stat span{color:var(--ink-3)}
+.actions{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.missing{
+  margin-top:18px;border-left:2px solid var(--turn);padding:6px 0 6px 12px;
+  color:var(--ink-2);font-size:14px;
+}
+.missing .sub{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.missing button{border-color:var(--line)}
+
+/* ---------- inventory ---------- */
+
+.inv{margin-top:64px;border-top:1px solid var(--ink);padding-top:20px}
+.inv-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:14px}
+.inv-head .spacer{flex:1}
+
+.row{
+  display:grid;
+  grid-template-columns:132px 1fr 92px 108px auto;
+  align-items:center;
+  gap:16px;
+  padding:11px 4px;
+  border-bottom:1px solid var(--line);
+}
+.row:hover{background:var(--panel)}
+.bars{display:flex;gap:2px}
+.bars i{width:9px;height:16px;display:block;background:currentColor}
+.bars i.off{background:transparent;box-shadow:inset 0 0 0 1px currentColor;opacity:.28}
+.name{font-size:15px}
+.name small{color:var(--ink-3);margin-left:7px;font-size:12px}
+.row .meta{font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.04em}
+.row .left{font-family:'DM Mono',ui-monospace,monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.row .btns{display:flex;gap:4px;opacity:.35;transition:opacity .12s ease}
+.row:hover .btns,.row:focus-within .btns{opacity:1}
+.row.dead .name{color:var(--ink-3);text-decoration:line-through}
+
+.empty{padding:40px 4px;color:var(--ink-3);max-width:40ch}
+
+/* ---------- add ---------- */
+
+.add{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.add input{
+  flex:1;min-width:260px;
+  font-family:'DM Mono',ui-monospace,monospace;font-size:13px;
+  background:transparent;border:1px solid var(--line);color:var(--ink);
+  padding:10px 12px;
+}
+.add input:focus{outline:none;border-color:var(--ink)}
+.add input::placeholder{color:var(--ink-3)}
+.hint{margin-top:10px;color:var(--ink-3);max-width:60ch;font-size:13px}
+
+/* ---------- ledger ---------- */
+
+.ledger{
+  margin-top:64px;border-top:1px solid var(--ink);padding-top:20px;
+  display:flex;gap:44px;flex-wrap:wrap;align-items:flex-end;
+}
+.ledger .stat b{color:var(--crit)}
+.ledger .saved b{color:var(--fresh)}
+.ledger .spacer{flex:1}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);
+  font-family:'DM Mono',ui-monospace,monospace;font-size:12px;letter-spacing:.05em;
+  padding:10px 16px;opacity:0;pointer-events:none;transition:opacity .18s ease;
+  z-index:20;
+}
+.toast.on{opacity:1}
+
+@media (max-width:720px){
+  body{padding:0 16px 80px}
+  .row{grid-template-columns:104px 1fr auto;gap:10px;row-gap:6px}
+  .row .meta{display:none}
+  .row .left{grid-column:3}
+  .row .btns{grid-column:2 / -1;justify-self:start;opacity:1}
+  .tonight{grid-template-columns:1fr}
+  .actions{flex-direction:row}
+  .chart{height:260px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="bar">
+    <div class="logo">Perishable</div>
+    <div class="mono" id="date">—</div>
+    <div class="spacer"></div>
+    <button id="advance">Next day →</button>
+    <button class="ghost" id="reset">Reset</button>
+  </header>
+
+  <section class="hero">
+    <h1 id="headline">—</h1>
+    <p id="subline"></p>
+  </section>
+
+  <div class="chart" id="chart">
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="chart-legend mono">
+    <span><i style="background:var(--crit)"></i>72 hours or less</span>
+    <span><i style="background:var(--turn)"></i>this week</span>
+    <span><i style="background:var(--fresh)"></i>holding</span>
+  </div>
+
+  <section class="tonight" id="tonight"></section>
+
+  <section class="inv">
+    <div class="inv-head mono">
+      <span>In the fridge</span>
+      <span class="spacer"></span>
+      <span id="count">—</span>
+    </div>
+    <div id="rows"></div>
+
+    <div class="add">
+      <input id="entry" placeholder="what did you buy? e.g. spinach, milk, 鸡胸肉 2d" autocomplete="off">
+      <button class="solid" id="addbtn">Add</button>
+    </div>
+    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or 中文.</p>
+  </section>
+
+  <section class="ledger">
+    <div class="stat">
+      <b id="wasteG">0 g</b>
+      <span class="mono">thrown away</span>
+    </div>
+    <div class="stat">
+      <b id="wasteUSD">$0.00</b>
+      <span class="mono">wasted</span>
+    </div>
+    <div class="stat saved">
+      <b id="savedG">0 g</b>
+      <span class="mono">rescued</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="stat">
+      <b id="dayCount">Day 1</b>
+      <span class="mono">of this kitchen</span>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Shelf lives are refrigerator days, roughly following USDA
+   FoodKeeper guidance. Weights and prices are demo estimates.
+   ============================================================ */
+const FOODS = {
+  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20},
+  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60},
+  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10},
+  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90},
+  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50},
+  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20},
+  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00},
+  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80},
+  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40},
+  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80},
+  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20},
+  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00},
+  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40},
+  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00},
+  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60},
+  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80},
+  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50},
+  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40},
+  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10},
+  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20},
+  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90},
+  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00},
+  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50},
+  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00},
+  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00}
+};
+
+const DISHES = [
+  {name:'Creamy chicken spinach rice', needs:['chicken','spinach','milk','onion'], pantry:['rice']},
+  {name:'Spinach and egg soup',        needs:['spinach','egg','scallion'],         pantry:['stock']},
+  {name:'Tomato egg stir-fry',         needs:['tomato','egg','scallion'],          pantry:['oil','sugar']},
+  {name:'Yogurt bowl with mango',      needs:['yogurt','mango'],                   pantry:['honey']},
+  {name:'Garlic mushroom toast',       needs:['mushroom','butter','garlic'],       pantry:['bread']},
+  {name:'Fried rice, everything in',   needs:['cookedrice','egg','carrot','scallion'], pantry:['soy sauce']},
+  {name:'Chicken and broccoli',        needs:['chicken','broccoli','garlic','ginger'], pantry:['soy sauce']},
+  {name:'Tofu with minced beef',       needs:['tofu','beef','garlic','scallion'],  pantry:['chili bean paste']},
+  {name:'Milk pancakes',               needs:['milk','egg','butter'],              pantry:['flour']},
+  {name:'Roast carrot and lemon salad',needs:['carrot','lemon','cilantro'],        pantry:['olive oil']},
+  {name:'Bacon and pepper pasta',      needs:['bacon','pepper','onion','cheese'],  pantry:['pasta']},
+  {name:'Green salad with soft egg',   needs:['lettuce','egg','tomato','lemon'],   pantry:['olive oil']},
+  {name:'Ginger scallion noodles',     needs:['scallion','ginger','garlic'],       pantry:['noodles','oil']},
+  {name:'Cheese omelette',             needs:['egg','cheese','butter'],            pantry:['salt']},
+  {name:'Potato and onion hash',       needs:['potato','onion','pepper'],          pantry:['oil','paprika']},
+  {name:'Mushroom cream pasta',        needs:['mushroom','milk','cheese','garlic'],pantry:['pasta']},
+  {name:'Tomato beef noodle',          needs:['tomato','beef','ginger','scallion'],pantry:['noodles']},
+  {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame']}
+];
+
+// missing-ingredient substitutions: key -> candidates
+const SUBS = {
+  milk:      [{key:'yogurt', pct:84},{name:'Water and butter', pct:61}],
+  onion:     [{key:'scallion', pct:79},{key:'garlic', pct:66}],
+  butter:    [{name:'Neutral oil', pct:88}],
+  cheese:    [{name:'Nutritional yeast', pct:55}],
+  ginger:    [{key:'garlic', pct:60},{name:'Ground ginger', pct:82}],
+  cilantro:  [{key:'scallion', pct:58},{name:'Parsley', pct:71}],
+  lemon:     [{name:'Rice vinegar', pct:74}],
+  mango:     [{name:'Frozen peach', pct:80}],
+  garlic:    [{name:'Garlic powder', pct:90}],
+  scallion:  [{key:'onion', pct:77}],
+  egg:       [{key:'tofu', pct:62}],
+  tomato:    [{name:'Ketchup', pct:76},{name:'Canned tomato', pct:94}],
+  broccoli:  [{key:'pepper', pct:70}],
+  carrot:    [{key:'pepper', pct:68},{key:'potato', pct:64}],
+  yogurt:    [{key:'milk', pct:80}],
+  mushroom:  [{key:'tofu', pct:55}],
+  tofu:      [{key:'egg', pct:64}],
+  bacon:     [{key:'chicken', pct:70}],
+  beef:      [{key:'chicken', pct:75}],
+  lettuce:   [{key:'spinach', pct:85}],
+  pepper:    [{key:'carrot', pct:66}],
+  spinach:   [{key:'lettuce', pct:72}],
+  chicken:   [{key:'tofu', pct:68}],
+  potato:    [{key:'carrot', pct:60}],
+  cookedrice:[{name:'Instant noodles', pct:70}]
+};
+
+const HORIZON = 21;
+const START = new Date(2026, 7, 21); // demo start date
+
+const SEED = [
+  {key:'spinach', age:5},
+  {key:'milk',    age:4},
+  {key:'chicken', age:1},
+  {key:'egg',     age:17},
+  {key:'onion',   age:5},
+  {key:'scallion',age:7},
+  {key:'garlic',  age:20},
+  {key:'tomato',  age:3},
+  {key:'carrot',  age:9},
+  {key:'yogurt',  age:11}
+];
+
+let day = 0;
+let uid = 0;
+let fridge = [];
+let ledger = {wasteG:0, wasteUSD:0, savedG:0};
+let swapped = {}; // dishName -> {missingKey, label}
+let skipped = new Set();
+
+function seed(){
+  day = 0; uid = 0;
+  ledger = {wasteG:0, wasteUSD:0, savedG:0};
+  swapped = {};
+  skipped = new Set();
+  fridge = SEED.map(s => ({id:++uid, key:s.key, bought:-s.age, custom:null}));
+}
+
+const food = it => it.custom || FOODS[it.key];
+const left = it => food(it).shelf - (day - it.bought);
+
+function state(d){
+  if (d < 0) return 'gone';
+  if (d <= 3) return 'crit';
+  if (d <= 7) return 'turn';
+  return 'fresh';
+}
+const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh:'var(--fresh)'};
+
+function fmtDate(offset){
+  const d = new Date(START.getTime() + offset*86400000);
+  return d.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', weekday:'short'});
+}
+
+/* ---------- recommendation ---------- */
+
+function urgency(d){
+  if (d < 0) return 0.4;          // already gone: low value, but still worth clearing
+  return 1 / (d + 0.9);           // steeper the closer to the edge
+}
+
+function recommend(){
+  const have = {};
+  fridge.forEach(it => { if (!have[it.key] || left(it) < left(have[it.key])) have[it.key] = it; });
+
+  let best = null;
+  DISHES.forEach(dish => {
+    if (skipped.has(dish.name)) return;
+    const matched = dish.needs.filter(k => have[k]);
+    const missing = dish.needs.filter(k => !have[k]);
+    if (matched.length < 2) return;
+    let score = matched.reduce((s,k) => s + urgency(left(have[k])), 0);
+    score -= missing.length * 0.45;
+    if (missing.length > 1) return;
+    if (!best || score > best.score) best = {dish, matched, missing, score, have};
+  });
+  return best;
+}
+
+/* ---------- render ---------- */
+
+function render(){
+  document.getElementById('date').textContent = fmtDate(day);
+  document.getElementById('dayCount').textContent = 'Day ' + (day + 1);
+  document.getElementById('count').textContent = fridge.length + ' items';
+  document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
+  document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
+  document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
+
+  renderHeadline();
+  renderChart();
+  renderTonight();
+  renderRows();
+}
+
+function renderHeadline(){
+  const gone = fridge.filter(it => left(it) < 0).length;
+  const soon = fridge.filter(it => left(it) >= 0 && left(it) <= 3).length;
+  const h = document.getElementById('headline');
+  const p = document.getElementById('subline');
+
+  if (!fridge.length){
+    h.textContent = 'The fridge is empty.';
+    p.textContent = 'Add what you bought and this page will start counting down.';
+    return;
+  }
+  if (gone){
+    h.innerHTML = `<span class="num">${gone}</span> ${gone===1?'thing is':'things are'} past date.`;
+    p.textContent = soon
+      ? `${soon} more ${soon===1?'goes':'go'} within 72 hours. Clear the dead ones out first.`
+      : 'Clear them out so the rest of the list stays honest.';
+    return;
+  }
+  if (soon){
+    h.innerHTML = `<span class="num">${soon}</span> ${soon===1?'thing becomes':'things become'} waste within 72 hours.`;
+    p.textContent = 'Not a shopping list. A list of what you already own and are about to lose.';
+  } else {
+    h.textContent = 'Nothing is urgent today.';
+    p.textContent = 'Everything in here has more than three days left. Check back tomorrow.';
+  }
+}
+
+function pos(d){ // sqrt scale: the near edge gets the room it deserves
+  const c = Math.max(0, Math.min(HORIZON, d));
+  return Math.sqrt(c / HORIZON) * 100;
+}
+
+function renderChart(){
+  const chart = document.getElementById('chart');
+  chart.querySelectorAll('.mark').forEach(n => n.remove());
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  [[0,'today'],[1,'1d'],[2,'2d'],[3,'3d'],[5,'5d'],[7,'1w'],[14,'2w'],[21,'3w']].forEach(([d,lab]) => {
+    const g = document.createElement('div');
+    g.className = 'g'; g.style.left = pos(d) + '%';
+    grid.appendChild(g);
+    const l = document.createElement('div');
+    l.className = 'gl'; l.style.left = pos(d) + '%'; l.textContent = lab;
+    grid.appendChild(l);
+  });
+
+  const items = fridge.slice().sort((a,b) => left(a) - left(b));
+  const nodes = [];
+  items.forEach(it => {
+    const d = left(it);
+    const st = state(d);
+    const m = document.createElement('div');
+    m.className = 'mark';
+    m.style.left = pos(Math.max(0,d)) + '%';
+    m.style.color = COLOR[st];
+    m.innerHTML = `<div class="stem"></div><div class="dot"></div>
+      <div class="lab">${food(it).en} <b>${d < 0 ? 'gone' : d + 'd'}</b></div>`;
+    chart.appendChild(m);
+    nodes.push({el:m, x:pos(Math.max(0,d))});
+  });
+
+  // greedy row packing so labels never collide
+  const W = chart.clientWidth || 900;
+  const rowEnd = [];
+  nodes.forEach(n => {
+    const lab = n.el.querySelector('.lab');
+    const w = lab.offsetWidth + 16;
+    const x = n.x / 100 * W;
+    let r = 0;
+    while (rowEnd[r] !== undefined && rowEnd[r] > x) r++;
+    rowEnd[r] = x + w;
+    const y = 18 + r * 21;
+    n.el.style.bottom = y + 'px';
+    n.el.style.height = '1px';
+    const stem = n.el.querySelector('.stem');
+    stem.style.height = y + 'px';
+    stem.style.bottom = -y + 'px';
+    n.el.querySelector('.dot').style.bottom = (-y - 3) + 'px';
+    lab.style.bottom = '-7px';
+  });
+}
+
+function renderTonight(){
+  const box = document.getElementById('tonight');
+  const r = recommend();
+
+  if (!r){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">Tonight</div>
+      <h2>Nothing here adds up to a meal.</h2>
+      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+        Two ingredients that go together is the minimum. Add what you actually have and try again.</p>
+    </div>`;
+    return;
+  }
+
+  const swap = swapped[r.dish.name];
+  const chips = r.dish.needs.map(k => {
+    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${Math.max(0,left(r.have[k]))}d</span>`;
+    if (swap && swap.key === k) return `<span class="chip use">${swap.label} (swap)</span>`;
+    return `<span class="chip" style="border-color:var(--turn);color:var(--turn)">${FOODS[k].en} — missing</span>`;
+  }).join('');
+  const pantry = r.dish.pantry.map(p => `<span class="chip pantry">${p}</span>`).join('');
+
+  const grams = r.matched.reduce((s,k) => s + food(r.have[k]).g, 0);
+  const usd = r.matched.reduce((s,k) => s + food(r.have[k]).usd, 0);
+
+  let missingHTML = '';
+  const miss = r.missing.filter(k => !(swap && swap.key === k));
+  if (miss.length){
+    const k = miss[0];
+    const opts = (SUBS[k] || []).map((s,i) => {
+      const label = s.key ? FOODS[s.key].en : s.name;
+      const owned = s.key && r.have[s.key] ? ' · you have it' : '';
+      return `<button data-swap="${k}" data-label="${label}" data-dish="${r.dish.name}">${label} ${s.pct}%${owned}</button>`;
+    }).join('');
+    missingHTML = `<div class="missing">
+      Missing one thing: <strong>${FOODS[k].en}</strong>. You do not need to start over.
+      <div class="sub">${opts || '<span class="mono">no substitute on file</span>'}</div>
+    </div>`;
+  }
+
+  box.innerHTML = `
+    <div>
+      <div class="eyebrow mono">Tonight · rescues ${r.matched.length} ${r.matched.length===1?'item':'items'}</div>
+      <h2>${r.dish.name}</h2>
+      <div class="rescue">${chips}${pantry}</div>
+      <div class="stats">
+        <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">kept out of the bin</span></div>
+        <div class="stat"><b>$${usd.toFixed(2)}</b><span class="mono">already paid for</span></div>
+      </div>
+      ${missingHTML}
+    </div>
+    <div class="actions">
+      <button class="solid" id="cook">Cook this</button>
+      <button id="skip">Show another</button>
+    </div>`;
+
+  document.getElementById('cook').onclick = () => cook(r);
+  document.getElementById('skip').onclick = () => {
+    skipped.add(r.dish.name);
+    render();
+  };
+  box.querySelectorAll('[data-swap]').forEach(b => {
+    b.onclick = () => {
+      swapped[b.dataset.dish] = {key:b.dataset.swap, label:b.dataset.label};
+      toast('Recipe adjusted for ' + b.dataset.label.toLowerCase());
+      render();
+    };
+  });
+}
+
+function renderRows(){
+  const box = document.getElementById('rows');
+  if (!fridge.length){
+    box.innerHTML = `<div class="empty">Nothing in here yet. Add what you bought below — you can paste a whole receipt line.</div>`;
+    return;
+  }
+  const items = fridge.slice().sort((a,b) => left(a) - left(b));
+  box.innerHTML = items.map(it => {
+    const d = left(it);
+    const st = state(d);
+    const f = food(it);
+    const frac = Math.max(0, Math.min(1, d / f.shelf));
+    const on = d < 0 ? 0 : Math.max(1, Math.ceil(frac * 10));
+    const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
+    return `<div class="row ${d<0?'dead':''}">
+      <div class="bars" style="color:${COLOR[st]}">${bars}</div>
+      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}</div>
+      <div class="meta">${Math.round(f.g)} g</div>
+      <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
+      <div class="btns">
+        <button class="ghost" data-used="${it.id}">Used</button>
+        <button class="ghost" data-toss="${it.id}">Tossed</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('[data-used]').forEach(b => b.onclick = () => useItem(+b.dataset.used, false));
+  box.querySelectorAll('[data-toss]').forEach(b => b.onclick = () => useItem(+b.dataset.toss, true));
+}
+
+/* ---------- actions ---------- */
+
+function useItem(id, tossed){
+  const i = fridge.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const it = fridge[i];
+  const f = food(it);
+  if (tossed){
+    ledger.wasteG += f.g;
+    ledger.wasteUSD += f.usd;
+    toast('Tossed ' + f.en.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone');
+  } else {
+    ledger.savedG += f.g;
+  }
+  fridge.splice(i, 1);
+  render();
+}
+
+function cook(r){
+  let g = 0;
+  r.matched.forEach(k => {
+    const it = r.have[k];
+    const i = fridge.findIndex(x => x.id === it.id);
+    if (i >= 0){ g += food(it).g; fridge.splice(i, 1); }
+  });
+  ledger.savedG += g;
+  toast(Math.round(g) + ' g rescued');
+  render();
+}
+
+function advance(){
+  day++;
+  render();
+  const gone = fridge.filter(it => left(it) === -1);
+  if (gone.length) toast(gone.map(g => food(g).en).join(', ') + ' just went past date');
+}
+
+/* ---------- entry ---------- */
+
+function lookup(token){
+  const t = token.trim().toLowerCase();
+  if (!t) return null;
+  for (const k in FOODS){
+    const f = FOODS[k];
+    if (k === t) return k;
+    if (f.en.toLowerCase() === t) return k;
+    if (f.en.toLowerCase().split(',')[0] === t) return k;
+    if (f.zh.some(z => z === token.trim())) return k;
+  }
+  for (const k in FOODS){
+    const f = FOODS[k];
+    if (f.en.toLowerCase().includes(t) || t.includes(f.en.toLowerCase().split(',')[0])) return k;
+    if (f.zh.some(z => token.includes(z))) return k;
+  }
+  return null;
+}
+
+function addEntry(text){
+  const parts = text.split(/[,，、\n;]+/).map(s => s.trim()).filter(Boolean);
+  let added = 0, unknown = [];
+  parts.forEach(part => {
+    let age = 0;
+    const m = part.match(/(\d+)\s*d\b/i);
+    if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').trim(); }
+    const key = lookup(part);
+    if (key){
+      fridge.push({id:++uid, key, bought:day - age, custom:null});
+      added++;
+    } else if (part.length){
+      const name = part.charAt(0).toUpperCase() + part.slice(1);
+      fridge.push({id:++uid, key:'_custom'+uid, bought:day - age,
+        custom:{en:name, zh:[], shelf:7, g:250, usd:2.50}});
+      unknown.push(name); added++;
+    }
+  });
+  render();
+  if (added) toast(added + ' added' + (unknown.length ? ' · ' + unknown.length + ' estimated at 7 days' : ''));
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+
+/* ---------- wire up ---------- */
+
+document.getElementById('advance').onclick = advance;
+document.getElementById('reset').onclick = () => { seed(); render(); toast('Demo reset'); };
+document.getElementById('addbtn').onclick = () => {
+  const el = document.getElementById('entry');
+  if (el.value.trim()){ addEntry(el.value); el.value = ''; }
+};
+document.getElementById('entry').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('addbtn').click(); }
+});
+window.addEventListener('resize', () => renderChart());
+
+seed();
+render();
+</script>
+</body>
+</html>
