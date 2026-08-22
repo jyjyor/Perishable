@@ -276,7 +276,16 @@ button.ghost:hover{color:var(--ink);background:var(--panel-2)}
     <div class="inv-head mono">
       <span>In the fridge</span>
       <span class="spacer"></span>
+      <button class="ghost" id="clearGone" style="display:none"></button>
       <span id="count">—</span>
+    </div>
+
+    <div class="missing" id="clearConfirm" style="display:none;border-left-color:var(--crit);margin-bottom:20px">
+      <div id="clearSummary"></div>
+      <div class="sub" style="margin-top:10px">
+        <button class="solid" id="clearConfirmBtn">Toss all</button>
+        <button id="clearCancelBtn">Cancel</button>
+      </div>
     </div>
 
     <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked</div>
@@ -423,6 +432,7 @@ let startedAt = null;
 let lastVisit = null;
 let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
+let clearConfirmOpen = false;
 
 function loadState(){
   try {
@@ -516,6 +526,7 @@ function render(){
   renderHeadline();
   renderChart();
   renderTonight();
+  renderClear();
   renderRestock();
   renderRows();
   saveState();
@@ -690,6 +701,34 @@ function renderTonight(){
   });
 }
 
+function renderClear(){
+  const btn = document.getElementById('clearGone');
+  const panel = document.getElementById('clearConfirm');
+  const gone = fridge.filter(it => left(it) < 0);
+
+  if (!gone.length){
+    btn.style.display = 'none';
+    panel.style.display = 'none';
+    clearConfirmOpen = false;
+    return;
+  }
+
+  btn.style.display = '';
+  btn.textContent = 'Toss ' + gone.length + ' expired';
+
+  if (!clearConfirmOpen){
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  const g = gone.reduce((s,it) => s + food(it).g, 0);
+  const usd = gone.reduce((s,it) => s + food(it).usd, 0);
+  const chips = gone.map(it => `<span class="chip" style="border-color:var(--crit);color:var(--crit)">${food(it).en}</span>`).join('');
+  document.getElementById('clearSummary').innerHTML = `
+    <div>About to toss ${gone.length} ${gone.length===1?'item':'items'} — ${Math.round(g)} g, $${usd.toFixed(2)}.</div>
+    <div class="rescue" style="margin-top:8px">${chips}</div>`;
+}
+
 function renderRestock(){
   const box = document.getElementById('restock');
   const keys = Object.keys(standing).sort((a,b) => {
@@ -769,6 +808,26 @@ function cook(r){
   });
   ledger.savedG += g;
   toast(Math.round(g) + ' g rescued');
+  render();
+}
+
+function clearGone(){
+  const gone = fridge.filter(it => left(it) < 0);
+  let usd = 0;
+  gone.forEach(it => {
+    const f = food(it);
+    ledger.wasteG += f.g;
+    ledger.wasteUSD += f.usd;
+    usd += f.usd;
+  });
+  fridge = fridge.filter(it => left(it) >= 0);
+  clearConfirmOpen = false;
+  toast('Tossed ' + gone.length + ' · $' + usd.toFixed(2) + ' gone');
+  render();
+}
+
+function cancelClear(){
+  clearConfirmOpen = false;
   render();
 }
 
@@ -855,6 +914,9 @@ function toast(msg){
 
 /* ---------- wire up ---------- */
 
+document.getElementById('clearGone').onclick = () => { clearConfirmOpen = true; render(); };
+document.getElementById('clearConfirmBtn').onclick = clearGone;
+document.getElementById('clearCancelBtn').onclick = cancelClear;
 document.getElementById('addbtn').onclick = () => {
   const el = document.getElementById('entry');
   if (el.value.trim()){ addEntry(el.value); el.value = ''; }
