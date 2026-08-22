@@ -63,7 +63,6 @@ body{
   text-transform:uppercase;
 }
 .bar .mono{color:var(--ink-2)}
-.bar .spacer{flex:1}
 
 button{
   font-family:'DM Mono',ui-monospace,monospace;
@@ -255,9 +254,6 @@ button.ghost:hover{color:var(--ink);background:var(--panel-2)}
   <header class="bar">
     <div class="logo">Perishable</div>
     <div class="mono" id="date">—</div>
-    <div class="spacer"></div>
-    <button id="advance">Next day →</button>
-    <button class="ghost" id="reset">Reset</button>
   </header>
 
   <section class="hero">
@@ -282,13 +278,18 @@ button.ghost:hover{color:var(--ink);background:var(--panel-2)}
       <span class="spacer"></span>
       <span id="count">—</span>
     </div>
-    <div id="rows"></div>
 
+    <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked</div>
+    <div class="rescue" id="restock"></div>
+
+    <div id="rows" style="margin-top:26px"></div>
+
+    <div class="mono" style="color:var(--ink-2);margin-top:26px;margin-bottom:10px">Something new or unusual</div>
     <div class="add">
       <input id="entry" placeholder="what did you buy? e.g. spinach, milk, 鸡胸肉 2d" autocomplete="off">
       <button class="solid" id="addbtn">Add</button>
     </div>
-    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or 中文.</p>
+    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or 中文. Anything typed here joins the tap list above next time.</p>
   </section>
 
   <section class="ledger">
@@ -399,38 +400,68 @@ const SUBS = {
 };
 
 const HORIZON = 21;
-const START = new Date(2026, 7, 21); // demo start date
+const STORE_KEY = 'perishable.v1';
 
-const SEED = [
-  {key:'spinach', age:5},
-  {key:'milk',    age:4},
-  {key:'chicken', age:1},
-  {key:'egg',     age:17},
-  {key:'onion',   age:5},
-  {key:'scallion',age:7},
-  {key:'garlic',  age:20},
-  {key:'tomato',  age:3},
-  {key:'carrot',  age:9},
-  {key:'yogurt',  age:11}
-];
+// dev-only clock shift, e.g. ?day=+5 — never shown in the UI, never persisted
+const DAY_OFFSET = (() => {
+  const p = new URLSearchParams(location.search).get('day');
+  if (!p) return 0;
+  const n = parseInt(p, 10);
+  return Number.isFinite(n) ? n : 0;
+})();
 
-let day = 0;
+function today(){
+  const d = new Date();
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000 + DAY_OFFSET;
+}
+
 let uid = 0;
 let fridge = [];
+let standing = {};  // key -> {count, lastBought, custom}
 let ledger = {wasteG:0, wasteUSD:0, savedG:0};
+let startedAt = null;
+let lastVisit = null;
 let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
 
-function seed(){
-  day = 0; uid = 0;
-  ledger = {wasteG:0, wasteUSD:0, savedG:0};
-  swapped = {};
-  skipped = new Set();
-  fridge = SEED.map(s => ({id:++uid, key:s.key, bought:-s.age, custom:null}));
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+
+function saveState(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({fridge, standing, ledger, uid, startedAt, lastVisit}));
+  } catch(e){ /* storage unavailable: carry on in memory only */ }
+}
+
+function boot(){
+  const now = today();
+  const saved = loadState();
+  if (saved){
+    fridge = saved.fridge || [];
+    standing = saved.standing || {};
+    ledger = saved.ledger || {wasteG:0, wasteUSD:0, savedG:0};
+    uid = saved.uid || 0;
+    startedAt = saved.startedAt != null ? saved.startedAt : now;
+    const prevVisit = saved.lastVisit != null ? saved.lastVisit : now;
+    fridge.forEach(it => {
+      if (it.crossed) return;
+      const f = food(it);
+      const leftAtVisit = f.shelf - (prevVisit - it.bought);
+      const leftNow = f.shelf - (now - it.bought);
+      if (leftAtVisit >= 0 && leftNow < 0) it.crossed = true;
+    });
+  } else {
+    startedAt = now;
+  }
+  lastVisit = now;
 }
 
 const food = it => it.custom || FOODS[it.key];
-const left = it => food(it).shelf - (day - it.bought);
+const left = it => food(it).shelf - (today() - it.bought);
 
 function state(d){
   if (d < 0) return 'gone';
@@ -440,9 +471,9 @@ function state(d){
 }
 const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh:'var(--fresh)'};
 
-function fmtDate(offset){
-  const d = new Date(START.getTime() + offset*86400000);
-  return d.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', weekday:'short'});
+function fmtDate(epochDay){
+  const d = new Date(epochDay * 86400000);
+  return d.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', weekday:'short', timeZone:'UTC'});
 }
 
 /* ---------- recommendation ---------- */
@@ -473,8 +504,8 @@ function recommend(){
 /* ---------- render ---------- */
 
 function render(){
-  document.getElementById('date').textContent = fmtDate(day);
-  document.getElementById('dayCount').textContent = 'Day ' + (day + 1);
+  document.getElementById('date').textContent = fmtDate(today());
+  document.getElementById('dayCount').textContent = 'Day ' + (today() - startedAt + 1);
   document.getElementById('count').textContent = fridge.length + ' items';
   document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
   document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
@@ -483,7 +514,9 @@ function render(){
   renderHeadline();
   renderChart();
   renderTonight();
+  renderRestock();
   renderRows();
+  saveState();
 }
 
 function renderHeadline(){
@@ -574,12 +607,21 @@ function renderTonight(){
   const r = recommend();
 
   if (!r){
-    box.innerHTML = `<div>
-      <div class="eyebrow mono">Tonight</div>
-      <h2>Nothing here adds up to a meal.</h2>
-      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-        Two ingredients that go together is the minimum. Add what you actually have and try again.</p>
-    </div>`;
+    if (!fridge.length){
+      box.innerHTML = `<div>
+        <div class="eyebrow mono">Tonight</div>
+        <h2>Nothing to suggest yet.</h2>
+        <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+          This fills in once there is something to work with.</p>
+      </div>`;
+    } else {
+      box.innerHTML = `<div>
+        <div class="eyebrow mono">Tonight</div>
+        <h2>Nothing here adds up to a meal.</h2>
+        <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+          Two ingredients that go together is the minimum. Add what you actually have and try again.</p>
+      </div>`;
+    }
     return;
   }
 
@@ -639,10 +681,32 @@ function renderTonight(){
   });
 }
 
+function renderRestock(){
+  const box = document.getElementById('restock');
+  const keys = Object.keys(standing).sort((a,b) => {
+    const A = standing[a], B = standing[b];
+    if (B.count !== A.count) return B.count - A.count;
+    return B.lastBought - A.lastBought;
+  });
+  if (!keys.length){
+    box.innerHTML = `<div class="empty" style="padding:0;max-width:52ch">Nothing on file yet. Everything you enter below becomes something you can tap next time.</div>`;
+    return;
+  }
+  box.innerHTML = keys.map(key => {
+    const inFridge = fridge.some(it => it.key === key);
+    const label = standing[key].custom ? standing[key].custom.en : FOODS[key].en;
+    return `<button class="chip${inFridge ? ' use' : ''}" data-restock="${key}">${label}</button>`;
+  }).join('');
+  box.querySelectorAll('[data-restock]').forEach(b => b.onclick = () => restock(b.dataset.restock));
+}
+
 function renderRows(){
   const box = document.getElementById('rows');
   if (!fridge.length){
-    box.innerHTML = `<div class="empty">Nothing in here yet. Add what you bought below — you can paste a whole receipt line.</div>`;
+    const firstRun = !Object.keys(standing).length;
+    box.innerHTML = `<div class="empty">${firstRun
+      ? 'Nothing counted yet — this is where each item\'s countdown begins.'
+      : 'Nothing in here yet. Add what you bought below — you can paste a whole receipt line.'}</div>`;
     return;
   }
   const items = fridge.slice().sort((a,b) => left(a) - left(b));
@@ -655,7 +719,7 @@ function renderRows(){
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}</div>
+      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">went past while you were away</small>' : ''}</div>
       <div class="meta">${Math.round(f.g)} g</div>
       <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
       <div class="btns">
@@ -699,13 +763,6 @@ function cook(r){
   render();
 }
 
-function advance(){
-  day++;
-  render();
-  const gone = fridge.filter(it => left(it) === -1);
-  if (gone.length) toast(gone.map(g => food(g).en).join(', ') + ' just went past date');
-}
-
 /* ---------- entry ---------- */
 
 function lookup(token){
@@ -726,6 +783,32 @@ function lookup(token){
   return null;
 }
 
+function slug(s){
+  return s.toLowerCase().trim().replace(/[^a-z0-9一-鿿]+/g, '');
+}
+
+function touchStanding(key, custom){
+  if (!standing[key]) standing[key] = {count:0, lastBought:today(), custom:custom||null};
+  standing[key].count++;
+  standing[key].lastBought = today();
+  if (custom) standing[key].custom = custom;
+}
+
+function restock(key){
+  const entry = standing[key];
+  if (!entry) return;
+  const existing = fridge.find(it => it.key === key);
+  if (existing){
+    existing.bought = today();
+    existing.crossed = false;
+  } else {
+    fridge.push({id:++uid, key, bought:today(), custom: entry.custom || null});
+  }
+  touchStanding(key, entry.custom);
+  toast((entry.custom ? entry.custom.en : FOODS[key].en) + ' restocked');
+  render();
+}
+
 function addEntry(text){
   const parts = text.split(/[,，、\n;]+/).map(s => s.trim()).filter(Boolean);
   let added = 0, unknown = [];
@@ -735,12 +818,16 @@ function addEntry(text){
     if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').trim(); }
     const key = lookup(part);
     if (key){
-      fridge.push({id:++uid, key, bought:day - age, custom:null});
+      fridge.push({id:++uid, key, bought:today() - age, custom:null});
+      touchStanding(key, null);
       added++;
     } else if (part.length){
       const name = part.charAt(0).toUpperCase() + part.slice(1);
-      fridge.push({id:++uid, key:'_custom'+uid, bought:day - age,
-        custom:{en:name, zh:[], shelf:7, g:250, usd:2.50}});
+      const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
+      const id = ++uid;
+      const customKey = '_c_' + (slug(part) || ('item' + id));
+      fridge.push({id, key:customKey, bought:today() - age, custom});
+      touchStanding(customKey, custom);
       unknown.push(name); added++;
     }
   });
@@ -759,8 +846,6 @@ function toast(msg){
 
 /* ---------- wire up ---------- */
 
-document.getElementById('advance').onclick = advance;
-document.getElementById('reset').onclick = () => { seed(); render(); toast('Demo reset'); };
 document.getElementById('addbtn').onclick = () => {
   const el = document.getElementById('entry');
   if (el.value.trim()){ addEntry(el.value); el.value = ''; }
@@ -770,7 +855,7 @@ document.getElementById('entry').addEventListener('keydown', e => {
 });
 window.addEventListener('resize', () => renderChart());
 
-seed();
+boot();
 render();
 </script>
 </body>
