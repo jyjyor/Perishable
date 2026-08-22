@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Three-fridge sanity check for perishable.html: all fresh, all past date,
+// Three-fridge sanity check for index.html: all fresh, all past date,
 // and mixed. Confirms Tonight never builds a recommendation around a
 // past-date item, and that the past-date-only state gets its own honest
 // copy instead of the generic "doesn't add up to a meal" message.
@@ -44,7 +44,7 @@ async function scenario(browser, name, entryText, shotName) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
 
-  await page.goto(`http://localhost:${PORT}/perishable.html`);
+  await page.goto(`http://localhost:${PORT}/index.html`);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForSelector('#headline');

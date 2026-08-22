@@ -1,7 +1,7 @@
 {
   "name": "perishable-tools",
   "private": true,
-  "description": "Dev-only verification scripts. Not part of the shipped app — perishable.html stays a single self-contained file with no build step.",
+  "description": "Dev-only verification scripts. Not part of the shipped app — index.html stays a single self-contained file with no build step.",
   "scripts": {
     "scenarios": "node scenarios.js"
   },
