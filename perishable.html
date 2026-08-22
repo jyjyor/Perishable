@@ -479,13 +479,15 @@ function fmtDate(epochDay){
 /* ---------- recommendation ---------- */
 
 function urgency(d){
-  if (d < 0) return 0.4;          // already gone: low value, but still worth clearing
   return 1 / (d + 0.9);           // steeper the closer to the edge
 }
 
 function recommend(){
   const have = {};
-  fridge.forEach(it => { if (!have[it.key] || left(it) < left(have[it.key])) have[it.key] = it; });
+  fridge.forEach(it => {
+    if (left(it) < 0) return; // never recommend cooking something already past date
+    if (!have[it.key] || left(it) < left(have[it.key])) have[it.key] = it;
+  });
 
   let best = null;
   DISHES.forEach(dish => {
@@ -614,6 +616,13 @@ function renderTonight(){
         <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
           This fills in once there is something to work with.</p>
       </div>`;
+    } else if (!fridge.some(it => left(it) >= 0)){
+      box.innerHTML = `<div>
+        <div class="eyebrow mono">Tonight</div>
+        <h2>Nothing here is still good.</h2>
+        <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+          Everything in the fridge is already past date. Clear it out, then restock to start again.</p>
+      </div>`;
     } else {
       box.innerHTML = `<div>
         <div class="eyebrow mono">Tonight</div>
@@ -627,7 +636,7 @@ function renderTonight(){
 
   const swap = swapped[r.dish.name];
   const chips = r.dish.needs.map(k => {
-    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${Math.max(0,left(r.have[k]))}d</span>`;
+    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${left(r.have[k])}d</span>`;
     if (swap && swap.key === k) return `<span class="chip use">${swap.label} (swap)</span>`;
     return `<span class="chip" style="border-color:var(--turn);color:var(--turn)">${FOODS[k].en} — missing</span>`;
   }).join('');
