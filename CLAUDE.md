@@ -14,7 +14,6 @@ consumer food app.
 ## Non-negotiable constraints
 
 - Single self-contained HTML file. No build step, no framework, no npm.
-- No localStorage or sessionStorage. In-memory state only.
 - No backend, no accounts, no database.
 - Shelf-life values follow USDA FoodKeeper refrigerator guidance. Do not
   round them up to be friendlier. Raw chicken is 2 days.
