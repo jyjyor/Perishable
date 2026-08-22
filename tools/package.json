@@ -1,0 +1,11 @@
+{
+  "name": "perishable-tools",
+  "private": true,
+  "description": "Dev-only verification scripts. Not part of the shipped app — perishable.html stays a single self-contained file with no build step.",
+  "scripts": {
+    "scenarios": "node scenarios.js"
+  },
+  "dependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}
