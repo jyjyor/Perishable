@@ -623,9 +623,7 @@ function renderTonight(){
     if (!fridge.length){
       box.innerHTML = `<div>
         <div class="eyebrow mono">Tonight</div>
-        <h2>Nothing to suggest yet.</h2>
-        <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-          This fills in once there is something to work with.</p>
+        <p class="mono" style="color:var(--ink-3)">—</p>
       </div>`;
     } else if (!fridge.some(it => left(it) >= 0)){
       box.innerHTML = `<div>
@@ -737,13 +735,19 @@ function renderRestock(){
     return B.lastBought - A.lastBought;
   });
   if (!keys.length){
-    box.innerHTML = `<div class="empty" style="padding:0;max-width:52ch">Nothing on file yet. Everything you enter below becomes something you can tap next time.</div>`;
+    box.innerHTML = `<div class="mono" style="color:var(--ink-3)">—</div>`;
     return;
   }
   box.innerHTML = keys.map(key => {
-    const inFridge = fridge.some(it => it.key === key);
+    const matches = fridge.filter(it => it.key === key);
+    const freshest = matches.reduce((best, it) => (!best || left(it) > left(best)) ? it : best, null);
     const label = standing[key].custom ? standing[key].custom.en : FOODS[key].en;
-    return `<button class="chip${inFridge ? ' use' : ''}" data-restock="${key}">${label}</button>`;
+    let cls = '', style = '';
+    if (freshest){
+      if (left(freshest) < 0){ style = ' style="border-color:var(--crit);color:var(--crit)"'; }
+      else { cls = ' use'; }
+    }
+    return `<button class="chip${cls}" data-restock="${key}"${style}>${label}</button>`;
   }).join('');
   box.querySelectorAll('[data-restock]').forEach(b => b.onclick = () => restock(b.dataset.restock));
 }
@@ -752,9 +756,9 @@ function renderRows(){
   const box = document.getElementById('rows');
   if (!fridge.length){
     const firstRun = !Object.keys(standing).length;
-    box.innerHTML = `<div class="empty">${firstRun
-      ? 'Nothing counted yet — this is where each item\'s countdown begins.'
-      : 'Nothing in here yet. Add what you bought below — you can paste a whole receipt line.'}</div>`;
+    box.innerHTML = firstRun
+      ? `<div class="mono" style="color:var(--ink-3)">—</div>`
+      : `<div class="empty">Nothing in here yet. Add what you bought below — you can paste a whole receipt line.</div>`;
     return;
   }
   const items = fridge.slice().sort((a,b) => left(a) - left(b));
@@ -767,7 +771,7 @@ function renderRows(){
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">went past while you were away</small>' : ''}</div>
+      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}</div>
       <div class="meta">${Math.round(f.g)} g</div>
       <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
       <div class="btns">
@@ -865,15 +869,24 @@ function touchStanding(key, custom){
 function restock(key){
   const entry = standing[key];
   if (!entry) return;
+  const label = entry.custom ? entry.custom.en : FOODS[key].en;
   const existing = fridge.find(it => it.key === key);
+  let msg = label + ' restocked';
   if (existing){
+    if (left(existing) < 0){
+      // the old one didn't get used — it was already waste, same as a toss
+      const f = food(existing);
+      ledger.wasteG += f.g;
+      ledger.wasteUSD += f.usd;
+      msg = 'Tossed the old ' + label.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone, restocked';
+    }
     existing.bought = today();
     existing.crossed = false;
   } else {
     fridge.push({id:++uid, key, bought:today(), custom: entry.custom || null});
   }
   touchStanding(key, entry.custom);
-  toast((entry.custom ? entry.custom.en : FOODS[key].en) + ' restocked');
+  toast(msg);
   render();
 }
 
