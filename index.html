@@ -844,7 +844,10 @@ function cancelClear(){
 
 /* ---------- entry ---------- */
 
-function lookup(token){
+// Exact only: token must equal a food's key, name, or a zh synonym outright.
+// Used standalone by the speech tokenizer, where a multi-unit window must
+// match a whole food name rather than merely contain one.
+function exactLookup(token){
   const t = token.trim().toLowerCase();
   if (!t) return null;
   for (const k in FOODS){
@@ -854,6 +857,14 @@ function lookup(token){
     if (f.en.toLowerCase().split(',')[0] === t) return k;
     if (f.zh.some(z => z === token.trim())) return k;
   }
+  return null;
+}
+
+function lookup(token){
+  const exact = exactLookup(token);
+  if (exact) return exact;
+  const t = token.trim().toLowerCase();
+  if (!t) return null;
   for (const k in FOODS){
     const f = FOODS[k];
     if (f.en.toLowerCase().includes(t) || t.includes(f.en.toLowerCase().split(',')[0])) return k;
@@ -911,6 +922,106 @@ function parseText(text){
     const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
     return {known:false, custom, label:name, age, raw:part};
   }).filter(Boolean);
+}
+
+// Pure: speech transcript in, parsed parts out. Speech carries no punctuation
+// to split on, so this walks a flat sequence of units (Latin words, or single
+// CJK characters — Chinese has no spaces) and greedily tries the largest
+// plausible window at each position: 2 units for Latin (covers every
+// multi-word food name), 3 for CJK (covers the longest zh entries). Windows
+// wider than 1 unit require an EXACT match (exactLookup) — the full lookup()
+// with its "candidate contains a food name" fallback would let something like
+// "milk chicken" match 'milk' as one 2-word candidate, silently swallowing
+// two separate items. Only the 1-unit window uses full lookup(), preserving
+// today's behavior where a bare "chicken" still resolves to Chicken breast.
+// Unmatched units accumulate and flush as one grouped "unrecognised" chip
+// rather than one per stray word.
+//
+// Known gap: only the existing "<number>d" shorthand is recognised as an age
+// marker (glued "2d" or spoken-apart "2 d"). Natural phrases like "two days
+// ago" are not parsed — nobody actually says "2d" out loud, so this needs
+// revisiting, just not in this pass.
+const CJK_RE = /[一-鿿]/;
+
+function parseSpeech(text){
+  const raw = text.trim().replace(/\s+/g, ' ');
+  if (!raw) return [];
+
+  const units = [];
+  let i = 0;
+  while (i < raw.length){
+    const ch = raw[i];
+    if (ch === ' '){ i++; continue; }
+    if (CJK_RE.test(ch)){
+      units.push({text:ch, cjk:true});
+      i++;
+    } else {
+      let j = i;
+      while (j < raw.length && /[a-zA-Z0-9']/.test(raw[j])) j++;
+      if (j === i) { i++; continue; } // stray punctuation
+      units.push({text:raw.slice(i, j), cjk:false});
+      i = j;
+    }
+  }
+
+  function windowText(u, len, cjk){
+    return units.slice(u, u + len).map(x => x.text).join(cjk ? '' : ' ');
+  }
+  function sameScript(u, len, cjk){
+    for (let k = 0; k < len; k++) if (units[u + k].cjk !== cjk) return false;
+    return true;
+  }
+  function tryMatch(u){
+    const cjk = units[u].cjk;
+    const maxLen = cjk ? 3 : 2;
+    for (let len = Math.min(maxLen, units.length - u); len >= 1; len--){
+      if (!sameScript(u, len, cjk)) continue;
+      const cand = windowText(u, len, cjk);
+      const key = len === 1 ? lookup(cand) : exactLookup(cand);
+      if (key) return {key, label:FOODS[key].en, raw:cand, consumed:len};
+    }
+    return null;
+  }
+
+  const items = [];
+  let unresolved = '';
+  function flushUnresolved(){
+    const t = unresolved.trim();
+    unresolved = '';
+    if (!t) return;
+    const name = t.charAt(0).toUpperCase() + t.slice(1);
+    items.push({known:false, custom:{en:name, zh:[], shelf:7, g:250, usd:2.50}, label:name, age:0, raw:t});
+  }
+
+  let u = 0;
+  while (u < units.length){
+    if (!units[u].cjk){
+      const glued = units[u].text.match(/^(\d+)d$/i);
+      if (glued && items.length){
+        items[items.length - 1].age = parseInt(glued[1], 10);
+        u += 1;
+        continue;
+      }
+      if (/^\d+$/.test(units[u].text) && u + 1 < units.length &&
+          !units[u+1].cjk && /^d$/i.test(units[u+1].text) && items.length){
+        items[items.length - 1].age = parseInt(units[u].text, 10);
+        u += 2;
+        continue;
+      }
+    }
+
+    const m = tryMatch(u);
+    if (m){
+      flushUnresolved();
+      items.push({known:true, key:m.key, label:m.label, age:0, raw:m.raw});
+      u += m.consumed;
+    } else {
+      unresolved += (unresolved && !units[u].cjk ? ' ' : '') + units[u].text;
+      u += 1;
+    }
+  }
+  flushUnresolved();
+  return items;
 }
 
 // Commits already-parsed parts: pushes to fridge, updates standing, renders, toasts.
@@ -1012,7 +1123,7 @@ function stopVoice(){
 }
 
 function showVoicePreview(text){
-  pendingItems = parseText(text).map(it => ({...it, included:true}));
+  pendingItems = parseSpeech(text).map(it => ({...it, included:true}));
   renderVoicePreview();
 }
 
