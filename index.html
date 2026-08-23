@@ -83,6 +83,7 @@ button.solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 button.solid:hover{background:#000}
 button.ghost{border-color:transparent;color:var(--ink-2);padding:4px 8px}
 button.ghost:hover{color:var(--ink);background:var(--panel-2)}
+button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
 /* ---------- hero ---------- */
 
@@ -161,6 +162,7 @@ button.ghost:hover{color:var(--ink);background:var(--panel-2)}
 }
 .chip.use{border-color:var(--ink);color:var(--ink)}
 .chip.pantry{border-style:dashed;color:var(--ink-3)}
+.chip.off{opacity:.4;text-decoration:line-through}
 .stats{display:flex;gap:26px;margin-top:18px}
 .stat b{
   display:block;
@@ -300,7 +302,9 @@ button.ghost:hover{color:var(--ink);background:var(--panel-2)}
     <div class="add">
       <input id="entry" placeholder="what did you buy? e.g. spinach, milk, 鸡胸肉 2d" autocomplete="off">
       <button class="solid" id="addbtn">Add</button>
+      <button id="voicebtn" style="display:none">Speak</button>
     </div>
+    <div class="missing" id="voicePreview" style="display:none"></div>
     <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or 中文. Anything typed here joins the tap list above next time.</p>
   </section>
 
@@ -893,30 +897,167 @@ function restock(key){
   render();
 }
 
-function addEntry(text){
+// Pure: text in, parsed parts out. No fridge/standing mutation, no render.
+function parseText(text){
   const parts = text.split(/[,，、\n;]+/).map(s => s.trim()).filter(Boolean);
-  let added = 0, unknown = [];
-  parts.forEach(part => {
+  return parts.map(part => {
     let age = 0;
     const m = part.match(/(\d+)\s*d\b/i);
     if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').trim(); }
+    if (!part.length) return null;
     const key = lookup(part);
-    if (key){
-      fridge.push({id:++uid, key, bought:today() - age, custom:null});
-      touchStanding(key, null);
-      added++;
-    } else if (part.length){
-      const name = part.charAt(0).toUpperCase() + part.slice(1);
-      const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
-      const id = ++uid;
-      const customKey = '_c_' + (slug(part) || ('item' + id));
-      fridge.push({id, key:customKey, bought:today() - age, custom});
-      touchStanding(customKey, custom);
-      unknown.push(name); added++;
+    if (key) return {known:true, key, label:FOODS[key].en, age, raw:part};
+    const name = part.charAt(0).toUpperCase() + part.slice(1);
+    const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
+    return {known:false, custom, label:name, age, raw:part};
+  }).filter(Boolean);
+}
+
+// Commits already-parsed parts: pushes to fridge, updates standing, renders, toasts.
+function commitItems(items){
+  let added = 0, unknown = 0;
+  items.forEach(it => {
+    const id = ++uid;
+    if (it.known){
+      fridge.push({id, key:it.key, bought:today() - it.age, custom:null});
+      touchStanding(it.key, null);
+    } else {
+      const key = '_c_' + (slug(it.raw) || ('item' + id));
+      fridge.push({id, key, bought:today() - it.age, custom:it.custom});
+      touchStanding(key, it.custom);
+      unknown++;
     }
+    added++;
   });
-  render();
-  if (added) toast(added + ' added' + (unknown.length ? ' · ' + unknown.length + ' estimated at 7 days' : ''));
+  if (added){
+    render();
+    toast(added + ' added' + (unknown ? ' · ' + unknown + ' estimated at 7 days' : ''));
+  }
+}
+
+function addEntry(text){
+  commitItems(parseText(text));
+}
+
+/* ---------- voice ---------- */
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null;
+let listening = false;
+let pendingItems = null;
+
+function initVoice(){
+  const btn = document.getElementById('voicebtn');
+  if (!SR){ btn.remove(); return; }
+  btn.style.display = '';
+  btn.onclick = () => listening ? stopVoice() : startVoice();
+}
+
+function setVoiceUI(active){
+  const btn = document.getElementById('voicebtn');
+  btn.textContent = active ? 'Listening…' : 'Speak';
+  btn.classList.toggle('recording', active);
+}
+
+function voiceErrorMessage(err){
+  switch(err){
+    case 'not-allowed':
+    case 'service-not-allowed': return 'Microphone permission denied';
+    case 'no-speech': return 'Didn’t catch anything';
+    case 'audio-capture': return 'No microphone found';
+    case 'network': return 'Speech recognition network error';
+    default: return 'Speech recognition failed';
+  }
+}
+
+function startVoice(){
+  pendingItems = null;
+  renderVoicePreview();
+  document.getElementById('entry').value = '';
+
+  recog = new SR();
+  recog.lang = navigator.language || 'en-US';
+  recog.continuous = true;
+  recog.interimResults = true;
+
+  let finalText = '';
+  recog.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const r = e.results[i];
+      if (r.isFinal) finalText += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    document.getElementById('entry').value = (finalText + interim).trim();
+  };
+  recog.onerror = e => toast(voiceErrorMessage(e.error));
+  recog.onend = () => {
+    listening = false;
+    setVoiceUI(false);
+    const text = document.getElementById('entry').value.trim();
+    if (text) showVoicePreview(text);
+  };
+
+  try {
+    recog.start();
+    listening = true;
+    setVoiceUI(true);
+  } catch(e){
+    toast('Could not start microphone');
+  }
+}
+
+function stopVoice(){
+  if (recog) recog.stop();
+}
+
+function showVoicePreview(text){
+  pendingItems = parseText(text).map(it => ({...it, included:true}));
+  renderVoicePreview();
+}
+
+function renderVoicePreview(){
+  const box = document.getElementById('voicePreview');
+  if (!pendingItems || !pendingItems.length){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  box.style.display = '';
+  const chips = pendingItems.map((it, i) => {
+    const excluded = !it.included;
+    const cls = 'chip' + (it.known && !excluded ? ' use' : '') + (excluded ? ' off' : '');
+    const style = (!excluded && !it.known) ? ' style="border-color:var(--turn);color:var(--turn)"' : '';
+    const label = it.known ? it.label : `“${it.raw}” — unrecognised`;
+    return `<span class="${cls}"${style} data-idx="${i}">${label}</span>`;
+  }).join('');
+  const includedCount = pendingItems.filter(it => it.included).length;
+  box.innerHTML = `
+    <div>Heard this — tap anything wrong to drop it before adding.</div>
+    <div class="sub">${chips}</div>
+    <div class="sub" style="margin-top:10px">
+      <button class="solid" id="voiceAdd">Add ${includedCount}</button>
+      <button id="voiceDiscard">Discard</button>
+    </div>`;
+  box.querySelectorAll('[data-idx]').forEach(el => {
+    el.onclick = () => {
+      const i = +el.dataset.idx;
+      pendingItems[i].included = !pendingItems[i].included;
+      renderVoicePreview();
+    };
+  });
+  document.getElementById('voiceAdd').onclick = () => {
+    const items = pendingItems.filter(it => it.included);
+    pendingItems = null;
+    document.getElementById('entry').value = '';
+    renderVoicePreview();
+    if (items.length) commitItems(items); else toast('Nothing to add');
+  };
+  document.getElementById('voiceDiscard').onclick = () => {
+    pendingItems = null;
+    document.getElementById('entry').value = '';
+    renderVoicePreview();
+  };
 }
 
 let toastTimer;
@@ -941,6 +1082,7 @@ document.getElementById('entry').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('addbtn').click(); }
 });
 window.addEventListener('resize', () => renderChart());
+initVoice();
 
 boot();
 render();
