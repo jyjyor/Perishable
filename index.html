@@ -169,6 +169,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   font-variation-settings:'wdth' 125;font-weight:800;font-size:22px;line-height:1.1;
 }
 .stat span{color:var(--ink-3)}
+.stat small{color:var(--ink-3);margin-left:6px;font-size:11px}
 .actions{display:flex;flex-direction:column;gap:8px;align-items:stretch}
 .missing{
   margin-top:18px;border-left:2px solid var(--turn);padding:6px 0 6px 12px;
@@ -333,14 +334,17 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     <div class="stat">
       <b id="wasteG">0 g</b>
       <span class="mono">thrown away</span>
+      <small>estimated</small>
     </div>
     <div class="stat">
       <b id="wasteUSD">$0.00</b>
       <span class="mono">wasted</span>
+      <small>estimated</small>
     </div>
     <div class="stat saved">
       <b id="savedG">0 g</b>
       <span class="mono">rescued</span>
+      <small>estimated</small>
     </div>
     <div class="spacer"></div>
     <div class="stat">
@@ -383,7 +387,49 @@ const FOODS = {
   mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00},
   cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50},
   butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00},
-  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00}
+  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00},
+
+  // Sourced from USDA FoodKeeper (either an exact entry or the same species
+  // under a generic FoodKeeper category, e.g. Chinese eggplant via the
+  // generic "Eggplant" entry). No `estimated` flag.
+  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80},
+  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50},
+  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10},
+  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30},
+  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60},
+  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80},
+  // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
+  // usually handled (more like a potato — weeks, not days) and I could not
+  // verify it against the primary USDA source (fsis.usda.gov blocks
+  // automated requests; this was sourced via a third-party mirror of the
+  // dataset). Shipping the sourced figure as-is rather than quietly
+  // correcting it toward intuition — that correction is exactly the kind
+  // of move that turns a source into a guess. Revisit if verified.
+  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50},
+  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90},
+  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40},
+  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70},
+  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40},
+  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90},
+  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70},
+  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60},
+
+  // No FoodKeeper entry, and no same-species proxy close enough to call
+  // sourced — either nothing in the dataset resembles them (lotus root,
+  // winter melon, water spinach, snow peas) or the closest entry is a
+  // different-enough species that reusing its number would be a stretch
+  // dressed up as a source (napa cabbage via Cabbage, garlic chives via
+  // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
+  // drives the same "shelf life estimated" marker already used for
+  // unrecognised typed/spoken items.
+  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true},
+  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true},
+  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true},
+  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true},
+  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true},
+  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true},
+  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true},
+  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true}
 };
 
 const DISHES = [
@@ -404,7 +450,43 @@ const DISHES = [
   {name:'Potato and onion hash',       needs:['potato','onion','pepper'],          pantry:['oil','paprika']},
   {name:'Mushroom cream pasta',        needs:['mushroom','milk','cheese','garlic'],pantry:['pasta']},
   {name:'Tomato beef noodle',          needs:['tomato','beef','ginger','scallion'],pantry:['noodles']},
-  {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame']}
+  {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame']},
+
+  // Every ingredient added alongside this batch appears in at least 2 of
+  // these dishes, paired with existing anchors (garlic, ginger, scallion,
+  // egg, tofu, beef, chicken, mushroom, carrot, potato) so a dish has real
+  // partial-match odds before standing history has built up.
+  {name:'Garlic bok choy and Chinese broccoli',    needs:['bokchoy','gailan','garlic'],           pantry:['oil']},
+  {name:'Choy sum and water spinach with fermented bean curd', needs:['choysum','waterspinach','garlic'], pantry:['fermented bean curd']},
+  {name:'Napa cabbage and bok choy hot pot',       needs:['napacabbage','bokchoy','tofu'],        pantry:['stock']},
+  {name:'Chinese broccoli and shiitake stir-fry',  needs:['gailan','shiitake'],                   pantry:['oyster sauce','oil']},
+  {name:'Choy sum and egg stir-fry',               needs:['choysum','egg'],                       pantry:['oil']},
+  {name:'Water spinach and egg stir-fry',          needs:['waterspinach','egg'],                  pantry:['oil']},
+  {name:'Napa cabbage and mushroom soup',          needs:['napacabbage','mushroom','ginger'],     pantry:['stock']},
+  {name:'Lotus root and beef soup',                needs:['lotusroot','beef','ginger'],           pantry:['stock']},
+  {name:'Lotus root, snow peas, and carrot stir-fry', needs:['lotusroot','snowpeas','carrot'],    pantry:['oil']},
+  {name:'Braised daikon and beef',                 needs:['daikon','beef','scallion'],            pantry:['soy sauce']},
+  {name:'Daikon and winter melon soup',            needs:['daikon','wintermelon','ginger'],       pantry:['stock']},
+  {name:'Snow peas and shiitake stir-fry',         needs:['snowpeas','shiitake'],                 pantry:['oil']},
+  {name:'Winter melon and mushroom soup',          needs:['wintermelon','mushroom','scallion'],   pantry:['stock']},
+  {name:'Chinese eggplant with garlic sauce',      needs:['chineseeggplant','garlic','scallion'], pantry:['soy sauce','sugar']},
+  {name:'Braised eggplant and potato',             needs:['chineseeggplant','potato'],            pantry:['soy sauce']},
+  {name:'Bean sprouts and garlic chives stir-fry', needs:['beansprouts','garlicchives'],          pantry:['oil']},
+  {name:'Cold bean sprout and cucumber salad',     needs:['beansprouts','cucumber','cilantro'],   pantry:['vinegar','sesame oil']},
+  {name:'Enoki and garlic chives egg drop soup',   needs:['enoki','garlicchives','egg'],          pantry:['stock']},
+  {name:'Enoki and tofu soup',                     needs:['enoki','tofu','scallion'],             pantry:['stock']},
+  {name:'Taro and chicken clay pot',               needs:['taro','chicken','ginger'],             pantry:['soy sauce']},
+  {name:'Braised taro and bamboo shoots',          needs:['taro','bambooshoots','mushroom'],      pantry:['soy sauce']},
+  {name:'Bamboo shoots and beef stir-fry',         needs:['bambooshoots','beef','scallion'],      pantry:['soy sauce']},
+  {name:'Edamame, corn, and carrot salad',         needs:['edamame','corn','carrot'],             pantry:['olive oil']},
+  {name:'Edamame with garlic and chili',           needs:['edamame','garlic'],                    pantry:['chili','salt']},
+  {name:'Corn and egg stir-fry',                   needs:['corn','egg'],                          pantry:['oil']},
+  {name:'Braised leek and tofu',                   needs:['leek','tofu'],                         pantry:['soy sauce']},
+  {name:'Leek and egg stir-fry',                   needs:['leek','egg'],                          pantry:['oil']},
+  {name:'Smashed cucumber with garlic',            needs:['cucumber','garlic'],                   pantry:['vinegar','sesame oil']},
+  {name:'Garlic zucchini and cauliflower',         needs:['zucchini','cauliflower','garlic'],     pantry:['oil']},
+  {name:'Cumin cauliflower',                       needs:['cauliflower','garlic'],                pantry:['cumin','oil']},
+  {name:'Zucchini and egg stir-fry',               needs:['zucchini','egg'],                      pantry:['oil']}
 ];
 
 // missing-ingredient substitutions: key -> candidates
@@ -804,7 +886,7 @@ function renderRows(){
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${it.custom ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}</div>
+      <div class="name">${f.en}${(it.custom || f.estimated) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}</div>
       <div class="meta">${Math.round(f.g)} g</div>
       <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
       <div class="btns">
