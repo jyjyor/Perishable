@@ -300,6 +300,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     <div class="inv-head mono">
       <span>In the fridge</span>
       <span class="spacer"></span>
+      <button class="ghost" id="rowsEdit">Edit</button>
       <button class="ghost" id="clearGone" style="display:none"></button>
       <span id="count">—</span>
     </div>
@@ -312,7 +313,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
       </div>
     </div>
 
-    <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked</div>
+    <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked <button class="ghost" id="restockEdit" style="margin-left:6px">Edit</button></div>
     <div class="rescue" id="restock"></div>
 
     <div id="rows" style="margin-top:26px"></div>
@@ -543,6 +544,8 @@ let lastVisit = null;
 let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
 let clearConfirmOpen = false;
+let editingRows = false;
+let editingRestock = false;
 
 function loadState(){
   try {
@@ -848,9 +851,19 @@ function compareStanding(a, b){
 
 function renderRestock(){
   const box = document.getElementById('restock');
+  document.getElementById('restockEdit').textContent = editingRestock ? 'Done' : 'Edit';
   const keys = Object.keys(standing).sort(compareStanding);
   if (!keys.length){
     box.innerHTML = `<div class="mono" style="color:var(--ink-3)">—</div>`;
+    return;
+  }
+  if (editingRestock){
+    box.innerHTML = `<div class="mono" style="color:var(--ink-3);width:100%;margin-bottom:2px">tap to remove</div>` +
+      keys.map(key => {
+        const label = standing[key].custom ? standing[key].custom.en : FOODS[key].en;
+        return `<button class="chip pantry" data-remove-standing="${key}">${label}</button>`;
+      }).join('');
+    box.querySelectorAll('[data-remove-standing]').forEach(b => b.onclick = () => removeStanding(b.dataset.removeStanding));
     return;
   }
   box.innerHTML = keys.map(key => {
@@ -869,6 +882,7 @@ function renderRestock(){
 
 function renderRows(){
   const box = document.getElementById('rows');
+  document.getElementById('rowsEdit').textContent = editingRows ? 'Done' : 'Edit';
   if (!fridge.length){
     const firstRun = !Object.keys(standing).length;
     box.innerHTML = firstRun
@@ -886,7 +900,7 @@ function renderRows(){
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${(it.custom || f.estimated) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}</div>
+      <div class="name">${f.en}${(it.custom || f.estimated) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}${editingRows ? `<small class="mono" style="cursor:pointer;text-decoration:underline" data-remove="${it.id}">remove</small>` : ''}</div>
       <div class="meta">${Math.round(f.g)} g</div>
       <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
       <div class="btns">
@@ -898,6 +912,7 @@ function renderRows(){
 
   box.querySelectorAll('[data-used]').forEach(b => b.onclick = () => useItem(+b.dataset.used, false));
   box.querySelectorAll('[data-toss]').forEach(b => b.onclick = () => useItem(+b.dataset.toss, true));
+  box.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeFridgeItem(+b.dataset.remove));
 }
 
 /* ---------- actions ---------- */
@@ -915,6 +930,39 @@ function useItem(id, tossed){
     ledger.savedG += f.g;
   }
   fridge.splice(i, 1);
+  render();
+}
+
+// A correction, not an event about food: never touches ledger. Unlike
+// useItem, this undoes the one standing-count increment this specific
+// entry caused when it was added -- not a reset, since the same key may
+// have been genuinely bought again since. If that brings the count to
+// zero, the standing entry (and its restock chip) goes away entirely,
+// which is what fixes a chip created by a one-off mis-parse.
+function removeFridgeItem(id){
+  const i = fridge.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const it = fridge[i];
+  const f = food(it);
+  fridge.splice(i, 1);
+  const s = standing[it.key];
+  if (s){
+    s.count -= 1;
+    if (s.count <= 0) delete standing[it.key];
+  }
+  toast('Removed ' + f.en.toLowerCase());
+  render();
+}
+
+// Also a correction, and also never touches ledger: this only forgets the
+// restock shortcut. Any live fridge item under this key is untouched --
+// "stop suggesting this" is not a claim about specific inventory.
+function removeStanding(key){
+  const entry = standing[key];
+  if (!entry) return;
+  const label = entry.custom ? entry.custom.en : FOODS[key].en;
+  delete standing[key];
+  toast('Removed ' + label.toLowerCase() + ' from restock');
   render();
 }
 
@@ -1383,6 +1431,8 @@ function toast(msg){
 document.getElementById('clearGone').onclick = () => { clearConfirmOpen = true; render(); };
 document.getElementById('clearConfirmBtn').onclick = clearGone;
 document.getElementById('clearCancelBtn').onclick = cancelClear;
+document.getElementById('rowsEdit').onclick = () => { editingRows = !editingRows; renderRows(); };
+document.getElementById('restockEdit').onclick = () => { editingRestock = !editingRestock; renderRestock(); };
 document.getElementById('addbtn').onclick = () => {
   // A pending preview always wins: this button and the preview's own Add N
   // must never disagree about what "Add" does while one is open.
