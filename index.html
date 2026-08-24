@@ -208,8 +208,9 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 /* ---------- add ---------- */
 
 .add{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.entrywrap{position:relative;flex:1;min-width:260px}
 .add input{
-  flex:1;min-width:260px;
+  width:100%;
   font-family:'DM Mono',ui-monospace,monospace;font-size:13px;
   background:transparent;border:1px solid var(--line);color:var(--ink);
   padding:10px 12px;
@@ -217,6 +218,23 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .add input:focus{outline:none;border-color:var(--ink)}
 .add input::placeholder{color:var(--ink-3)}
 .hint{margin-top:10px;color:var(--ink-3);max-width:60ch;font-size:13px}
+
+/* Suggestions are a menu of things you could add — a plain attached list,
+   the same row/border-bottom vocabulary as the inventory table. Deliberately
+   not chip-styled and not accented: the voice preview (.missing, turn accent,
+   pill chips) means "about to be added, confirm or drop it" — a different
+   claim than "here's what exists," so the two must not read alike. */
+.suggest{
+  position:absolute;left:0;right:0;top:100%;
+  background:var(--paper);border:1px solid var(--ink);border-top:none;
+  max-height:240px;overflow-y:auto;z-index:15;
+}
+.suggest-row{
+  padding:9px 12px;font-size:14px;color:var(--ink);
+  border-bottom:1px solid var(--line);cursor:pointer;
+}
+.suggest-row:last-child{border-bottom:none}
+.suggest-row:hover,.suggest-row.active{background:var(--panel-2)}
 
 /* ---------- ledger ---------- */
 
@@ -300,7 +318,10 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 
     <div class="mono" style="color:var(--ink-2);margin-top:26px;margin-bottom:10px">Something new or unusual</div>
     <div class="add">
-      <input id="entry" placeholder="what did you buy? e.g. spinach, milk, 鸡胸肉 2d" autocomplete="off">
+      <div class="entrywrap">
+        <input id="entry" placeholder="what did you buy? e.g. spinach, milk, 鸡胸肉 2d" autocomplete="off">
+        <div class="suggest" id="suggest" style="display:none"></div>
+      </div>
       <button class="solid" id="addbtn">Add</button>
       <button id="voicebtn" style="display:none">Speak</button>
     </div>
@@ -734,13 +755,18 @@ function renderClear(){
     <div class="rescue" style="margin-top:8px">${chips}</div>`;
 }
 
+// Shared ranking: how often this household buys it, then how recently.
+// Used by the restock chips and by autocomplete, so the two never disagree
+// about what "most-bought" means.
+function compareStanding(a, b){
+  const A = standing[a], B = standing[b];
+  if (B.count !== A.count) return B.count - A.count;
+  return B.lastBought - A.lastBought;
+}
+
 function renderRestock(){
   const box = document.getElementById('restock');
-  const keys = Object.keys(standing).sort((a,b) => {
-    const A = standing[a], B = standing[b];
-    if (B.count !== A.count) return B.count - A.count;
-    return B.lastBought - A.lastBought;
-  });
+  const keys = Object.keys(standing).sort(compareStanding);
   if (!keys.length){
     box.innerHTML = `<div class="mono" style="color:var(--ink-3)">—</div>`;
     return;
@@ -1157,18 +1183,108 @@ function renderVoicePreview(){
       renderVoicePreview();
     };
   });
-  document.getElementById('voiceAdd').onclick = () => {
-    const items = pendingItems.filter(it => it.included);
-    pendingItems = null;
-    document.getElementById('entry').value = '';
-    renderVoicePreview();
-    if (items.length) commitItems(items); else toast('Nothing to add');
-  };
-  document.getElementById('voiceDiscard').onclick = () => {
-    pendingItems = null;
-    document.getElementById('entry').value = '';
-    renderVoicePreview();
-  };
+  document.getElementById('voiceAdd').onclick = confirmVoicePreview;
+  document.getElementById('voiceDiscard').onclick = discardVoicePreview;
+}
+
+// Also called by #addbtn when a preview is pending, so there is exactly one
+// code path for "commit the preview" — clicking either button can never
+// disagree about what gets added, because they're the same call.
+function confirmVoicePreview(){
+  const items = pendingItems.filter(it => it.included);
+  pendingItems = null;
+  document.getElementById('entry').value = '';
+  renderVoicePreview();
+  if (items.length) commitItems(items); else toast('Nothing to add');
+}
+
+function discardVoicePreview(){
+  pendingItems = null;
+  document.getElementById('entry').value = '';
+  renderVoicePreview();
+}
+
+/* ---------- autocomplete ---------- */
+
+let suggestItems = [];
+let suggestIndex = -1;
+
+const SEP_RE = /[,，、\n;]/;
+
+// The field holds a comma-separated list, so suggestions match against the
+// unfinished tail after the last separator, not the whole value — selecting
+// one must not disturb items already typed before it.
+function currentSegment(value){
+  let idx = -1;
+  for (let i = value.length - 1; i >= 0; i--){
+    if (SEP_RE.test(value[i])){ idx = i; break; }
+  }
+  return {prefix: value.slice(0, idx + 1), segment: value.slice(idx + 1)};
+}
+
+// FOODS only, never standing's custom entries — a custom item carries a
+// fabricated 7-day shelf life, and suggesting it back would launder a guess
+// into something that looks authoritative. Ranked by compareStanding first
+// (what this household actually buys, same ordering as the restock chips),
+// then everything else in FOODS declaration order.
+function matchFoods(query){
+  const q = query.trim();
+  if (!q) return [];
+  const isCJK = CJK_RE.test(q[0]);
+  const ql = q.toLowerCase();
+
+  function matches(key){
+    const f = FOODS[key];
+    if (isCJK) return f.zh.some(z => z.includes(q));
+    return f.en.toLowerCase().split(/\s+/).some(word => word.startsWith(ql));
+  }
+
+  const all = Object.keys(FOODS).filter(matches);
+  const bought = all.filter(k => standing[k]).sort(compareStanding);
+  const unbought = all.filter(k => !standing[k]);
+  return bought.concat(unbought).slice(0, 8).map(k => ({key:k, en:FOODS[k].en}));
+}
+
+function updateSuggestions(){
+  const el = document.getElementById('entry');
+  const {segment} = currentSegment(el.value);
+  suggestItems = matchFoods(segment);
+  suggestIndex = -1;
+  renderSuggestions();
+}
+
+function renderSuggestions(){
+  const box = document.getElementById('suggest');
+  if (!suggestItems.length){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  box.style.display = '';
+  box.innerHTML = suggestItems.map((it, i) =>
+    `<div class="suggest-row${i === suggestIndex ? ' active' : ''}" data-idx="${i}">${it.en}</div>`
+  ).join('');
+  box.querySelectorAll('[data-idx]').forEach(row => {
+    // mousedown, not click: fires before the input's blur, so tapping a
+    // suggestion isn't raced by the blur handler hiding the list first.
+    row.addEventListener('mousedown', e => {
+      e.preventDefault();
+      selectSuggestion(+row.dataset.idx);
+    });
+  });
+}
+
+function selectSuggestion(i){
+  const el = document.getElementById('entry');
+  const chosen = suggestItems[i];
+  if (!chosen) return;
+  const {prefix} = currentSegment(el.value);
+  el.value = prefix + (prefix ? ' ' : '') + chosen.en + ', ';
+  suggestItems = [];
+  suggestIndex = -1;
+  renderSuggestions();
+  el.focus();
+  el.setSelectionRange(el.value.length, el.value.length);
 }
 
 let toastTimer;
@@ -1186,11 +1302,41 @@ document.getElementById('clearGone').onclick = () => { clearConfirmOpen = true; 
 document.getElementById('clearConfirmBtn').onclick = clearGone;
 document.getElementById('clearCancelBtn').onclick = cancelClear;
 document.getElementById('addbtn').onclick = () => {
+  // A pending preview always wins: this button and the preview's own Add N
+  // must never disagree about what "Add" does while one is open.
+  if (pendingItems){ confirmVoicePreview(); return; }
   const el = document.getElementById('entry');
   if (el.value.trim()){ addEntry(el.value); el.value = ''; }
 };
+document.getElementById('entry').addEventListener('input', () => {
+  // Editing the field while a preview is open means the shown chips no
+  // longer describe what's in the field — drop them rather than re-parse
+  // live and have the chips flicker mid-correction.
+  if (pendingItems) discardVoicePreview();
+  updateSuggestions();
+});
 document.getElementById('entry').addEventListener('keydown', e => {
-  if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('addbtn').click(); }
+  if (suggestItems.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
+    e.preventDefault();
+    const dir = e.key === 'ArrowDown' ? 1 : -1;
+    suggestIndex = (suggestIndex + dir + suggestItems.length) % suggestItems.length;
+    renderSuggestions();
+    return;
+  }
+  if (e.key === 'Escape' && suggestItems.length){
+    suggestItems = []; suggestIndex = -1;
+    renderSuggestions();
+    return;
+  }
+  if (e.key === 'Enter'){
+    e.preventDefault();
+    if (suggestItems.length && suggestIndex >= 0){ selectSuggestion(suggestIndex); return; }
+    document.getElementById('addbtn').click();
+  }
+});
+document.getElementById('entry').addEventListener('blur', () => {
+  suggestItems = []; suggestIndex = -1;
+  renderSuggestions();
 });
 window.addEventListener('resize', () => renderChart());
 initVoice();
