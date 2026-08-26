@@ -155,6 +155,26 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   line-height:1.08;
   letter-spacing:-.01em;
 }
+
+/* A projected day (tomorrow / the day after) is structurally lighter than
+   tonight -- smaller top rule, no giant heading -- because it is a
+   conditional read, not the page's primary claim. */
+.tonight.projected{margin-top:32px;border-top:1px solid var(--line);padding-top:18px}
+
+/* The fact is sourced shelf-life data, certain regardless of any dish
+   assumption -- so it gets heavier type than the dish suggestion below it,
+   which is only ever one option from a list we wrote. */
+.daily-fact{
+  font-variation-settings:'wdth' 112;
+  font-weight:700;
+  font-size:clamp(22px,3.2vw,34px);
+  line-height:1.1;
+  letter-spacing:-.01em;
+  margin-top:6px;
+  max-width:22ch;
+}
+.dish-sub{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+.dish-sub .dish-name{font-weight:700;font-size:17px;color:var(--ink);margin-top:2px}
 .rescue{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .chip{
   font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;letter-spacing:.04em;
@@ -295,6 +315,8 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   </div>
 
   <section class="tonight" id="tonight"></section>
+  <section class="tonight projected" id="tomorrow" style="display:none"></section>
+  <section class="tonight projected" id="dayAfter" style="display:none"></section>
 
   <section class="inv">
     <div class="inv-head mono">
@@ -543,6 +565,8 @@ let startedAt = null;
 let lastVisit = null;
 let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
+let skippedTomorrow = new Set();
+let skippedDayAfter = new Set();
 let clearConfirmOpen = false;
 let editingRows = false;
 let editingRestock = false;
@@ -584,7 +608,8 @@ function boot(){
 }
 
 const food = it => it.custom || FOODS[it.key];
-const left = it => food(it).shelf - (today() - it.bought);
+const leftAt = (it, day) => food(it).shelf - (day - it.bought);
+const left = it => leftAt(it, today());
 
 function state(d){
   if (d < 0) return 'gone';
@@ -605,49 +630,122 @@ function urgency(d){
   return 1 / (d + 0.9);           // steeper the closer to the edge
 }
 
-function ownedNow(){
+// sourceFridge/day-parameterized so the 3-day projection can ask "what
+// would be owned, and what would recommend/near-miss, on a simulated future
+// day against a working copy of the fridge" using the exact same logic that
+// already governs today -- not a parallel implementation of it.
+function haveAt(sourceFridge, day){
   const have = {};
-  fridge.forEach(it => {
-    if (left(it) < 0) return; // never recommend cooking something already past date
-    if (!have[it.key] || left(it) < left(have[it.key])) have[it.key] = it;
+  sourceFridge.forEach(it => {
+    if (leftAt(it, day) < 0) return; // never recommend cooking something already past date
+    if (!have[it.key] || leftAt(it, day) < leftAt(have[it.key], day)) have[it.key] = it;
   });
   return have;
 }
+const ownedNow = () => haveAt(fridge, today());
 
-function recommend(){
-  const have = ownedNow();
+function recommendAt(sourceFridge, day, skipSet){
+  const have = haveAt(sourceFridge, day);
   let best = null;
   DISHES.forEach(dish => {
-    if (skipped.has(dish.name)) return;
+    if (skipSet.has(dish.name)) return;
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 2) return;
-    let score = matched.reduce((s,k) => s + urgency(left(have[k])), 0);
+    let score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
     score -= missing.length * 0.45;
     if (missing.length > 1) return;
     if (!best || score > best.score) best = {dish, matched, missing, score, have};
   });
   return best;
 }
+const recommend = () => recommendAt(fridge, today(), skipped);
 
-// Only reachable ground beyond recommend(): a dish with matched >= 2 and
-// missing === 1 would already satisfy recommend()'s own gate, so if one
-// existed, recommend() would have found it. The only cases left once
-// recommend() has failed are two-ingredient dishes where exactly one is
+// Only reachable ground beyond recommendAt(): a dish with matched >= 2 and
+// missing === 1 would already satisfy recommendAt()'s own gate, so if one
+// existed, recommendAt() would have found it. The only cases left once
+// recommendAt() has failed are two-ingredient dishes where exactly one is
 // owned -- there is no broader "missing two things" fallback tier, because
 // then "one more thing" would stop being true.
-function nearMiss(){
-  const have = ownedNow();
+function nearMissAt(sourceFridge, day, skipSet){
+  const have = haveAt(sourceFridge, day);
   let best = null;
   DISHES.forEach(dish => {
-    if (skipped.has(dish.name)) return;
+    if (skipSet.has(dish.name)) return;
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 1 || missing.length !== 1) return;
-    const score = matched.reduce((s,k) => s + urgency(left(have[k])), 0);
+    const score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
     if (!best || score > best.score) best = {dish, matched, missing, score, have};
   });
   return best;
+}
+const nearMiss = () => nearMissAt(fridge, today(), skipped);
+
+// The one thing about a projected day that's certain rather than opinion:
+// the single most urgent item in the REAL fridge (never the working copy
+// used for dish projection) as of that day. Independent of whether any
+// suggested dish chain actually happens, so it never depends on an
+// assumption and is never empty as long as the fridge has anything in it.
+function factAt(day){
+  if (!fridge.length) return null;
+  let worst = fridge[0];
+  fridge.forEach(it => { if (leftAt(it, day) < leftAt(worst, day)) worst = it; });
+  const d = leftAt(worst, day);
+  const name = food(worst).en;
+  if (d < 0) return `${name} is ${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date.`;
+  if (d === 0) return `${name} is on its last day.`;
+  return `${name} has ${d} ${d === 1 ? 'day' : 'days'} left.`;
+}
+
+const DAY_LABELS = ['Tonight', 'Tomorrow', 'The day after'];
+
+function joinWords(arr){
+  if (arr.length <= 1) return arr[0] || '';
+  if (arr.length === 2) return arr[0] + ' and ' + arr[1];
+  return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+}
+
+// States what a projected day's suggestion actually assumes, built from
+// what the prior days really resolved to rather than a fixed phrase -- a
+// near-miss or terminal day upstream consumed nothing, so nothing after it
+// gets to claim a plan happened.
+function assumptionClause(dayIndex, results){
+  const cooked = [], notCooked = [];
+  for (let i = 0; i < dayIndex; i++){
+    (results[i].tier === 'recommend' ? cooked : notCooked).push(DAY_LABELS[i].toLowerCase());
+  }
+  if (!cooked.length) return 'nothing before this was a real plan — same fridge, further along';
+  let clause = `assumes ${joinWords(cooked)} ${cooked.length === 1 ? 'happens' : 'happen'}`;
+  if (notCooked.length) clause += `; ${joinWords(notCooked)} ${notCooked.length === 1 ? "wasn't" : "weren't"} a plan either`;
+  return clause;
+}
+
+// Walks up to three simulated days forward on a working copy of the real
+// fridge. Only a real recommendation (tier 'recommend') gets its matched
+// ingredients removed before the next day is computed -- a near-miss or
+// terminal day assumes nothing, so the next day starts from the identical
+// fridge, just aged by one more day. Stops the moment a day is terminal:
+// with nothing ever added back and shelf life only ever counting down,
+// every day after a terminal one is guaranteed terminal too, so there is
+// nothing further to discover by continuing.
+function buildDayProjections(){
+  const results = [];
+  let workingFridge = fridge.slice();
+  const skipSets = [skipped, skippedTomorrow, skippedDayAfter];
+  for (let d = 0; d < 3; d++){
+    const day = today() + d;
+    let r = recommendAt(workingFridge, day, skipSets[d]);
+    let tier = 'recommend';
+    if (!r){ r = nearMissAt(workingFridge, day, skipSets[d]); tier = r ? 'nearmiss' : 'terminal'; }
+    results.push({dayIndex: d, day, tier, result: r});
+    if (tier === 'terminal') break;
+    if (tier === 'recommend'){
+      const consumedIds = new Set(r.matched.map(k => r.have[k].id));
+      workingFridge = workingFridge.filter(it => !consumedIds.has(it.id));
+    }
+  }
+  return results;
 }
 
 /* ---------- render ---------- */
@@ -756,10 +854,13 @@ function renderChart(){
 // pantry chips, and the "missing one thing" substitution block mean the
 // same thing regardless of which tier found the dish -- only the framing
 // around this card should ever differ between the two.
-function buildDishCard(r){
+// day defaults to today() -- only a projected card ever passes a future
+// day, so an ingredient's "· Nd" reflects its countdown as of the day this
+// card is actually about, not today's.
+function buildDishCard(r, day = today()){
   const swap = swapped[r.dish.name];
   const chips = r.dish.needs.map(k => {
-    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${left(r.have[k])}d</span>`;
+    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${leftAt(r.have[k], day)}d</span>`;
     if (swap && swap.key === k) return `<span class="chip use">${swap.label} (swap)</span>`;
     return `<span class="chip" style="border-color:var(--turn);color:var(--turn)">${FOODS[k].en} — missing</span>`;
   }).join('');
@@ -785,16 +886,21 @@ function buildDishCard(r){
   return {chips, pantry, grams, usd, missingHTML};
 }
 
-// Wires the Cook/Show another/swap buttons for whichever card is currently
-// shown (real recommendation or near-miss) -- identical either way, since
-// cook() already only ever acts on the matched ingredients.
-function wireDishCard(r){
-  document.getElementById('cook').onclick = () => cook(r);
-  document.getElementById('skip').onclick = () => {
-    skipped.add(r.dish.name);
+// Wires the Cook/Show another/swap buttons inside whichever container is
+// passed -- .js-cook only exists on tonight's own card, so it's simply
+// absent (not disabled) everywhere else; there is no path by which a
+// projected card can call cook() against the real fridge. skipSet is the
+// day-specific set so "Show another" on one day never affects another.
+function wireDishCard(r, boxId, skipSet){
+  const box = document.getElementById(boxId);
+  const cookBtn = box.querySelector('.js-cook');
+  if (cookBtn) cookBtn.onclick = () => cook(r);
+  const skipBtn = box.querySelector('.js-skip');
+  if (skipBtn) skipBtn.onclick = () => {
+    skipSet.add(r.dish.name);
     render();
   };
-  document.getElementById('tonight').querySelectorAll('[data-swap]').forEach(b => {
+  box.querySelectorAll('[data-swap]').forEach(b => {
     b.onclick = () => {
       swapped[b.dataset.dish] = {key:b.dataset.swap, label:b.dataset.label};
       toast('Recipe adjusted for ' + b.dataset.label.toLowerCase());
@@ -803,50 +909,11 @@ function wireDishCard(r){
   });
 }
 
-function renderTonight(){
+function renderTodayCard(entry){
   const box = document.getElementById('tonight');
-  const r = recommend();
+  const day = entry.day;
 
-  if (!r){
-    if (!fridge.length){
-      box.innerHTML = `<div>
-        <div class="eyebrow mono">Tonight</div>
-        <p class="mono" style="color:var(--ink-3)">—</p>
-      </div>`;
-      return;
-    }
-    if (!fridge.some(it => left(it) >= 0)){
-      box.innerHTML = `<div>
-        <div class="eyebrow mono">Tonight</div>
-        <h2>Nothing here is still good.</h2>
-        <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-          Everything in the fridge is already past date. Clear it out, then restock to start again.</p>
-      </div>`;
-      return;
-    }
-
-    const nm = nearMiss();
-    if (nm){
-      const {chips, pantry, grams, usd, missingHTML} = buildDishCard(nm);
-      box.innerHTML = `
-        <div>
-          <div class="eyebrow mono">Closest match · one ingredient short</div>
-          <h2>${nm.dish.name}</h2>
-          <div class="rescue">${chips}${pantry}</div>
-          <div class="stats">
-            <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">already in the fridge for this</span></div>
-            <div class="stat"><b>$${usd.toFixed(2)}</b><span class="mono">already paid for</span></div>
-          </div>
-          ${missingHTML}
-        </div>
-        <div class="actions">
-          <button class="solid" id="cook">Cook this</button>
-          <button id="skip">Show another</button>
-        </div>`;
-      wireDishCard(nm);
-      return;
-    }
-
+  if (entry.tier === 'terminal'){
     box.innerHTML = `<div>
       <div class="eyebrow mono">Tonight</div>
       <h2>Not even one ingredient away from a dish.</h2>
@@ -856,23 +923,117 @@ function renderTonight(){
     return;
   }
 
-  const {chips, pantry, grams, usd, missingHTML} = buildDishCard(r);
+  const r = entry.result;
+  const {chips, pantry, grams, usd, missingHTML} = buildDishCard(r, day);
+  const eyebrow = entry.tier === 'recommend'
+    ? `Tonight · rescues ${r.matched.length} ${r.matched.length === 1 ? 'item' : 'items'}`
+    : 'Closest match · one ingredient short';
+  const statLabel = entry.tier === 'recommend' ? 'kept out of the bin' : 'already in the fridge for this';
   box.innerHTML = `
     <div>
-      <div class="eyebrow mono">Tonight · rescues ${r.matched.length} ${r.matched.length===1?'item':'items'}</div>
+      <div class="eyebrow mono">${eyebrow}</div>
       <h2>${r.dish.name}</h2>
       <div class="rescue">${chips}${pantry}</div>
       <div class="stats">
-        <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">kept out of the bin</span></div>
+        <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">${statLabel}</span></div>
         <div class="stat"><b>$${usd.toFixed(2)}</b><span class="mono">already paid for</span></div>
       </div>
       ${missingHTML}
     </div>
     <div class="actions">
-      <button class="solid" id="cook">Cook this</button>
-      <button id="skip">Show another</button>
+      ${entry.tier === 'recommend' ? '<button class="solid js-cook">Cook this</button>' : ''}
+      <button class="js-skip">Show another</button>
     </div>`;
-  wireDishCard(r);
+  wireDishCard(r, 'tonight', skipped);
+}
+
+// Tomorrow / the day after: the fact (certain, from real fridge shelf life)
+// always renders. The dish sub-card (opinion, from a projected fridge) is
+// clearly the secondary element -- smaller type, no Cook button, an eyebrow
+// that states what it assumes rather than presenting itself as equally
+// certain as the fact above it.
+function renderProjectedCard(entry, boxId, skipSet){
+  const box = document.getElementById(boxId);
+  box.style.display = '';
+  const day = entry.day;
+  const label = DAY_LABELS[entry.dayIndex];
+  const fact = factAt(day);
+
+  let subHTML;
+  if (entry.tier === 'terminal'){
+    subHTML = `<div class="dish-sub">
+      <div class="eyebrow mono">${entry.clause}</div>
+      <div class="dish-name" style="color:var(--ink-3);font-weight:600">Not even one ingredient away from a dish.</div>
+    </div>`;
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">${label}</div>
+      <div class="daily-fact">${fact}</div>
+      ${subHTML}
+    </div>`;
+    return;
+  }
+
+  const r = entry.result;
+  const {chips, pantry, grams, usd, missingHTML} = buildDishCard(r, day);
+  const statLabel = entry.tier === 'recommend' ? 'would be kept out of the bin' : 'already in the fridge for this';
+  subHTML = `<div class="dish-sub">
+    <div class="eyebrow mono">${entry.clause}</div>
+    <div class="dish-name">${r.dish.name}</div>
+    <div class="rescue">${chips}${pantry}</div>
+    <div class="stats">
+      <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">${statLabel}</span></div>
+      <div class="stat"><b>$${usd.toFixed(2)}</b><span class="mono">already paid for</span></div>
+    </div>
+    ${missingHTML}
+  </div>`;
+  box.innerHTML = `
+    <div>
+      <div class="eyebrow mono">${label}</div>
+      <div class="daily-fact">${fact}</div>
+      ${subHTML}
+    </div>
+    <div class="actions">
+      <button class="js-skip">Show another</button>
+    </div>`;
+  wireDishCard(r, boxId, skipSet);
+}
+
+function renderTonight(){
+  const box = document.getElementById('tonight');
+  const tomorrowBox = document.getElementById('tomorrow');
+  const dayAfterBox = document.getElementById('dayAfter');
+  tomorrowBox.style.display = 'none';
+  tomorrowBox.innerHTML = '';
+  dayAfterBox.style.display = 'none';
+  dayAfterBox.innerHTML = '';
+
+  if (!fridge.length){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">Tonight</div>
+      <p class="mono" style="color:var(--ink-3)">—</p>
+    </div>`;
+    return;
+  }
+  if (!fridge.some(it => left(it) >= 0)){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">Tonight</div>
+      <h2>Nothing here is still good.</h2>
+      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+        Everything in the fridge is already past date. Clear it out, then restock to start again.</p>
+    </div>`;
+    return;
+  }
+
+  const results = buildDayProjections();
+  renderTodayCard(results[0]);
+
+  const boxIds = [null, 'tomorrow', 'dayAfter'];
+  const skipSets = [null, skippedTomorrow, skippedDayAfter];
+  for (let i = 1; i < results.length; i++){
+    const entry = results[i];
+    entry.clause = assumptionClause(i, results);
+    renderProjectedCard(entry, boxIds[i], skipSets[i]);
+  }
 }
 
 function renderClear(){
