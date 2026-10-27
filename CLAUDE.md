@@ -59,9 +59,14 @@ brown discoloration that appears before mold does, an outline that
 shrivels inward as it shrinks rather than stretching or twisting. A
 field-guide specimen plate, not a cartoon or an illustration style.
 
-Type: Archivo variable (width axis carries the personality — 125 wdth
-uppercase for display, 100 for body) plus DM Mono for all dates, counts,
-labels, and buttons. No third family.
+Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
+names, and body text — regular and bold only, the two weights the family
+has; nothing is synthetically bolded or italicised beyond what it ships.
+Tonos Mono (tonos-mono-vf) for all dates, counts, labels, and buttons.
+No third family. Both come from an Adobe Fonts web project tied to a
+Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
+CDN — fallbacks are Georgia/serif for Caslonian and ui-monospace for
+Tonos Mono, so the page still holds together if that stops being served.
 
 Signature element: the fridge view, then the decay line. The decay line
 showed the dates but didn't make you feel what you were about to lose —

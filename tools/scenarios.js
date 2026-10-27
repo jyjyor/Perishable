@@ -2,7 +2,11 @@
 // Three-fridge sanity check for index.html: all fresh, all past date,
 // and mixed. Confirms Tonight never builds a recommendation around a
 // past-date item, and that the past-date-only state gets its own honest
-// copy instead of the generic "doesn't add up to a meal" message.
+// copy instead of the generic "doesn't add up to a meal" message. Also
+// includes a migration check (migrationScenario) that loads a real
+// localStorage state built on the pushed origin/main version into the
+// current code, since a real phone's saved data always lags behind the
+// working tree by however much hasn't been pushed yet.
 //
 // Setup (once): cd tools && npm install
 // Run:          node tools/scenarios.js
@@ -16,10 +20,13 @@ const { chromium } = require('playwright-core');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(__dirname, 'screenshots');
 const PORT = 8934;
+const PORT_LIVE = 8970; // separate, short-lived server for the pushed (origin/main) version only
 const CHROME_PATH = process.env.CHROME_PATH
   || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -454,6 +461,100 @@ async function dishRepeatScenario(browser) {
   await page.context().close();
 }
 
+// Migration safety: a real phone's localStorage was written by whatever's
+// actually live on origin/main, not by whatever's in the working tree.
+// This pulls the real pushed index.html (git show, no working-tree
+// changes), drives it like an actual user to build a realistic saved
+// state -- known items, an unrecognized/custom item (the shape most
+// likely to be missing new fields like cat/shape/plural), something
+// tossed (waste ledger), something cooked (saved ledger), a standing/
+// restock chip -- captures the exact localStorage blob that produces,
+// then loads that same blob into the CURRENT code and confirms the count,
+// the ledger, and the fridge view all survive with no console errors.
+// Never touches the working tree; the "live" copy exists only in a temp
+// file for the few seconds this scenario needs it.
+async function migrationScenario(browser) {
+  const liveHtml = execSync('git show origin/main:index.html', { cwd: ROOT, maxBuffer: 1024 * 1024 * 20 });
+  const tmpLive = path.join(os.tmpdir(), 'perishable-live-' + Date.now() + '.html');
+  fs.writeFileSync(tmpLive, liveHtml);
+
+  const liveServer = await new Promise(resolve => {
+    const s = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
+      res.end(liveHtml);
+    });
+    s.listen(PORT_LIVE, () => resolve(s));
+  });
+
+  console.log('\n--- MIGRATION: origin/main saved state into current code ---');
+
+  // Build a realistic saved state on the real pushed version.
+  const livePage = await (await browser.newContext()).newPage();
+  const liveErrors = [];
+  livePage.on('pageerror', e => liveErrors.push(e.message));
+  await livePage.goto(`http://localhost:${PORT_LIVE}/`);
+  await livePage.evaluate(() => localStorage.clear());
+  await livePage.reload();
+  await livePage.waitForSelector('#headline');
+  await livePage.fill('#entry', 'spinach, milk, chicken, onion, dragonfruit, garlic 5d');
+  await livePage.click('#addbtn');
+  await livePage.waitForTimeout(150);
+  const tossBtn = await livePage.$('[data-toss]');
+  if (tossBtn) await tossBtn.click();
+  await livePage.waitForTimeout(100);
+  const cookBtn = await livePage.$('.js-cook');
+  if (cookBtn) await cookBtn.click();
+  await livePage.waitForTimeout(100);
+
+  const savedState = await livePage.evaluate(() => localStorage.getItem('perishable.v1'));
+  if (!savedState) throw new Error('origin/main produced no saved state to migrate -- nothing to test');
+  const parsed = JSON.parse(savedState);
+  const expectedCount = parsed.fridge.length;
+  console.log('live (origin/main) fridge items:', expectedCount, '· standing keys:', Object.keys(parsed.standing).length);
+  console.log('live ledger:', JSON.stringify(parsed.ledger));
+  if (liveErrors.length) throw new Error(`origin/main itself threw console errors while building state: ${JSON.stringify(liveErrors)}`);
+  await livePage.context().close();
+  liveServer.close();
+  fs.unlinkSync(tmpLive);
+
+  // Load that exact blob into the current (unpushed) code.
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(state => localStorage.setItem('perishable.v1', state), savedState);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(250);
+
+  const newCount = await page.textContent('#count');
+  console.log('current code item count:', newCount.trim());
+  if (parseInt(newCount, 10) !== expectedCount) throw new Error(`expected ${expectedCount} items to survive migration, current code shows "${newCount.trim()}"`);
+
+  const wasteG = await page.textContent('#wasteG');
+  const savedG = await page.textContent('#savedG');
+  console.log('current code ledger: wasteG =', wasteG.trim(), ', savedG =', savedG.trim());
+  if (parseInt(wasteG, 10) !== Math.round(parsed.ledger.wasteG)) throw new Error(`waste ledger lost in migration: expected ${Math.round(parsed.ledger.wasteG)}, got "${wasteG.trim()}"`);
+  if (parseInt(savedG, 10) !== Math.round(parsed.ledger.savedG)) throw new Error(`saved ledger lost in migration: expected ${Math.round(parsed.ledger.savedG)}, got "${savedG.trim()}"`);
+
+  const restockChips = await page.$$eval('#restock .chip, #restock button', els => els.length);
+  console.log('restock chips rendered:', restockChips);
+  if (!restockChips) throw new Error('standing/restock data did not survive migration');
+
+  // The fridge view specifically: every migrated item (including the
+  // unrecognized "dragonfruit" custom entry, which carries none of the
+  // newer cat/shape/plural fields) must render through the current
+  // category/shape lookups without crashing or silently dropping anything.
+  const shelfItems = await page.$$eval('#fridgeShelf .fridge-item', els => els.length);
+  const drawerItems = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
+  console.log('fridge view: shelf =', shelfItems, ', drawer =', drawerItems);
+  if (shelfItems + drawerItems !== expectedCount) throw new Error(`fridge view shows ${shelfItems + drawerItems} items total, expected ${expectedCount}`);
+
+  if (errors.length) throw new Error(`current code threw console errors loading migrated state: ${JSON.stringify(errors)}`);
+  await page.screenshot({ path: path.join(OUT, 'scn-migration.png'), fullPage: true });
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -469,6 +570,7 @@ async function dishRepeatScenario(browser) {
   await fridgeFactBugScenario(browser);
   await pluralAgreementScenario(browser);
   await dishRepeatScenario(browser);
+  await migrationScenario(browser);
 
   await browser.close();
   server.close();
