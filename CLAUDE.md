@@ -40,9 +40,15 @@ Type: Archivo variable (width axis carries the personality — 125 wdth
 uppercase for display, 100 for body) plus DM Mono for all dates, counts,
 labels, and buttons. No third family.
 
-Signature element: the decay line. A 21-day horizon on a square-root
-scale, every item pinned at its expiry. It is the argument of the whole
-project and must stay the first thing on the page.
+Signature element: the fridge view, then the decay line. The decay line
+showed the dates but didn't make you feel what you were about to lose —
+the fridge is the answer to that, so it opens the page: closest-to-expiring
+sits large and lit at the front, safe things recede smaller and dimmer,
+the way looking into a real fridge does before you've read a single
+number. The decay line follows directly after, a 21-day horizon on a
+square-root scale, every item pinned at its expiry — it still carries the
+dates, now that the fridge carries the feeling. Both read from the same
+shelf-life math (leftAt, pos) and must never disagree with each other.
 
 ## Voice
 

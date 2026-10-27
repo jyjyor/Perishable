@@ -233,6 +233,144 @@ async function noRiskScenario(browser) {
   await page.context().close();
 }
 
+// Phase 3: four items at roughly 25/50/75/95% of their own shelf life used
+// -- the point the earlier fridge screenshots never actually showed, since
+// everything in them was either freshly bought or already gone. Carrot
+// 25%, yogurt 50%, mushrooms ~75%, cheese ~95%, spanning veg/dairy/soft so
+// three different category shapes show up in one shot too.
+async function fridgeGradientScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'carrot 7d, yogurt 7d, mushrooms 5d, cheese 40d');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- FRIDGE GRADIENT: 25/50/75/95% ---');
+  const fills = await page.$$eval('#fridgeShelf .fridge-item .fridge-shape svg > :first-child',
+    els => els.map(e => e.getAttribute('fill')));
+  console.log('shelf fills (front to back):', JSON.stringify(fills));
+  if (new Set(fills).size < 4) throw new Error(`expected 4 distinct colors across the decay gradient, got ${JSON.stringify(fills)}`);
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'fridge-gradient.png'), fullPage: true });
+  await page.context().close();
+}
+
+// Phase 3: a realistic ~25-item haul (22 savable across every category,
+// 3 already gone) -- the point of this one is volume: does the shelf
+// actually wrap into a front row plus rows behind it, and does tapping a
+// covered (behind-row) item reveal its label the way a shelf item that
+// never had a row-mate covering it should not need to.
+async function fridgeHaulScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  // Phone width, not desktop -- receipt scanning is explicitly a phone
+  // feature, and a realistic haul needs a narrow shelf to actually wrap
+  // into the rows behind-row items depend on, which 1080px of desktop
+  // width mostly absorbed in one row.
+  await page.setViewportSize({ width: 390, height: 1600 });
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry',
+    'spinach, lettuce 2d, milk, yogurt 3d, chicken, beef, bacon 2d, egg 5d, tofu 1d, ' +
+    'onion, scallion 2d, garlic, ginger, tomato 2d, carrot, pepper 1d, broccoli 1d, ' +
+    'mushroom 3d, potato, cheese 10d, butter, cooked rice 2d, ' +
+    'daikon 20d, zucchini 8d, enoki 10d');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- FRIDGE HAUL: ~25 items ---');
+  const fridgeCount = await page.textContent('#fridgeCount');
+  console.log('fridge count:', fridgeCount);
+  if (fridgeCount.trim() !== '25 items') throw new Error(`expected "25 items", got "${fridgeCount.trim()}"`);
+
+  const covered = await page.$$('#fridgeShelf .fridge-item.covered');
+  console.log('covered (behind-row) items:', covered.length);
+  if (!covered.length) throw new Error('a 25-item haul should overflow into a second row, producing covered items');
+
+  const firstCovered = covered[0];
+  const labelBefore = await firstCovered.evaluate(el => getComputedStyle(el.querySelector('.fridge-label')).opacity);
+  await firstCovered.click();
+  await page.waitForTimeout(250); // let the .15s opacity transition finish before reading it
+  const labelAfter = await firstCovered.evaluate(el => getComputedStyle(el.querySelector('.fridge-label')).opacity);
+  console.log('covered item label opacity before/after tap:', labelBefore, '->', labelAfter);
+  if (labelBefore !== '0' || labelAfter !== '1') throw new Error(`tap-to-reveal didn't toggle label opacity (${labelBefore} -> ${labelAfter})`);
+
+  const drawerCount = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
+  console.log('drawer (gone) items:', drawerCount);
+  if (drawerCount !== 3) throw new Error(`expected 3 gone items in the drawer, got ${drawerCount}`);
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'fridge-haul.png'), fullPage: true });
+  await page.context().close();
+}
+
+// Regression for the Tomorrow/day-after fact-line bug: the daily-fact line
+// must read from that day's own projected (working) fridge, not the live
+// real one, once an earlier day's recommendation has (in the simulation)
+// used something up -- otherwise the fact cites an ingredient the dish-sub
+// right under it just said nothing is happening to. Exact repro: chicken,
+// spinach, milk, onion, garlic, cheese, egg -- tonight's dish only needs
+// the first four, leaving garlic/cheese/egg (all weeks from turning) for
+// tomorrow's projection, which is why tomorrow should land on noRisk, not
+// terminal, and why its fact should never again cite chicken.
+async function fridgeFactBugScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'chicken, spinach, milk, onion, garlic, cheese, egg');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- FACT-LINE BUG: Tomorrow must read the projected fridge ---');
+  const fact = await page.textContent('#tomorrow .daily-fact');
+  const dishName = await page.textContent('#tomorrow .dish-name');
+  console.log('Tomorrow fact:', fact.trim());
+  console.log('Tomorrow dish-sub:', dishName.trim());
+  if (dishName.trim() !== 'Nothing here is about to turn.') throw new Error(`expected tomorrow's tier to be noRisk, dish-sub was "${dishName.trim()}"`);
+  if (fact.includes('Chicken')) throw new Error(`Tomorrow's fact still cites chicken, which tonight's own recommendation assumes got used -- "${fact.trim()}"`);
+  if (!/Garlic|Cheese|Eggs/.test(fact)) throw new Error(`expected Tomorrow's fact to cite one of the leftover items (garlic/cheese/eggs), got "${fact.trim()}"`);
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'fridge-factbug-fixed.png'), fullPage: true });
+  await page.context().close();
+
+  // Edge case the fix itself exposed: when the projected fridge is fully
+  // emptied (every item in it was part of tonight's dish), factAt()
+  // legitimately returns null -- confirm the fallback copy renders
+  // instead of the template printing the literal word "null".
+  const page2 = await (await browser.newContext()).newPage();
+  const errors2 = [];
+  page2.on('pageerror', e => errors2.push(e.message));
+  await page2.goto(`http://localhost:${PORT}/index.html`);
+  await page2.evaluate(() => localStorage.clear());
+  await page2.reload();
+  await page2.waitForSelector('#headline');
+  await page2.fill('#entry', 'spinach, milk, chicken, onion');
+  await page2.click('#addbtn');
+  await page2.waitForTimeout(150);
+  const emptyFact = await page2.textContent('#tomorrow .daily-fact');
+  console.log('Tomorrow fact when the projection is fully emptied:', emptyFact.trim());
+  if (emptyFact.trim() === 'null') throw new Error('factAt() returning null leaked the literal word "null" into the page');
+  if (!emptyFact.trim()) throw new Error('expected fallback copy for an emptied projection, got nothing');
+  if (errors2.length) console.log('console errors:', errors2);
+  await page2.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -243,6 +381,9 @@ async function noRiskScenario(browser) {
   await receiptScenario(browser);
   await recommendationScenario(browser);
   await noRiskScenario(browser);
+  await fridgeGradientScenario(browser);
+  await fridgeHaulScenario(browser);
+  await fridgeFactBugScenario(browser);
 
   await browser.close();
   server.close();

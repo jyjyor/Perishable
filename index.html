@@ -85,6 +85,43 @@ button.ghost{border-color:transparent;color:var(--ink-2);padding:4px 8px}
 button.ghost:hover{color:var(--ink);background:var(--panel-2)}
 button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
+/* ---------- fridge view ----------
+   A reversed fridge: what's closest to expiring sits large and lit on a
+   front shelf, partly covering safe items smaller and dimmer behind it --
+   real depth (JS-computed overlap + z-index), not left/right in one row.
+   Hue always matches the same days-left bucket the list and legend use
+   (COLOR/state()); decay fraction drives only form and value -- darkening
+   toward the drawer's brown, sag, mold, shrink. Position and color both
+   come from leftAt()/pos()/state(), never a second "how urgent" math. */
+.fridgeview{padding:28px 0 8px}
+.fridgeview-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:18px}
+.fridgeview-head .spacer{flex:1}
+.fridge-shelf{
+  position:relative;
+  padding:4px 4px 0;
+  border-bottom:2px solid var(--ink);
+}
+.fridge-shelf .fridge-item{position:absolute;bottom:0}
+.fridge-item{display:flex;flex-direction:column;align-items:center;gap:4px;max-width:92px}
+.fridge-item.covered{cursor:pointer}
+.fridge-item.covered .fridge-label{opacity:0;pointer-events:none;transition:opacity .15s ease}
+.fridge-item.covered.revealed .fridge-label{opacity:1;pointer-events:auto}
+.fridge-shape{display:flex;align-items:flex-end;justify-content:center}
+.fridge-shape svg{display:block}
+.fridge-label{
+  text-align:center;color:var(--ink-2);line-height:1.3;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+}
+.fridge-label .fridge-days{color:var(--ink-3)}
+.fridge-drawer{
+  margin-top:0;background:var(--panel-2);
+  padding:16px 18px 18px;border-bottom:1px solid var(--line);
+}
+.fridge-drawer-label{color:var(--ink-2);margin-bottom:12px}
+.fridge-drawer-items{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.fridge-drawer-items .fridge-label{color:var(--ink-3)}
+.fridge-drawer-items button{margin-top:2px}
+
 /* ---------- hero ---------- */
 
 .hero{padding:56px 0 28px}
@@ -336,6 +373,30 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     <div class="mono" id="settingsStatus" style="margin-top:8px;color:var(--ink-3)"></div>
   </div>
 
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="moldSpeckle" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+        <feColorMatrix in="noise" type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.6 0.6 0.6 0 0" result="speckleAlpha"/>
+        <feComposite in="SourceGraphic" in2="speckleAlpha" operator="in"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <section class="fridgeview" id="fridgeview">
+    <div class="fridgeview-head mono">
+      <span>The fridge</span>
+      <span class="spacer"></span>
+      <span id="fridgeCount">—</span>
+    </div>
+    <div class="fridge-shelf" id="fridgeShelf"></div>
+  </section>
+  <div class="fridge-drawer" id="fridgeDrawer" style="display:none">
+    <div class="fridge-drawer-label mono">Gone — toss to clear</div>
+    <div class="fridge-drawer-items" id="fridgeDrawerItems"></div>
+  </div>
+
   <section class="hero">
     <h1 id="headline">—</h1>
     <p id="subline"></p>
@@ -423,43 +484,50 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 /* ============================================================
    Shelf lives are refrigerator days, roughly following USDA
    FoodKeeper guidance. Weights and prices are demo estimates.
+
+   cat groups items by how they visibly rot, for the fridge view only --
+   it picks a silhouette and weights the four decay stages (darken, sag,
+   mold, shrink; see FRIDGE_CAT below) and never touches shelf life. One
+   of: leafy (wilts), soft (shrinks/wrinkles), veg (firm produce), dairy,
+   protein, cooked. A custom item (typed/voice/receipt, never in FOODS)
+   has no cat and keeps the generic shape.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20},
-  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60},
-  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10},
-  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90},
-  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50},
-  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20},
-  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00},
-  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80},
-  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40},
-  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80},
-  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20},
-  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00},
-  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40},
-  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00},
-  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60},
-  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80},
-  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50},
-  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40},
-  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10},
-  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20},
-  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90},
-  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00},
-  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50},
-  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00},
-  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00},
+  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy'},
+  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60, cat:'leafy'},
+  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy'},
+  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90, cat:'dairy'},
+  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein'},
+  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20, cat:'protein'},
+  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00, cat:'protein'},
+  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy'},
+  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein'},
+  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg'},
+  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20, cat:'leafy'},
+  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg'},
+  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40, cat:'veg'},
+  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00, cat:'soft'},
+  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg'},
+  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft'},
+  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg'},
+  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft'},
+  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10, cat:'leafy'},
+  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20, cat:'veg'},
+  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90, cat:'soft'},
+  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00, cat:'soft'},
+  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy'},
+  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00, cat:'dairy'},
+  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00, cat:'cooked'},
 
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper category, e.g. Chinese eggplant via the
   // generic "Eggplant" entry). No `estimated` flag.
-  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80},
-  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50},
-  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10},
-  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30},
-  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60},
-  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80},
+  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80, cat:'leafy'},
+  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50, cat:'veg'},
+  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10, cat:'soft'},
+  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30, cat:'veg'},
+  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft'},
+  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -467,14 +535,14 @@ const FOODS = {
   // dataset). Shipping the sourced figure as-is rather than quietly
   // correcting it toward intuition — that correction is exactly the kind
   // of move that turns a source into a guess. Revisit if verified.
-  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50},
-  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90},
-  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40},
-  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70},
-  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40},
-  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90},
-  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70},
-  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60},
+  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50, cat:'veg'},
+  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90, cat:'veg'},
+  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40, cat:'veg'},
+  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70, cat:'leafy'},
+  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40, cat:'soft'},
+  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90, cat:'soft'},
+  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70, cat:'veg'},
+  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60, cat:'veg'},
 
   // No FoodKeeper entry, and no same-species proxy close enough to call
   // sourced — either nothing in the dataset resembles them (lotus root,
@@ -484,14 +552,14 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed/spoken items.
-  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true},
-  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true},
-  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true},
-  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true},
-  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true},
-  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true},
-  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true},
-  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true}
+  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy'},
+  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy'},
+  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg'},
+  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy'},
+  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy'},
+  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy'},
+  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true, cat:'veg'},
+  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true, cat:'veg'}
 };
 
 const DISHES = [
@@ -660,6 +728,14 @@ function state(d){
 }
 const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh:'var(--fresh)'};
 
+// Fraction of an item's own shelf life used up, as of `day` -- 0 at
+// purchase, 1 by its last day, clamped there for anything already past
+// date. The fridge view's only decay math; everything else (darken, sag,
+// shrink, mold) is this one number driving continuous CSS/SVG output.
+function decayFraction(it, day){
+  return Math.max(0, Math.min(1, 1 - leftAt(it, day) / food(it).shelf));
+}
+
 function fmtDate(epochDay){
   const d = new Date(epochDay * 86400000);
   return d.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', weekday:'short', timeZone:'UTC'});
@@ -731,15 +807,18 @@ function nearMissAt(sourceFridge, day, skipSet, requireAtRisk = true){
 }
 const nearMiss = () => nearMissAt(fridge, today(), skipped);
 
-// The one thing about a projected day that's certain rather than opinion:
-// the single most urgent item in the REAL fridge (never the working copy
-// used for dish projection) as of that day. Independent of whether any
-// suggested dish chain actually happens, so it never depends on an
-// assumption and is never empty as long as the fridge has anything in it.
-function factAt(day){
-  if (!fridge.length) return null;
-  let worst = fridge[0];
-  fridge.forEach(it => { if (leftAt(it, day) < leftAt(worst, day)) worst = it; });
+// The single most urgent item as of `day`, read from `sourceFridge` --
+// Tonight passes the real fridge (nothing's been cooked yet, so "real" and
+// "projected" are the same set). Tomorrow/the day after pass that day's
+// own working-fridge snapshot (buildDayProjections' fridgeAtStart), so if
+// an earlier day's suggestion already used something up, the fact line
+// stops citing it -- it was contradicting the dish-sub right under it,
+// which already says whether that earlier day was ever a real plan.
+function factAt(day, sourceFridge){
+  const pool = sourceFridge || fridge;
+  if (!pool.length) return null;
+  let worst = pool[0];
+  pool.forEach(it => { if (leftAt(it, day) < leftAt(worst, day)) worst = it; });
   const d = leftAt(worst, day);
   const name = food(worst).en;
   if (d < 0) return `${name} is ${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date.`;
@@ -784,6 +863,7 @@ function buildDayProjections(){
   const skipSets = [skipped, skippedTomorrow, skippedDayAfter];
   for (let d = 0; d < 3; d++){
     const day = today() + d;
+    const fridgeAtStart = workingFridge; // this day's fact reads from here, not the live global fridge
     let r = recommendAt(workingFridge, day, skipSets[d]);
     let tier = r ? 'recommend' : null;
     if (!r){ r = nearMissAt(workingFridge, day, skipSets[d]); tier = r ? 'nearmiss' : null; }
@@ -797,7 +877,7 @@ function buildDayProjections(){
         || nearMissAt(workingFridge, day, skipSets[d], false);
       tier = anyDishAtAll ? 'noRisk' : 'terminal';
     }
-    results.push({dayIndex: d, day, tier, result: r});
+    results.push({dayIndex: d, day, tier, result: r, fridgeAtStart});
     if (tier === 'terminal') break;
     if (tier === 'recommend'){
       const consumedIds = new Set(r.matched.map(k => r.have[k].id));
@@ -817,6 +897,7 @@ function render(){
   document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
 
+  renderFridgeView();
   renderHeadline();
   renderChart();
   renderTonight();
@@ -856,6 +937,203 @@ function renderHeadline(){
 function pos(d){ // sqrt scale: the near edge gets the room it deserves
   const c = Math.max(0, Math.min(HORIZON, d));
   return Math.sqrt(c / HORIZON) * 100;
+}
+
+/* ---------- fridge view ----------
+   Position on the shelf and the color's hue both come from the exact
+   functions the decay line, list, and legend already use (pos(), leftAt(),
+   state()/COLOR) -- not a parallel read of "how urgent is this" or a
+   second meaning for color. decayFraction() is the only continuous input,
+   and it drives form and value only: darkening toward the drawer's brown,
+   sag, mold, shrink. Gone items never sit on the shelf: they get their own
+   drawer, fixed size, fully decayed, so a few rotten things can't crowd
+   out what's still savable. */
+
+// Category groups items by how they visibly rot (see the FOODS comment),
+// each with its own silhouette and its own weight on the four decay
+// stages -- greens sag hardest, soft produce shrinks hardest, dairy darkens
+// and molds more than it sags, protein darkens hardest. 1.0 is baseline.
+// A custom item (typed/voice/receipt) carries no cat and gets 'generic':
+// the plain container shape, every weight neutral.
+const FRIDGE_CAT = {
+  leafy:   {shape:'leafy',   darken:0.8, sag:1.5, mold:1.0, shrink:0.6},
+  soft:    {shape:'soft',    darken:0.9, sag:0.6, mold:0.9, shrink:1.5},
+  veg:     {shape:'veg',     darken:1.0, sag:0.8, mold:1.0, shrink:1.0},
+  dairy:   {shape:'dairy',   darken:1.1, sag:0.5, mold:1.3, shrink:0.5},
+  protein: {shape:'protein', darken:1.3, sag:0.9, mold:0.8, shrink:0.9},
+  cooked:  {shape:'cooked',  darken:1.0, sag:0.7, mold:1.2, shrink:0.8},
+  generic: {shape:'generic', darken:1.0, sag:1.0, mold:1.0, shrink:1.0}
+};
+function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
+
+// Hue is the item's days-left bucket, state(d) -- the same lookup COLOR
+// uses everywhere else on the page. Fraction only blends that hue toward
+// the drawer's brown (BUCKET_HEX.gone), scaled by the category's darken
+// weight; it never changes which hue family an item starts from. Hex
+// values here must match the CSS custom properties in :root.
+const BUCKET_HEX = {fresh:'#5F7350', turn:'#A8842A', crit:'#6E3448', gone:'#2B2320'};
+function hexToRgb(hex){
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function decayColor(d, fraction, darkenWeight){
+  const base = hexToRgb(BUCKET_HEX[state(d)]);
+  const gone = hexToRgb(BUCKET_HEX.gone);
+  const t = Math.max(0, Math.min(1, fraction * 0.75 * darkenWeight));
+  const rgb = base.map((c, i) => Math.round(c + (gone[i] - c) * t));
+  return `rgb(${rgb.join(',')})`;
+}
+
+// One basic SVG shape per category -- simple silhouettes, not illustration.
+function fridgeShapeGeometry(shape, s){
+  switch(shape){
+    case 'leafy':   return `<ellipse cx="${s/2}" cy="${s*0.6}" rx="${s*0.46}" ry="${s*0.34}"/>`;
+    case 'soft':    return `<circle cx="${s/2}" cy="${s/2}" r="${s*0.42}"/>`;
+    case 'dairy':   return `<rect x="${s*0.22}" y="${s*0.08}" width="${s*0.56}" height="${s*0.84}" rx="${s*0.07}"/>`;
+    case 'protein': return `<rect x="${s*0.1}" y="${s*0.28}" width="${s*0.8}" height="${s*0.46}" rx="${s*0.14}"/>`;
+    case 'cooked':  return `<ellipse cx="${s/2}" cy="${s*0.58}" rx="${s*0.46}" ry="${s*0.22}"/>`;
+    case 'veg':     return `<rect x="${s*0.18}" y="${s*0.1}" width="${s*0.64}" height="${s*0.8}" rx="${s*0.16}"/>`;
+    default:        return `<rect x="2" y="2" width="${s-4}" height="${s-4}" rx="${s*0.18}"/>`;
+  }
+}
+
+// A speckle overlay using the SAME geometry, clipped through the shared
+// #moldSpeckle filter and faded in by moldOpacity -- the speckle only ever
+// looks like noise *within* the item's own outline, never a separate blob
+// floating on top of it.
+function foodShapeMarkup(shape, color, moldOpacity, size){
+  const geo = fridgeShapeGeometry(shape, size);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    ${geo.replace('/>', ` fill="${color}"/>`)}
+    ${geo.replace('/>', ` fill="${BUCKET_HEX.gone}" filter="url(#moldSpeckle)" opacity="${moldOpacity.toFixed(2)}"/>`)}
+  </svg>`;
+}
+
+// Greedy left-to-right width packing, items pre-sorted soonest-first so
+// size is already non-increasing within any row this produces -- the
+// first item placed in a row is always that row's largest, which is what
+// lets the single-pass row-height math in renderFridgeView stay simple.
+// Each row IS the depth tier: row 0 is the front shelf (always exposed),
+// every row after it is "behind" (covered, tap to reveal) -- not a second,
+// fuzzier threshold on top of the packing that already produces it.
+function layoutShelfRow(items, day, containerWidth){
+  const padX = 10, overlapRatio = 0.42;
+  let x = padX, row = 0, rowStarted = false;
+  const laidOut = [];
+  items.forEach(it => {
+    const d = leftAt(it, day);
+    const frontness = 1 - pos(Math.max(0, d)) / 100;
+    const size = Math.round(34 + frontness * 70);
+    if (rowStarted && x + size > containerWidth - padX){
+      row++;
+      x = padX;
+      rowStarted = false;
+    }
+    rowStarted = true;
+    const depthLift = Math.round((1 - frontness) * 16);
+    laidOut.push({it, d, frontness, size, x, row, depthLift, covered: row > 0});
+    x += size - Math.round(size * overlapRatio);
+  });
+  return laidOut;
+}
+
+function buildShelfItem(p, day){
+  const {it, d, frontness, size, x, depthLift, covered} = p;
+  const f = food(it);
+  const cat = fridgeCatOf(it);
+  const frac = decayFraction(it, day);
+  const shownSize = Math.max(18, Math.round(size * (1 - frac * 0.22 * cat.shrink)));
+  const moldOpacity = Math.max(0, Math.min(1, ((frac - 0.3) / 0.7) * cat.mold));
+  const color = decayColor(d, frac, cat.darken);
+  const sagY = (1 - frac * 0.14 * cat.sag).toFixed(3);
+  const sagX = (1 + frac * 0.05 * cat.sag).toFixed(3);
+  const brightness = (0.6 + frontness * 0.4).toFixed(2);
+  const shapeStyle = `width:${shownSize}px;height:${shownSize}px;` +
+    `transform:scaleY(${sagY}) scaleX(${sagX});transform-origin:bottom center;` +
+    `filter:brightness(${brightness})`;
+  const dayLabel = d === 0 ? 'today' : d + 'd';
+  const itemStyle = `left:${x}px;bottom:${p.bottom}px;z-index:${p.z}`;
+  return `<div class="fridge-item${covered ? ' covered' : ''}" style="${itemStyle}">
+    <div class="fridge-shape" style="${shapeStyle}">${foodShapeMarkup(cat.shape, color, moldOpacity, shownSize)}</div>
+    <div class="fridge-label mono">${f.en}<span class="fridge-days">${dayLabel}</span></div>
+  </div>`;
+}
+
+// Gone items skip the shelf's urgency scale entirely -- fixed size, always
+// fully decayed (fraction capped at 1 regardless of how long ago it
+// expired), so the drawer reads as one flat, impossible-to-miss tier.
+// Category still shapes and weights the decay, same as the shelf.
+function buildDrawerItem(it, day){
+  const d = leftAt(it, day);
+  const f = food(it);
+  const cat = fridgeCatOf(it);
+  const frac = 1;
+  const size = Math.round(58 * (1 - 0.18 * cat.shrink));
+  const moldOpacity = Math.max(0, Math.min(1, ((frac - 0.3) / 0.7) * cat.mold));
+  const color = decayColor(d, frac, cat.darken);
+  const sagY = (1 - frac * 0.14 * cat.sag).toFixed(3);
+  const sagX = (1 + frac * 0.05 * cat.sag).toFixed(3);
+  const shapeStyle = `width:${size}px;height:${size}px;` +
+    `transform:scaleY(${sagY}) scaleX(${sagX});transform-origin:bottom center`;
+  return `<div class="fridge-item">
+    <div class="fridge-shape" style="${shapeStyle}">${foodShapeMarkup(cat.shape, color, moldOpacity, size)}</div>
+    <div class="fridge-label mono">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span></div>
+    <button class="ghost" data-fridge-toss="${it.id}">Toss</button>
+  </div>`;
+}
+
+function renderFridgeView(){
+  const shelf = document.getElementById('fridgeShelf');
+  const drawer = document.getElementById('fridgeDrawer');
+  const drawerItems = document.getElementById('fridgeDrawerItems');
+  const day = today();
+
+  document.getElementById('fridgeCount').textContent = fridge.length ? fridge.length + ' items' : '—';
+
+  if (!fridge.length){
+    shelf.style.height = '';
+    shelf.innerHTML = '<div class="empty">The fridge is empty.</div>';
+    drawer.style.display = 'none';
+    drawerItems.innerHTML = '';
+    return;
+  }
+
+  const savable = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  const gone = fridge.filter(it => leftAt(it, day) < 0);
+
+  if (savable.length){
+    const containerWidth = shelf.clientWidth || shelf.parentElement.clientWidth || 900;
+    const laidOut = layoutShelfRow(savable, day, containerWidth);
+    const rowSizes = [];
+    laidOut.forEach(p => { if (rowSizes[p.row] === undefined) rowSizes[p.row] = p.size; });
+    const rowGap = 34, padBottom = 14;
+    const rowBottoms = [];
+    let acc = padBottom;
+    for (let r = 0; r < rowSizes.length; r++){ rowBottoms[r] = acc; acc += rowSizes[r] + rowGap; }
+    laidOut.forEach((p, i) => {
+      p.bottom = rowBottoms[p.row] + p.depthLift;
+      p.z = laidOut.length - i; // earlier (more urgent) items always paint over later ones
+    });
+    shelf.style.height = (acc + 6) + 'px';
+    shelf.innerHTML = laidOut.map(p => buildShelfItem(p, day)).join('');
+    shelf.querySelectorAll('.fridge-item.covered').forEach(el => {
+      el.onclick = () => el.classList.toggle('revealed');
+    });
+  } else {
+    shelf.style.height = '';
+    shelf.innerHTML = '<div class="empty">Nothing left to save — check the drawer below.</div>';
+  }
+
+  if (gone.length){
+    drawer.style.display = '';
+    drawerItems.innerHTML = gone.map(it => buildDrawerItem(it, day)).join('');
+    drawerItems.querySelectorAll('[data-fridge-toss]').forEach(b => {
+      b.onclick = () => useItem(+b.dataset.fridgeToss, true);
+    });
+  } else {
+    drawer.style.display = 'none';
+    drawerItems.innerHTML = '';
+  }
 }
 
 function renderChart(){
@@ -1058,7 +1336,11 @@ function renderProjectedCard(entry, boxId, skipSet){
   box.style.display = '';
   const day = entry.day;
   const label = DAY_LABELS[entry.dayIndex];
-  const fact = factAt(day);
+  // factAt can legitimately return null now that it reads the projected
+  // fridge: if an earlier day's recommendation used up everything, there's
+  // nothing left to report on. That's a real, if unusual, outcome -- say
+  // so plainly rather than let the template print the literal word null.
+  const fact = factAt(day, entry.fridgeAtStart) || 'Nothing would be left in the fridge by then.';
 
   let subHTML;
   if (entry.tier === 'terminal'){
@@ -2127,7 +2409,7 @@ document.getElementById('entry').addEventListener('blur', () => {
   suggestItems = []; suggestIndex = -1;
   renderSuggestions();
 });
-window.addEventListener('resize', () => renderChart());
+window.addEventListener('resize', () => { renderChart(); renderFridgeView(); });
 initVoice();
 initSettings();
 initReceipt();
