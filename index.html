@@ -195,8 +195,31 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   margin-top:18px;border-left:2px solid var(--turn);padding:6px 0 6px 12px;
   color:var(--ink-2);font-size:14px;
 }
-.missing .sub{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.missing .sub{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .missing button{border-color:var(--line)}
+.missing input[type="password"]{
+  flex:1;min-width:200px;
+  font-family:'DM Mono',ui-monospace,monospace;font-size:13px;
+  background:transparent;border:1px solid var(--line);color:var(--ink);
+  padding:7px 10px;
+}
+.missing input[type="password"]:focus{outline:none;border-color:var(--ink)}
+
+.receipt-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.receipt-row:last-child{border-bottom:none}
+.receipt-row input[type="checkbox"]{accent-color:var(--ink);flex:none}
+.receipt-row input[type="text"]{
+  flex:1;
+  font-family:'DM Mono',ui-monospace,monospace;font-size:13px;
+  background:transparent;border:1px solid var(--line);color:var(--ink);
+  padding:6px 9px;
+}
+.receipt-row input[type="text"]:focus{outline:none;border-color:var(--ink)}
+.receipt-row.unresolved input[type="text"]{border-color:var(--turn);color:var(--turn)}
+.receipt-row .qty{
+  font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);
+  min-width:24px;text-align:right;flex:none;
+}
 
 /* ---------- inventory ---------- */
 
@@ -298,7 +321,19 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   <header class="bar">
     <div class="logo">Perishable</div>
     <div class="mono" id="date">—</div>
+    <span style="flex:1"></span>
+    <button class="ghost" id="settingsBtn">Settings</button>
   </header>
+
+  <div class="missing" id="settingsPanel" style="display:none;margin-top:14px">
+    <div>Claude API key, for receipt scanning only. Stored in this browser, never in the file.</div>
+    <div class="sub" style="margin-top:10px">
+      <input type="password" id="settingsKey" placeholder="sk-ant-…" autocomplete="off">
+      <button class="solid" id="settingsSave">Save</button>
+      <button id="settingsClear">Clear</button>
+    </div>
+    <div class="mono" id="settingsStatus" style="margin-top:8px;color:var(--ink-3)"></div>
+  </div>
 
   <section class="hero">
     <h1 id="headline">—</h1>
@@ -348,8 +383,11 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
       </div>
       <button class="solid" id="addbtn">Add</button>
       <button id="voicebtn" style="display:none">Speak</button>
+      <button id="scanReceiptBtn">Scan receipt</button>
+      <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
     </div>
     <div class="missing" id="voicePreview" style="display:none"></div>
+    <div class="missing" id="receiptPreview" style="display:none"></div>
     <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or Chinese. Anything typed here joins the tap list above next time.</p>
   </section>
 
@@ -543,6 +581,8 @@ const SUBS = {
 
 const HORIZON = 21;
 const STORE_KEY = 'perishable.v1';
+const KEY_STORE = 'perishable.key';     // API key only — never bundled with app state
+const RECEIPT_MODEL = 'claude-haiku-5-5';
 
 // dev-only clock shift, e.g. ?day=+5 — never shown in the UI, never persisted
 const DAY_OFFSET = (() => {
@@ -1430,6 +1470,314 @@ function addEntry(text){
   commitItems(parseText(text));
 }
 
+/* ---------- settings (API key) ---------- */
+
+function getApiKey(){
+  try { return (localStorage.getItem(KEY_STORE) || '').trim(); } catch(e){ return ''; }
+}
+function setApiKey(k){
+  try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch(e){ /* unavailable */ }
+}
+
+function initSettings(){
+  const panel = document.getElementById('settingsPanel');
+  document.getElementById('settingsBtn').onclick = () => {
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    if (panel.style.display !== 'none') renderSettingsStatus();
+  };
+  document.getElementById('settingsSave').onclick = () => {
+    const input = document.getElementById('settingsKey');
+    const v = input.value.trim();
+    if (!v){ toast('Enter a key first'); return; }
+    setApiKey(v);
+    input.value = '';
+    renderSettingsStatus();
+    toast('Key saved');
+  };
+  document.getElementById('settingsClear').onclick = () => {
+    setApiKey('');
+    document.getElementById('settingsKey').value = '';
+    renderSettingsStatus();
+    toast('Key cleared');
+  };
+}
+
+function renderSettingsStatus(){
+  document.getElementById('settingsStatus').textContent =
+    getApiKey() ? 'Key saved in this browser.' : 'No key saved yet — receipt scanning needs one.';
+}
+
+/* ---------- receipt scanning ----------
+   Flow: downscale the photo client-side, send it to Claude for OCR only
+   (names + quantity + is_food + date — never shelf life), run every
+   returned name through the same lookup() the typed/voice path uses so
+   USDA FoodKeeper stays the one source of shelf life, then show an
+   editable review list before anything touches the fridge. A failed
+   call keeps the photo and offers Retry — nothing is logged silently. */
+
+let receiptState = 'idle'; // idle | scanning | review | error
+let receiptPending = null; // {age, dateKnown, items:[{raw,label,key,included,quantity,unresolved}]}
+let receiptPhoto = null;   // cached downscaled dataURL, kept only for Retry
+let receiptErrorMsg = '';
+
+function receiptFoodNames(){
+  return Object.values(FOODS).map(f => f.en).join(', ');
+}
+
+function buildReceiptPrompt(){
+  return 'You are reading a grocery receipt photo. It may be in English or ' +
+    'Chinese (e.g. Costco, 99 Ranch).\n\n' +
+    'Return ONLY JSON, no prose, no markdown fences, in exactly this shape:\n' +
+    '{"date": "YYYY-MM-DD or null", "items": [{"raw": "string as printed", ' +
+    '"expanded": "string", "quantity": integer, "is_food": boolean}]}\n\n' +
+    'Rules:\n' +
+    '- "date" is the receipt\'s purchase date if legible, else null.\n' +
+    '- "raw" is the line exactly as printed.\n' +
+    '- "expanded" is a plain, recognizable name (e.g. "KS ORG BNNA" -> ' +
+    '"organic bananas"). If the item clearly matches one of these known ' +
+    'foods, return that exact name instead: ' + receiptFoodNames() + '. ' +
+    'Otherwise return a plain English or Chinese name.\n' +
+    '- "quantity" is an integer count of packages/units bought. A weighed ' +
+    'line (e.g. "1.52 lb @ 0.99/lb") is quantity 1.\n' +
+    '- "is_food" is false for paper towels, cleaning supplies, tax, ' +
+    'subtotal, total, coupons, and other non-food lines.\n' +
+    '- Never assign a shelf life, category, or storage advice — that is ' +
+    'handled elsewhere.\n' +
+    '- Every line on the receipt produces one item, food or not.';
+}
+
+// Real call lives behind this seam so tools/scenarios.js can stub it with
+// a canned response instead of hitting the network.
+async function callReceiptAPI(dataUrl){
+  if (window.__receiptApiOverride) return window.__receiptApiOverride(dataUrl);
+
+  const key = getApiKey();
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: RECEIPT_MODEL,
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: [
+          {type:'image', source:{type:'base64', media_type:'image/jpeg', data:base64}},
+          {type:'text', text: buildReceiptPrompt()}
+        ]
+      }]
+    })
+  });
+  if (!res.ok){
+    let detail = '';
+    try { detail = (await res.json()).error?.message || ''; } catch(e){ /* non-JSON error body */ }
+    throw new Error('API error ' + res.status + (detail ? ': ' + detail : ''));
+  }
+  const data = await res.json();
+  const text = (data.content || []).map(b => b.text || '').join('').trim();
+  const cleaned = text.replace(/^```(json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch(e){ throw new Error('Could not read the model’s response'); }
+  if (!parsed || !Array.isArray(parsed.items)) throw new Error('Unexpected response shape');
+  return parsed;
+}
+
+function downscaleImage(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const longEdge = Math.max(img.width, img.height);
+      const scale = Math.min(1, 1600 / longEdge);
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that photo')); };
+    img.src = url;
+  });
+}
+
+function parseReceiptDate(dateStr){
+  if (!dateStr) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr).trim());
+  if (!m) return null;
+  const day = Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 + DAY_OFFSET;
+  return Number.isFinite(day) ? day : null;
+}
+
+// Pure: API response in, review-list items out. One age (days ago) for the
+// whole receipt, not per line — a receipt has one purchase date.
+function buildReceiptPending(parsed){
+  const dateDay = parseReceiptDate(parsed.date);
+  const age = dateDay != null ? Math.max(0, today() - dateDay) : 0;
+  const items = (parsed.items || []).map(it => {
+    const expanded = String(it.expanded || it.raw || '').trim();
+    const isFood = !!it.is_food;
+    const key = isFood ? lookup(expanded) : null;
+    const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+    return {
+      raw: String(it.raw || ''),
+      label: key ? FOODS[key].en : (expanded ? expanded.charAt(0).toUpperCase() + expanded.slice(1) : 'Unrecognized item'),
+      key,
+      included: isFood,
+      quantity: isFood ? qty : 1,
+      unresolved: isFood && !key
+    };
+  });
+  receiptPending = {age, dateKnown: dateDay != null, items};
+}
+
+function initReceipt(){
+  const btn = document.getElementById('scanReceiptBtn');
+  const file = document.getElementById('receiptFile');
+  btn.onclick = () => {
+    if (!getApiKey()){
+      toast('Add your Claude API key in Settings first');
+      document.getElementById('settingsPanel').style.display = '';
+      renderSettingsStatus();
+      return;
+    }
+    file.value = '';
+    file.click();
+  };
+  file.onchange = () => {
+    const f = file.files && file.files[0];
+    if (f) handleReceiptFile(f);
+  };
+}
+
+async function handleReceiptFile(file){
+  receiptState = 'scanning';
+  receiptErrorMsg = '';
+  renderReceiptBox();
+  try {
+    const dataUrl = await downscaleImage(file);
+    receiptPhoto = dataUrl;
+    const parsed = await callReceiptAPI(dataUrl);
+    buildReceiptPending(parsed);
+    receiptState = 'review';
+  } catch(e){
+    receiptState = 'error';
+    receiptErrorMsg = e.message || 'Something went wrong reading that receipt';
+  }
+  renderReceiptBox();
+}
+
+function retryReceiptScan(){
+  if (!receiptPhoto) return;
+  receiptState = 'scanning';
+  receiptErrorMsg = '';
+  renderReceiptBox();
+  callReceiptAPI(receiptPhoto)
+    .then(parsed => { buildReceiptPending(parsed); receiptState = 'review'; })
+    .catch(e => { receiptState = 'error'; receiptErrorMsg = e.message || 'Something went wrong reading that receipt'; })
+    .then(renderReceiptBox);
+}
+
+function discardReceipt(){
+  receiptState = 'idle';
+  receiptPending = null;
+  receiptPhoto = null;
+  receiptErrorMsg = '';
+  renderReceiptBox();
+}
+
+function renderReceiptBox(){
+  const box = document.getElementById('receiptPreview');
+  if (receiptState === 'idle'){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  box.style.display = '';
+
+  if (receiptState === 'scanning'){
+    box.innerHTML = '<div>Reading the receipt…</div>';
+    return;
+  }
+
+  if (receiptState === 'error'){
+    box.innerHTML =
+      '<div>' + receiptErrorMsg + '</div>' +
+      '<div class="sub" style="margin-top:10px">' +
+        '<button class="solid" id="receiptRetry">Retry</button>' +
+        '<button id="receiptDiscard">Discard</button>' +
+      '</div>';
+    document.getElementById('receiptRetry').onclick = retryReceiptScan;
+    document.getElementById('receiptDiscard').onclick = discardReceipt;
+    return;
+  }
+
+  // review
+  const dateLine = receiptPending.dateKnown
+    ? 'Bought ' + receiptPending.age + (receiptPending.age === 1 ? ' day' : ' days') + ' ago, per the receipt'
+    : 'No legible date on the receipt — logging as bought today';
+  const rows = receiptPending.items.map((it, i) =>
+    '<div class="receipt-row' + (it.unresolved ? ' unresolved' : '') + '">' +
+      '<input type="checkbox" class="receipt-check" data-idx="' + i + '"' + (it.included ? ' checked' : '') + '>' +
+      '<input type="text" class="receipt-name" data-idx="' + i + '" value="' + it.label.replace(/"/g, '&quot;') + '">' +
+      '<span class="qty">' + (it.quantity > 1 ? '×' + it.quantity : '') + '</span>' +
+    '</div>'
+  ).join('');
+  box.innerHTML =
+    '<div>' + dateLine + '</div>' +
+    '<div style="margin-top:10px">' + rows + '</div>' +
+    '<div class="sub" style="margin-top:12px">' +
+      '<button class="solid" id="receiptConfirm">Add checked</button>' +
+      '<button id="receiptDiscard">Discard</button>' +
+    '</div>';
+  box.querySelectorAll('.receipt-check').forEach(cb => {
+    cb.onchange = () => { receiptPending.items[+cb.dataset.idx].included = cb.checked; };
+  });
+  box.querySelectorAll('.receipt-name').forEach(inp => {
+    inp.oninput = () => { receiptPending.items[+inp.dataset.idx].label = inp.value; };
+  });
+  document.getElementById('receiptConfirm').onclick = confirmReceipt;
+  document.getElementById('receiptDiscard').onclick = discardReceipt;
+}
+
+// Committing matches commitItems()'s shape: known items use the FOODS
+// shelf life, everything else falls back to the same estimated 7-day
+// custom item typed/voice entry already uses. If a review-screen edit
+// moved a matched item's name away from its FOODS label, it commits as
+// a custom item instead — the edited text is what gets saved, honestly.
+function confirmReceipt(){
+  const age = receiptPending.age;
+  let added = 0;
+  receiptPending.items.forEach(it => {
+    if (!it.included) return;
+    for (let n = 0; n < it.quantity; n++){
+      const id = ++uid;
+      const stillMatched = it.key && FOODS[it.key].en === it.label.trim();
+      if (stillMatched){
+        fridge.push({id, key: it.key, bought: today() - age, custom: null});
+        touchStanding(it.key, null);
+      } else {
+        const name = it.label.trim() || it.raw || 'Item';
+        const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
+        const key = '_c_' + (slug(name) || ('item' + id));
+        fridge.push({id, key, bought: today() - age, custom});
+        touchStanding(key, custom);
+      }
+      added++;
+    }
+  });
+  discardReceipt();
+  if (added){ render(); toast(added + ' added from receipt'); }
+  else toast('Nothing checked to add');
+}
+
 /* ---------- voice ---------- */
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1696,6 +2044,8 @@ document.getElementById('entry').addEventListener('blur', () => {
 });
 window.addEventListener('resize', () => renderChart());
 initVoice();
+initSettings();
+initReceipt();
 
 boot();
 render();
