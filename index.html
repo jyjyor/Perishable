@@ -109,17 +109,18 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .fridge-shape{display:flex;align-items:flex-end;justify-content:center}
 .fridge-shape svg{display:block}
 .fridge-label{
+  /* color is always set inline per item now (the urgency bucket, state()/
+     COLOR -- the one place that lookup still shows on the fridge view);
+     var(--ink-2) here is only a fallback if that's ever omitted. */
   text-align:center;color:var(--ink-2);line-height:1.3;
   display:flex;flex-direction:column;align-items:center;gap:1px;
 }
-.fridge-label .fridge-days{color:var(--ink-3)}
 .fridge-drawer{
   margin-top:0;background:var(--panel-2);
   padding:16px 18px 18px;border-bottom:1px solid var(--line);
 }
 .fridge-drawer-label{color:var(--ink-2);margin-bottom:12px}
 .fridge-drawer-items{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
-.fridge-drawer-items .fridge-label{color:var(--ink-3)}
 .fridge-drawer-items button{margin-top:2px}
 
 /* ---------- hero ---------- */
@@ -1306,23 +1307,17 @@ function mushroomBrownSpots(deformed, fraction, size, seed){
   return spots.join('');
 }
 
-// Mold as a mushroom actually gets it: white, fuzzy, cottony, starting at
-// the gills and the cap edge -- not evenly over the cap face. Dense, fine
-// stippling (far smaller/more numerous dots than the flat version's
-// pebbles) plus short hair-like strokes fringing each colony's outer
-// edge, for a fibrous rather than spotted edge. Seeded at the rim and the
-// cap's two edge points; same front-loaded growth curve so it's legible
-// soon after MOLD_START without looking fully mature immediately.
-function mushroomMoldMarkup(deformed, fraction, moldW, size, seed){
-  if (moldW <= 0 || fraction <= MOLD_START) return '';
+// Mold as actual mold: white, fuzzy, cottony, starting at a food's own
+// edges -- not an even wash over its face. Dense, fine stippling (far
+// smaller/more numerous dots than the old flat version's pebbles) plus
+// short hair-like strokes fringing each colony's outer edge, for a
+// fibrous rather than spotted edge. Shared by every shape; only where the
+// seed points sit differs (mushroomMoldMarkup below seeds at the rim and
+// cap edges specifically; genericMoldMarkup seeds at two outline points).
+// Front-loaded growth curve so a colony is legible soon after MOLD_START
+// rather than looking fully mature immediately.
+function moldColonies(seeds, fraction, moldW, size, seed){
   const rand = seededRand(seed + 888);
-  const rim = mushroomRim(deformed, size);
-  const seeds = [
-    { pt: rim.at(0.12), phase: 0 },
-    { pt: rim.at(0.88), phase: 0.03 },
-    { pt: rim.p0, phase: 0.08 },
-    { pt: rim.p6, phase: 0.08 }
-  ];
   const span = 1 - MOLD_START;
   let dots = [], hairs = [];
   seeds.forEach(sd => {
@@ -1347,6 +1342,84 @@ function mushroomMoldMarkup(deformed, fraction, moldW, size, seed){
   });
   return dots.join('') + hairs.join('');
 }
+function mushroomMoldMarkup(deformed, fraction, moldW, size, seed){
+  if (moldW <= 0 || fraction <= MOLD_START) return '';
+  const rim = mushroomRim(deformed, size);
+  return moldColonies([
+    { pt: rim.at(0.12), phase: 0 },
+    { pt: rim.at(0.88), phase: 0.03 },
+    { pt: rim.p0, phase: 0.08 },
+    { pt: rim.p6, phase: 0.08 }
+  ], fraction, moldW, size, seed);
+}
+
+/* ---------- generic line-art (every non-mushroom category) ----------
+   Basic level only -- no per-category refinement yet, just the shared
+   decay mechanics (identity lines, discoloration, mold) expressed
+   generically off whatever outline a category already has, so nothing
+   in the fridge view is a flat swatch next to mushroom's line drawing. */
+
+// A few simple creases from the centroid toward the outline -- not
+// per-category illustration, just enough surface detail that the body
+// isn't a flat silhouette with nothing happening inside it.
+function genericIdentityLines(deformed, size, seed){
+  const rand = seededRand(seed + 210);
+  const cx = deformed.reduce((s, p) => s + p[0], 0) / deformed.length;
+  const cy = deformed.reduce((s, p) => s + p[1], 0) / deformed.length;
+  const n = deformed.length;
+  const used = new Set();
+  const lines = [];
+  for (let k = 0; k < Math.min(3, n); k++){
+    let i;
+    do { i = Math.floor(rand() * n); } while (used.has(i));
+    used.add(i);
+    const p = deformed[i];
+    const reach = 0.5 + rand() * 0.3;
+    const ex = cx + (p[0] - cx) * reach, ey = cy + (p[1] - cy) * reach;
+    const bow = size * 0.02 * (rand() * 2 - 1);
+    const mx = (cx + ex) / 2 + bow, my = (cy + ey) / 2;
+    lines.push(`M ${cx.toFixed(1)} ${cy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`);
+  }
+  return lines.map(d => `<path d="${d}"/>`).join('');
+}
+
+// Same brown-fleck bruising as mushroom's, placed generically: a point on
+// the outline, pulled partway toward the centroid, rather than along a
+// rim curve only mushroom's cap-and-stem shape actually has.
+function genericDiscolorationSpots(deformed, fraction, size, seed){
+  if (fraction <= 0.25) return '';
+  const rand = seededRand(seed + 555);
+  const cx = deformed.reduce((s, p) => s + p[0], 0) / deformed.length;
+  const cy = deformed.reduce((s, p) => s + p[1], 0) / deformed.length;
+  const n = deformed.length;
+  const growT = Math.min(1, (fraction - 0.25) / 0.45);
+  const count = Math.round(1 + growT * 3);
+  const spots = [];
+  for (let i = 0; i < count; i++){
+    const p = deformed[Math.floor(rand() * n)];
+    const reach = 0.25 + rand() * 0.55;
+    const px = cx + (p[0] - cx) * reach, py = cy + (p[1] - cy) * reach;
+    const r = size * (0.018 + rand() * 0.015) * (0.6 + growT * 0.5);
+    const pts = ellipseRing(5, r, r * 0.8, px, py).map(pt => {
+      const jr = (rand() * 2 - 1) * r * 0.3;
+      const dx = pt[0] - px, dy = pt[1] - py, dist = Math.hypot(dx, dy) || 1;
+      return [pt[0] + (dx / dist) * jr, pt[1] + (dy / dist) * jr];
+    });
+    spots.push(`<path d="${smoothClosedPath(pts)}" fill="#6B5438" opacity="${(0.5 + growT * 0.3).toFixed(2)}"/>`);
+  }
+  return spots.join('');
+}
+
+function genericMoldMarkup(deformed, fraction, moldW, size, seed){
+  if (moldW <= 0 || fraction <= MOLD_START) return '';
+  const n = deformed.length;
+  // Two outline points, roughly opposite each other -- mold starts "on"
+  // the food's own edge, never floating centered on its face.
+  return moldColonies(
+    [{ pt: deformed[0], phase: 0 }, { pt: deformed[Math.floor(n / 2)], phase: 0.05 }],
+    fraction, moldW, size, seed
+  );
+}
 
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
@@ -1354,11 +1427,15 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   const uid = 'fline' + (fridgeShapeCounter++);
   const strokeW = Math.max(1, size * 0.008).toFixed(2);
   const isMushroom = shape === 'mushroom';
-  const strokes = isMushroom ? mushroomLines(deformed, fraction, wrinkleW, size, seed) : '';
-  const spots = isMushroom ? mushroomBrownSpots(deformed, fraction, size, seed) : '';
+  const strokes = isMushroom
+    ? mushroomLines(deformed, fraction, wrinkleW, size, seed)
+    : genericIdentityLines(deformed, size, seed);
+  const spots = isMushroom
+    ? mushroomBrownSpots(deformed, fraction, size, seed)
+    : genericDiscolorationSpots(deformed, fraction, size, seed);
   const moldInner = isMushroom
     ? mushroomMoldMarkup(deformed, fraction, moldW, size, seed)
-    : moldDotsMarkup(size, fraction, moldW, seed);
+    : genericMoldMarkup(deformed, fraction, moldW, size, seed);
   const mold = moldInner ? `<g clip-path="url(#${uid}-clip)">${moldInner}</g>` : '';
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
@@ -1383,7 +1460,9 @@ function layoutShelfRow(items, day, containerWidth){
   items.forEach(it => {
     const d = leftAt(it, day);
     const frontness = 1 - pos(Math.max(0, d)) / 100;
-    const size = Math.round(34 + frontness * 70);
+    // Large enough that the front row reads at a glance, bigger than the
+    // headline numerals beside it -- 44-174px, not the earlier 34-104.
+    const size = Math.round(44 + frontness * 130);
     if (rowStarted && x + size > containerWidth - padX){
       row++;
       x = padX;
@@ -1403,38 +1482,67 @@ function buildShelfItem(p, day){
   const cat = fridgeCatOf(it);
   const frac = decayFraction(it, day);
   const shownSize = Math.max(18, Math.round(size * (1 - frac * 0.22 * cat.shrink)));
-  const color = decayColor(d, frac, cat.darken, false);
+  // Body color is the food's own tone (natureColor); urgency lives only on
+  // the label now, via the same state()/COLOR lookup the list and legend use.
+  const color = natureColor(frac);
+  const labelColor = COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = d === 0 ? 'today' : d + 'd';
   const itemStyle = `left:${x}px;bottom:${p.bottom}px;z-index:${p.z}`;
-  const svg = foodShapeMarkup(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
   return `<div class="fridge-item${covered ? ' covered' : ''}" style="${itemStyle}">
     <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
-    <div class="fridge-label mono">${f.en}<span class="fridge-days">${dayLabel}</span></div>
+    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${dayLabel}</span></div>
   </div>`;
 }
 
 // Gone items skip the shelf's urgency scale entirely -- fixed size, always
 // fully decayed (fraction capped at 1 regardless of how long ago it
 // expired), so the drawer reads as one flat, impossible-to-miss tier.
-// Category still shapes and weights the decay, same as the shelf, and
-// isGone=true is what lets the drawer reach a visibly deeper dark than
-// anything still on the shelf.
+// Category still shapes and weights the decay, same as the shelf.
 function buildDrawerItem(it, day){
   const d = leftAt(it, day);
   const f = food(it);
   const cat = fridgeCatOf(it);
   const frac = 1;
-  const size = Math.round(58 * (1 - 0.18 * cat.shrink));
-  const color = decayColor(d, frac, cat.darken, true);
+  const size = Math.round(76 * (1 - 0.18 * cat.shrink));
+  const color = natureColor(frac);
+  const labelColor = COLOR[state(d)]; // always 'gone' here, same lookup as everywhere else
   const shapeStyle = `width:${size}px;height:${size}px`;
-  const svg = foodShapeMarkup(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
   return `<div class="fridge-item">
     <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
-    <div class="fridge-label mono">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span></div>
+    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span></div>
     <button class="ghost" data-fridge-toss="${it.id}">Toss</button>
   </div>`;
+}
+
+// Front-row (always-visible) labels only -- covered items' labels are
+// hidden until tapped, so they can't collide with anything by default.
+// The initial x positions are packed by shape size alone; a long name's
+// label column can still be wider than that spacing (max-width:92px lets
+// a label wrap, but two adjacent 92px columns centred ~60px apart still
+// overlap). This runs after the real DOM exists specifically so it can
+// read each label's actual rendered width -- no static estimate of text
+// width would be honest across every food name and every viewport.
+function preventLabelOverlap(shelf){
+  const shelfRect = shelf.getBoundingClientRect();
+  const GAP = 6;
+  let prevRight = -Infinity;
+  shelf.querySelectorAll('.fridge-item:not(.covered)').forEach(el => {
+    const label = el.querySelector('.fridge-label');
+    const labelRect = label.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const elCenter = (elRect.left - shelfRect.left) + elRect.width / 2;
+    let labelLeft = elCenter - labelRect.width / 2;
+    if (labelLeft < prevRight + GAP){
+      const shift = (prevRight + GAP) - labelLeft;
+      el.style.left = (parseFloat(el.style.left) + shift) + 'px';
+      labelLeft += shift;
+    }
+    prevRight = labelLeft + labelRect.width;
+  });
 }
 
 function renderFridgeView(){
@@ -1474,6 +1582,7 @@ function renderFridgeView(){
     shelf.querySelectorAll('.fridge-item.covered').forEach(el => {
       el.onclick = () => el.classList.toggle('revealed');
     });
+    preventLabelOverlap(shelf);
   } else {
     shelf.style.height = '';
     shelf.innerHTML = '<div class="empty">Nothing left to save — check the drawer below.</div>';

@@ -20,8 +20,12 @@ consumer food app.
 
 ## Visual system — derived, not decorative
 
-Colours are the actual decay sequence of produce. Do not add colours
-outside this set. Do not introduce a "brand" colour.
+Two colour roles, kept apart on purpose. Urgency — how soon something
+turns — is told only by the decay-sequence palette below, and it appears
+in exactly four places: the label on each fridge-view item (name and
+days-left), the inventory list, the decay line, and its legend. Do not
+add colours outside this set for urgency, and do not let urgency colour
+migrate anywhere else.
 
   --paper:#E6EAE8   cold fridge-interior white, fluorescent-lit
   --panel:#DCE1DF
@@ -34,7 +38,26 @@ outside this set. Do not introduce a "brand" colour.
   --turn:#A8842A    oxidised ochre
   --crit:#6E3448    bruise plum
   --gone:#2B2320
-  --paper:#E6EAE8
+
+Food, in the fridge view specifically, is told by what it actually looks
+like decaying — cream through brown to near-black (natureColor() in
+index.html) — not by urgency. A mustard mushroom turning bruise-plum read
+as a dye, not a mushroom: urgency and decay are different questions, and
+one fill trying to answer both was the mistake this corrects. These
+tones are kept cool and desaturated on purpose, so the body never visually
+competes with the more saturated urgency colour sitting right next to it
+on the label, and they sit outside the decay-sequence set above
+deliberately — they are not a second brand palette, and nothing else on
+the page should start using them.
+
+Food bodies are line-drawn, not flat fills: a thin ink outline over the
+natural-tone wash, identity from a few interior lines (mushroom has a
+real cap-and-stem with gills; the other categories carry a basic version
+of the same language — a few creases — not yet bespoke per category), and
+decay drawn in line as much as in colour — wrinkles that multiply,
+brown discoloration that appears before mold does, an outline that
+shrivels inward as it shrinks rather than stretching or twisting. A
+field-guide specimen plate, not a cartoon or an illustration style.
 
 Type: Archivo variable (width axis carries the personality — 125 wdth
 uppercase for display, 100 for body) plus DM Mono for all dates, counts,

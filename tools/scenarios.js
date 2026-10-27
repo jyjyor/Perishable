@@ -313,6 +313,20 @@ async function fridgeHaulScenario(browser) {
   console.log('drawer (gone) items:', drawerCount);
   if (drawerCount !== 3) throw new Error(`expected 3 gone items in the drawer, got ${drawerCount}`);
 
+  // No two visible (front-row, not covered) labels may overlap -- covered
+  // items are exempt, their labels are hidden until tapped by design.
+  const labelRects = await page.$$eval('#fridgeShelf .fridge-item:not(.covered) .fridge-label', els =>
+    els.map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }));
+  console.log('front-row label count:', labelRects.length);
+  for (let i = 0; i < labelRects.length; i++){
+    for (let j = i + 1; j < labelRects.length; j++){
+      const a = labelRects[i], b = labelRects[j];
+      const overlapX = a.left < b.right && b.left < a.right;
+      const overlapY = a.top < b.bottom && b.top < a.bottom;
+      if (overlapX && overlapY) throw new Error(`front-row labels ${i} and ${j} overlap: ${JSON.stringify(a)} / ${JSON.stringify(b)}`);
+    }
+  }
+
   if (errors.length) console.log('console errors:', errors);
   await page.screenshot({ path: path.join(OUT, 'fridge-haul.png'), fullPage: true });
   await page.context().close();
