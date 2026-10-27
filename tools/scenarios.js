@@ -223,8 +223,12 @@ async function noRiskScenario(browser) {
   for (const [boxId, label] of [['tomorrow', 'Tomorrow'], ['dayAfter', 'The day after']]) {
     const visible = await page.isVisible('#' + boxId);
     if (!visible) throw new Error(`#${boxId} should render (with the plain line), not stay hidden`);
+    const fact = await page.textContent('#' + boxId + ' .daily-fact');
     const dishName = await page.textContent('#' + boxId + ' .dish-name');
-    console.log(`${label}:`, dishName.trim());
+    console.log(`${label} fact:`, fact.trim(), '/ dish-sub:', dishName.trim());
+    // The headline itself must say nothing's at risk, not cite whichever
+    // safe item happens to be least-safe (e.g. "Eggs has 34 days left").
+    if (fact.trim() !== 'Nothing in the fridge is at risk yet.') throw new Error(`${label} daily-fact was "${fact.trim()}"`);
     if (dishName.trim() !== 'Nothing here is about to turn.') throw new Error(`${label} dish-name was "${dishName.trim()}"`);
   }
 
@@ -319,10 +323,13 @@ async function fridgeHaulScenario(browser) {
 // real one, once an earlier day's recommendation has (in the simulation)
 // used something up -- otherwise the fact cites an ingredient the dish-sub
 // right under it just said nothing is happening to. Exact repro: chicken,
-// spinach, milk, onion, garlic, cheese, egg -- tonight's dish only needs
-// the first four, leaving garlic/cheese/egg (all weeks from turning) for
-// tomorrow's projection, which is why tomorrow should land on noRisk, not
-// terminal, and why its fact should never again cite chicken.
+// spinach, milk, onion, bacon -- tonight's dish only needs the first four,
+// leaving just bacon for tomorrow's projection. Bacon is at risk (7d, already
+// turn-bucket) but appears in only one DISH, as 1 of 3 needed, so alone it
+// can't even form a near-miss (2 missing, not 1) -- tomorrow lands on
+// terminal, a tier that still shows a fact line, and that fact must cite
+// bacon, never chicken. (noRisk's own fact line is covered separately below:
+// it no longer cites any item at all.)
 async function fridgeFactBugScenario(browser) {
   const page = await (await browser.newContext()).newPage();
   const errors = [];
@@ -332,7 +339,7 @@ async function fridgeFactBugScenario(browser) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForSelector('#headline');
-  await page.fill('#entry', 'chicken, spinach, milk, onion, garlic, cheese, egg');
+  await page.fill('#entry', 'chicken, spinach, milk, onion, bacon');
   await page.click('#addbtn');
   await page.waitForTimeout(150);
 
@@ -341,9 +348,9 @@ async function fridgeFactBugScenario(browser) {
   const dishName = await page.textContent('#tomorrow .dish-name');
   console.log('Tomorrow fact:', fact.trim());
   console.log('Tomorrow dish-sub:', dishName.trim());
-  if (dishName.trim() !== 'Nothing here is about to turn.') throw new Error(`expected tomorrow's tier to be noRisk, dish-sub was "${dishName.trim()}"`);
+  if (dishName.trim() !== 'Not even one ingredient away from a dish.') throw new Error(`expected tomorrow's tier to be terminal, dish-sub was "${dishName.trim()}"`);
   if (fact.includes('Chicken')) throw new Error(`Tomorrow's fact still cites chicken, which tonight's own recommendation assumes got used -- "${fact.trim()}"`);
-  if (!/Garlic|Cheese|Eggs/.test(fact)) throw new Error(`expected Tomorrow's fact to cite one of the leftover items (garlic/cheese/eggs), got "${fact.trim()}"`);
+  if (!fact.includes('Bacon')) throw new Error(`expected Tomorrow's fact to cite bacon (the only item left in the projection), got "${fact.trim()}"`);
 
   if (errors.length) console.log('console errors:', errors);
   await page.screenshot({ path: path.join(OUT, 'fridge-factbug-fixed.png'), fullPage: true });
@@ -371,6 +378,68 @@ async function fridgeFactBugScenario(browser) {
   await page2.context().close();
 }
 
+// Plural agreement: Eggs is a plural FOODS name, marked plural:true. Same
+// terminal-tier repro shape as the fact-line bug scenario above (consume
+// everything but one item, so the fact line still renders), swapped to an
+// item whose name needs "have"/"are", to catch "Eggs has" regressing back.
+async function pluralAgreementScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'chicken, spinach, milk, onion, egg 34d');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- PLURAL AGREEMENT ---');
+  const fact = await page.textContent('#tomorrow .daily-fact');
+  console.log('Tomorrow fact:', fact.trim());
+  if (!/^Eggs (have|are) /.test(fact.trim())) throw new Error(`expected plural agreement ("Eggs have/are ..."), got "${fact.trim()}"`);
+  if (/Eggs (has|is) /.test(fact.trim())) throw new Error(`singular verb leaked through for a plural name -- "${fact.trim()}"`);
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.context().close();
+}
+
+// Dish-repeat collapsing: a lone at-risk yogurt (no mango) is a near-miss
+// tonight -- nearmiss consumes nothing, so tomorrow's projection is the
+// identical fridge aged one more day, and the same dish wins again. That
+// second card should collapse to one line instead of repeating in full.
+async function dishRepeatScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'yogurt 10d');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- DISH REPEAT COLLAPSING ---');
+  const tonightH2 = await page.textContent('#tonight h2');
+  const tomorrowDishName = await page.textContent('#tomorrow .dish-name');
+  console.log('Tonight:', tonightH2.trim());
+  console.log('Tomorrow dish-sub:', tomorrowDishName.trim());
+  if (tonightH2.trim() !== 'Yogurt bowl with mango') throw new Error(`expected tonight's near-miss to be "Yogurt bowl with mango", got "${tonightH2.trim()}"`);
+  const expected = 'Same dish as tonight: Yogurt bowl with mango.';
+  if (tomorrowDishName.trim() !== expected) throw new Error(`expected Tomorrow to collapse to "${expected}", got "${tomorrowDishName.trim()}"`);
+  // Collapsed cards still carry no full rescue chip row or stats -- confirm
+  // it didn't just render the full card again with different wording.
+  const tomorrowChips = await page.$$eval('#tomorrow .chip', els => els.length);
+  if (tomorrowChips !== 0) throw new Error(`expected a collapsed card to have no chips, found ${tomorrowChips}`);
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'scn-dish-repeat.png'), fullPage: true });
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -384,6 +453,8 @@ async function fridgeFactBugScenario(browser) {
   await fridgeGradientScenario(browser);
   await fridgeHaulScenario(browser);
   await fridgeFactBugScenario(browser);
+  await pluralAgreementScenario(browser);
+  await dishRepeatScenario(browser);
 
   await browser.close();
   server.close();
