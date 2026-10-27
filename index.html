@@ -475,11 +475,18 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    FoodKeeper guidance. Weights and prices are demo estimates.
 
    cat groups items by how they visibly rot, for the fridge view only --
-   it picks a silhouette and weights the four decay stages (darken, sag,
-   mold, shrink; see FRIDGE_CAT below) and never touches shelf life. One
-   of: leafy (wilts), soft (shrinks/wrinkles), veg (firm produce), dairy,
-   protein, cooked. A custom item (typed/voice/receipt, never in FOODS)
-   has no cat and keeps the generic shape.
+   it weights the four decay stages (darken, sag, mold, shrink; see
+   FRIDGE_CAT below) and, by default, picks the silhouette too -- and
+   never touches shelf life. One of: leafy (wilts), soft (shrinks/
+   wrinkles), veg (firm produce), dairy, protein, cooked. A custom item
+   (typed/voice/receipt, never in FOODS) has no cat and keeps the generic
+   shape and neutral weights.
+
+   shape optionally overrides just the silhouette a specific food uses,
+   independent of which category's decay weights it carries -- e.g.
+   mushrooms still decay by soft produce's weights (shrinks/wrinkles
+   hardest) but render as an actual cap-and-stem, not soft's plain circle.
+   Most foods have no shape and just use their category's default.
    ============================================================ */
 const FOODS = {
   spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy'},
@@ -499,7 +506,7 @@ const FOODS = {
   carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg'},
   pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft'},
   broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg'},
-  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true},
+  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom'},
   cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10, cat:'leafy'},
   potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20, cat:'veg'},
   lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90, cat:'soft'},
@@ -515,8 +522,8 @@ const FOODS = {
   daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50, cat:'veg'},
   chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10, cat:'soft'},
   beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30, cat:'veg', plural:true},
-  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft'},
-  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft'},
+  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom'},
+  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -959,6 +966,11 @@ const FRIDGE_CAT = {
   generic: {shape:'generic', darken:1.0, sag:1.0, mold:1.0, shrink:1.0, wrinkle:0.2}
 };
 function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
+// A specific food's shape, if it has one (e.g. mushrooms render as a real
+// cap-and-stem, not soft produce's plain circle) -- falling back to its
+// category's default silhouette otherwise. Decay weights always come from
+// cat regardless; shape is a silhouette-only override.
+function fridgeShapeOf(it){ return food(it).shape || fridgeCatOf(it).shape; }
 
 // Hue is the item's days-left bucket, state(d) -- the same lookup COLOR
 // uses everywhere else on the page. Fraction only blends that hue toward
@@ -971,6 +983,34 @@ function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
 // properties in :root.
 const BUCKET_HEX = {fresh:'#5F7350', turn:'#A8842A', crit:'#6E3448', gone:'#2B2320'};
 const MOLD_HEX = '#B5BFBB'; // --line: the palette's palest tone, distinct from --paper
+const INK_HEX = '#141817'; // --ink: the line-art exploration's stroke color
+
+// The urgency bucket (fresh/turn/crit/gone) no longer colors the food
+// body -- a mustard mushroom turning purple read as a dye, not a
+// mushroom. It now colors only the label (name + days-left; see
+// buildShelfItem/buildDrawerItem), which is what actually needs to match
+// the list, the decay line, and the legend. The body uses natureColor:
+// the food's own tones, cream through brown to near-black -- kept cool
+// and desaturated on purpose, so it never visually competes with the
+// label's more saturated urgency color sitting right next to it. Uses
+// tones outside the current decay-sequence palette; see CLAUDE.md.
+// (neutralWashColor -- one flat wash for every food, darkening with
+// decay -- was explored and set aside in favor of this; kept here only
+// because tools/mushroom-study.js's side-by-side comparison still calls it.)
+function hexLerp(hexA, hexB, t){
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  const tt = Math.max(0, Math.min(1, t));
+  return `rgb(${a.map((c, i) => Math.round(c + (b[i] - c) * tt)).join(',')})`;
+}
+function natureColor(fraction){
+  const CREAM = '#D6D6CE', BROWN = '#6E6457', NEARBLACK = '#201F1C';
+  return fraction <= 0.5
+    ? hexLerp(CREAM, BROWN, fraction / 0.5)
+    : hexLerp(BROWN, NEARBLACK, (fraction - 0.5) / 0.5);
+}
+function neutralWashColor(fraction){
+  return hexLerp('#D7D2C6', '#1E1B18', fraction);
+}
 function hexToRgb(hex){
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -1010,16 +1050,33 @@ function rectCorners(x1, y1, x2, y2){
 // more points, smoothed into curves; packaged/cut categories (dairy/
 // protein) get four corners, connected straight, for a boxier, cut
 // silhouette that still deforms the same way.
+// Cap-and-stem, 13 points at fixed indices (both mushroomLines() and the
+// deformation below depend on this order, not just the resulting shape):
+//   0 left cap edge, 1 left shoulder, 2 upper-left, 3 apex (true dome
+//   peak, not a flat span between two points), 4 upper-right, 5 right
+//   shoulder, 6 right cap edge, 7 stem shoulder (right), 8 stem right,
+//   9 stem bottom-right, 10 stem bottom-left, 11 stem left, 12 stem
+//   shoulder (left). The apex sits in the top droop band, the stem spans
+//   the mid/bow band down into the base-spread band, so droop reads as
+//   the cap sinking and spread reads as the stem's base widening.
+function mushroomOutline(s){
+  return [
+    [s*0.08, s*0.38], [s*0.12, s*0.22], [s*0.26, s*0.10], [s*0.50, s*0.05], [s*0.74, s*0.10],
+    [s*0.88, s*0.22], [s*0.92, s*0.38], [s*0.58, s*0.43], [s*0.58, s*0.80], [s*0.56, s*0.92],
+    [s*0.44, s*0.92], [s*0.42, s*0.80], [s*0.38, s*0.43]
+  ];
+}
 function catOutlinePoints(shape, s){
   const cx = s / 2;
   switch(shape){
-    case 'leafy':   return ellipseRing(8, s*0.44, s*0.32, cx, s*0.60);
-    case 'soft':    return ellipseRing(8, s*0.40, s*0.40, cx, s*0.52);
-    case 'veg':     return ellipseRing(6, s*0.30, s*0.40, cx, s*0.52);
-    case 'cooked':  return ellipseRing(7, s*0.44, s*0.21, cx, s*0.60);
-    case 'dairy':   return rectCorners(s*0.28, s*0.08, s*0.72, s*0.92);
-    case 'protein': return rectCorners(s*0.10, s*0.28, s*0.90, s*0.68);
-    default:        return rectCorners(s*0.08, s*0.08, s*0.92, s*0.92);
+    case 'leafy':    return ellipseRing(8, s*0.44, s*0.32, cx, s*0.60);
+    case 'soft':     return ellipseRing(8, s*0.40, s*0.40, cx, s*0.52);
+    case 'veg':      return ellipseRing(6, s*0.30, s*0.40, cx, s*0.52);
+    case 'cooked':   return ellipseRing(7, s*0.44, s*0.21, cx, s*0.60);
+    case 'mushroom': return mushroomOutline(s);
+    case 'dairy':    return rectCorners(s*0.28, s*0.08, s*0.72, s*0.92);
+    case 'protein':  return rectCorners(s*0.10, s*0.28, s*0.90, s*0.68);
+    default:         return rectCorners(s*0.08, s*0.08, s*0.92, s*0.92);
   }
 }
 const BOXY_SHAPES = {dairy:1, protein:1};
@@ -1038,30 +1095,46 @@ function deformPoints(points, fraction, sagW, wrinkleW, seed, size){
   const h = Math.max(1, maxY - minY);
   const rand = seededRand(seed);
   const jitters = points.map(() => rand() * 2 - 1);
-  const sag = fraction * sagW;
+  // Structural distortion (droop/lean/bow/spread) freezes at its 75%-decayed
+  // level instead of climbing all the way to 100% -- compounding bow and
+  // spread on the same points past that point is what was kinking a stem
+  // into a lightning bolt. The cap-and-stem form holds past 75%; wrinkle
+  // (below, uncapped) is what keeps showing decay through 100% instead.
+  const sag = Math.min(fraction, 0.75) * sagW;
   const wrinkle = fraction * wrinkleW;
-  // Deformed points are clamped into the viewBox rather than tuned by
-  // trial and error to just barely stay inside it: a strong coefficient
-  // on a point that started near the edge would otherwise push it past
-  // the SVG's bounds and get silently clipped -- invisible, not subtle.
-  const lo = size * 0.02, hi = size * 0.98;
+  // Deformed points are soft-clamped into the viewBox (a tanh squash, not
+  // a hard cutoff) rather than tuned by trial and error to just barely
+  // stay inside it -- a strong coefficient on a point that started near
+  // the edge would otherwise push it past the SVG's bounds and get
+  // silently clipped (invisible, not subtle), and a hard min/max clamp on
+  // several neighboring points creates a flat, unnatural notch where they
+  // all pile up on the same boundary value.
+  const lo = size * 0.03, hi = size * 0.97;
+  const mid = (lo + hi) / 2, half = (hi - lo) / 2;
+  const soft = v => mid + half * Math.tanh((v - mid) / half);
   return points.map((p, i) => {
     let [x, y] = p;
     const heightFrac = (y - minY) / h; // 0 top .. 1 bottom
-    if (heightFrac < 0.4) y += sag * h * 0.26 * (0.4 - heightFrac);        // droop: top sinks
-    x += sag * h * 0.10 * (1 - heightFrac);                                // lean: shear, top leans further
+    if (heightFrac < 0.4) y += sag * h * 0.40 * (0.4 - heightFrac);        // droop: top sinks
+    x += sag * h * 0.15 * (1 - heightFrac);                                // lean: shear, top leans further
     const midness = 1 - Math.abs(heightFrac - 0.5) * 2;
     const side = x - cx >= 0 ? 1 : -1;
-    x += side * sag * (Math.abs(x - cx) || h * 0.3) * 0.24 * midness;      // bow: mid-height sides push out
+    x += side * sag * (Math.abs(x - cx) || h * 0.3) * 0.34 * midness;      // bow: mid-height sides push out
     if (heightFrac > 0.6){
-      x += side * sag * h * 0.19 * (heightFrac - 0.6);                     // spread: base widens
-      y += sag * h * 0.07 * (heightFrac - 0.6);
+      x += side * sag * h * 0.28 * (heightFrac - 0.6);                     // spread: base widens
+      y += sag * h * 0.10 * (heightFrac - 0.6);
     }
-    const jr = jitters[i] * wrinkle * h * 0.18;                            // wrinkle: per-point jitter
+    // Curls inward, not noise: every point gets pulled toward the centroid
+    // (never pushed out), with only its magnitude varying per point --
+    // symmetric +/- jitter here was independent chaos on 13 points at
+    // once, which is what was reading as a twist rather than a shrivel.
+    // This is now the sole structural change past sag's 75% freeze, so it
+    // has to look coherent carrying that alone.
+    const jr = (jitters[i] * 0.3 - 0.7) * wrinkle * h * 0.08;
     const dx = x - cx, dy = y - cy, dist = Math.hypot(dx, dy) || 1;
     x += (dx / dist) * jr;
     y += (dy / dist) * jr;
-    return [Math.max(lo, Math.min(hi, x)), Math.max(lo, Math.min(hi, y))];
+    return [soft(x), soft(y)];
   });
 }
 function smoothClosedPath(points){
@@ -1083,38 +1156,215 @@ function fridgeShapePath(shape, s, fraction, sagW, wrinkleW, seed){
   return BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
 }
 
-// Mold as light, palette-pale patches that grow from one or two seeded
-// points and can merge, with a defined (if slightly irregular) edge --
-// not a filter-based grain, which read as an even wash and disappeared
-// entirely once darken had already pulled the base shape dark. Patches
-// start appearing early (past ~8% decayed) so there's something to see
-// well before the item is mostly gone.
-function moldPatchMarkup(s, fraction, moldW, seed){
-  if (moldW <= 0 || fraction <= 0.08) return '';
+// Mold as a colony of many small pale spots clustered around one or two
+// seeded points, not two large smooth blobs -- they multiply and spread
+// outward as decay climbs, overlapping into a denser mass rather than one
+// shape simply growing. Real decay sags and darkens first; mold is the
+// last stage, so colonies stay empty until well past the outline has
+// already lost its plumpness, then take over fast: nothing before 70%,
+// dominant by 95-100%. The returned group is clipped to the caller's own
+// silhouette clipPath -- mold can read as spots near an edge, never as
+// dots floating past it.
+const MOLD_START = 0.70;
+function moldDotsMarkup(s, fraction, moldW, seed){
+  if (moldW <= 0 || fraction <= MOLD_START) return '';
   const rand = seededRand(seed + 777);
   const seeds = [
-    {cx: s * (0.32 + rand() * 0.08), cy: s * (0.38 + rand() * 0.08), phase: 0},
-    {cx: s * (0.60 + rand() * 0.10), cy: s * (0.58 + rand() * 0.08), phase: 0.18}
+    {cx: s * (0.34 + rand() * 0.10), cy: s * (0.42 + rand() * 0.10), phase: 0},
+    {cx: s * (0.58 + rand() * 0.12), cy: s * (0.56 + rand() * 0.10), phase: 0.05}
   ];
-  const maxR = s * 0.20;
-  return seeds.map(sp => {
-    const grow = Math.max(0, Math.min(1, (fraction - 0.08 - sp.phase) / 0.7));
-    const r = maxR * Math.pow(grow, 0.6) * Math.min(1, moldW);
-    if (r < s * 0.035) return '';
-    const pts = ellipseRing(7, r, r, sp.cx, sp.cy).map(p => {
-      const jr = (rand() * 2 - 1) * r * 0.22;
-      const dx = p[0] - sp.cx, dy = p[1] - sp.cy, dist = Math.hypot(dx, dy) || 1;
-      return [p[0] + (dx / dist) * jr, p[1] + (dy / dist) * jr];
-    });
-    return `<path d="${smoothClosedPath(pts)}" fill="${MOLD_HEX}"/>`;
-  }).join('');
+  const span = 1 - MOLD_START;
+  let dots = [];
+  seeds.forEach(sp => {
+    const growT = Math.max(0, Math.min(1, (fraction - MOLD_START - sp.phase) / (span - sp.phase)));
+    if (growT <= 0) return;
+    // Front-loaded, not linear: a colony that's just started should
+    // already read as a colony, not one faint dot -- "starts ~70%, clearly
+    // legible by 75%" is a five-point window, not room for a slow ramp.
+    // It keeps climbing more gradually after that, toward dominant at 95-100%.
+    const growCurve = Math.pow(growT, 0.4);
+    const count = Math.round((3 + growCurve * 20) * Math.min(1, moldW));
+    const spread = s * (0.05 + growCurve * 0.26);
+    for (let i = 0; i < count; i++){
+      const a = rand() * Math.PI * 2;
+      const dist = Math.pow(rand(), 0.6) * spread; // denser near the seed, thinning outward
+      const r = s * (0.016 + rand() * 0.018) * (0.6 + growCurve * 0.7);
+      dots.push(`<circle cx="${(sp.cx + Math.cos(a) * dist).toFixed(1)}" cy="${(sp.cy + Math.sin(a) * dist).toFixed(1)}" r="${r.toFixed(1)}" fill="${MOLD_HEX}"/>`);
+    }
+  });
+  return dots.join('');
 }
 
+// Incrementing, not seed-based: SVG ids must be unique across the whole
+// document, and a render pass can legitimately put the same item (same
+// seed) on screen twice (the fridge view + the inventory list, say).
+let fridgeShapeCounter = 0;
 function foodShapeMarkup(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
   const path = fridgeShapePath(shape, size, fraction, sagW, wrinkleW, seed);
-  const mold = moldPatchMarkup(size, fraction, moldW, seed);
+  const uid = 'fshape' + (fridgeShapeCounter++);
+  const dots = moldDotsMarkup(size, fraction, moldW, seed);
+  // The mold group is clipped to this exact (already-deformed) outline
+  // and softly blurred -- spots read as growing on the food, never as
+  // specks floating past its edge.
+  const mold = dots
+    ? `<g clip-path="url(#${uid}-clip)" filter="url(#${uid}-blur)">${dots}</g>`
+    : '';
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs>
+      <clipPath id="${uid}-clip"><path d="${path}"/></clipPath>
+      <filter id="${uid}-blur" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="${Math.max(0.6, size * 0.012).toFixed(2)}"/>
+      </filter>
+    </defs>
     <path d="${path}" fill="${color}"/>
+    ${mold}
+  </svg>`;
+}
+
+/* ---------- line-art exploration (mushroom only, not yet wired to the
+   shelf/drawer) -------------------------------------------------------
+   A field-guide-specimen register, not illustration: a thin ink outline
+   over a flat wash, identity from a few interior lines, decay drawn in
+   line (wrinkles that multiply, gills that collapse) rather than only in
+   fill color. Reuses the exact same outline/deformation/color/mold math
+   as the flat version above -- only the final SVG assembly differs, which
+   is the thing actually being compared. Indices below are
+   mushroomOutline()'s fixed 13 points (see its own comment). */
+// A rim-curve closure shared by the gill/wrinkle lines, the brown spots,
+// and mold's seed placement, so "near the rim" means the same curve in
+// all three rather than three independent approximations of it.
+function mushroomRim(deformed, size){
+  const p0 = deformed[0], p6 = deformed[6], p7 = deformed[7], p12 = deformed[12];
+  const ctrl = [(p7[0] + p12[0]) / 2, Math.min(p7[1], p12[1]) - size * 0.03];
+  return {
+    p0, p6, p7, p12, ctrl,
+    at: t => {
+      const mt = 1 - t;
+      return [mt * mt * p0[0] + 2 * mt * t * ctrl[0] + t * t * p6[0],
+              mt * mt * p0[1] + 2 * mt * t * ctrl[1] + t * t * p6[1]];
+    }
+  };
+}
+
+// Gills, the rim they hang from, and wrinkles -- stroke-only, no fill.
+// Real decay sags and darkens before it molds, so wrinkles are the
+// earliest line-drawn sign: a few past ~12% decayed, multiplying and
+// reaching further toward the apex as fraction (and the category's
+// wrinkle weight) climb, uncapped through 100% even after the outline's
+// own structural distortion has frozen.
+function mushroomLines(deformed, fraction, wrinkleW, size, seed){
+  const rand = seededRand(seed + 321);
+  const rim = mushroomRim(deformed, size);
+  const apex = deformed[3];
+  const hub = [(rim.p7[0] + rim.p12[0]) / 2, (rim.p7[1] + rim.p12[1]) / 2 - size * 0.015];
+  const lines = [`M ${rim.p0[0].toFixed(1)} ${rim.p0[1].toFixed(1)} Q ${rim.ctrl[0].toFixed(1)} ${rim.ctrl[1].toFixed(1)} ${rim.p6[0].toFixed(1)} ${rim.p6[1].toFixed(1)}`];
+  const gillCount = 7;
+  for (let i = 1; i < gillCount; i++){
+    let [gx, gy] = rim.at(i / gillCount);
+    gx += (rand() * 2 - 1) * fraction * size * 0.05;
+    gy += (rand() * 2 - 1) * fraction * size * 0.03;
+    const bend = (rand() * 2 - 1) * fraction * size * 0.035;
+    const mx = (hub[0] + gx) / 2 + bend, my = (hub[1] + gy) / 2;
+    lines.push(`M ${hub[0].toFixed(1)} ${hub[1].toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${gx.toFixed(1)} ${gy.toFixed(1)}`);
+  }
+  const wCount = Math.round(Math.max(0, fraction - 0.12) * 1.4 * Math.max(0.4, wrinkleW) * 8);
+  for (let i = 0; i < wCount; i++){
+    const [bx, by] = rim.at(0.12 + rand() * 0.76);
+    const reach = 0.18 + rand() * 0.42;
+    const sx = bx + (apex[0] - bx) * Math.max(0, reach - 0.22), sy = by + (apex[1] - by) * Math.max(0, reach - 0.22);
+    const ex = bx + (apex[0] - bx) * reach, ey = by + (apex[1] - by) * reach;
+    const bow = size * 0.018 * (rand() * 2 - 1);
+    const mx = (sx + ex) / 2 + bow, my = (sy + ey) / 2;
+    lines.push(`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`);
+  }
+  return lines.map(d => `<path d="${d}"/>`).join('');
+}
+
+// Brown discoloration -- bruising, not mold. Starts earlier (~25%) and
+// stays modest, handing off to mold once that takes over past MOLD_START.
+// Small irregular filled flecks scattered across the cap face.
+function mushroomBrownSpots(deformed, fraction, size, seed){
+  if (fraction <= 0.25) return '';
+  const rand = seededRand(seed + 555);
+  const rim = mushroomRim(deformed, size);
+  const apex = deformed[3];
+  const growT = Math.min(1, (fraction - 0.25) / 0.45); // ramps across 25%->70%, mold picks up after
+  const count = Math.round(1 + growT * 4);
+  const spots = [];
+  for (let i = 0; i < count; i++){
+    const [bx, by] = rim.at(0.1 + rand() * 0.8);
+    const reach = 0.15 + rand() * 0.55;
+    const cx = bx + (apex[0] - bx) * reach, cy = by + (apex[1] - by) * reach;
+    const r = size * (0.02 + rand() * 0.018) * (0.6 + growT * 0.5);
+    const pts = ellipseRing(5, r, r * 0.8, cx, cy).map(p => {
+      const jr = (rand() * 2 - 1) * r * 0.3;
+      const dx = p[0] - cx, dy = p[1] - cy, dist = Math.hypot(dx, dy) || 1;
+      return [p[0] + (dx / dist) * jr, p[1] + (dy / dist) * jr];
+    });
+    spots.push(`<path d="${smoothClosedPath(pts)}" fill="#6B5438" opacity="${(0.5 + growT * 0.3).toFixed(2)}"/>`);
+  }
+  return spots.join('');
+}
+
+// Mold as a mushroom actually gets it: white, fuzzy, cottony, starting at
+// the gills and the cap edge -- not evenly over the cap face. Dense, fine
+// stippling (far smaller/more numerous dots than the flat version's
+// pebbles) plus short hair-like strokes fringing each colony's outer
+// edge, for a fibrous rather than spotted edge. Seeded at the rim and the
+// cap's two edge points; same front-loaded growth curve so it's legible
+// soon after MOLD_START without looking fully mature immediately.
+function mushroomMoldMarkup(deformed, fraction, moldW, size, seed){
+  if (moldW <= 0 || fraction <= MOLD_START) return '';
+  const rand = seededRand(seed + 888);
+  const rim = mushroomRim(deformed, size);
+  const seeds = [
+    { pt: rim.at(0.12), phase: 0 },
+    { pt: rim.at(0.88), phase: 0.03 },
+    { pt: rim.p0, phase: 0.08 },
+    { pt: rim.p6, phase: 0.08 }
+  ];
+  const span = 1 - MOLD_START;
+  let dots = [], hairs = [];
+  seeds.forEach(sd => {
+    const growT = Math.max(0, Math.min(1, (fraction - MOLD_START - sd.phase) / (span - sd.phase)));
+    if (growT <= 0) return;
+    const growCurve = Math.pow(growT, 0.4);
+    const count = Math.round((5 + growCurve * 30) * Math.min(1, moldW));
+    const spread = size * (0.035 + growCurve * 0.11);
+    for (let i = 0; i < count; i++){
+      const a = rand() * Math.PI * 2;
+      const dist = Math.pow(rand(), 0.5) * spread;
+      const r = size * (0.005 + rand() * 0.006);
+      dots.push(`<circle cx="${(sd.pt[0] + Math.cos(a) * dist).toFixed(1)}" cy="${(sd.pt[1] + Math.sin(a) * dist).toFixed(1)}" r="${r.toFixed(1)}" fill="${MOLD_HEX}"/>`);
+    }
+    const hairCount = Math.round(growCurve * 7);
+    for (let i = 0; i < hairCount; i++){
+      const a = rand() * Math.PI * 2;
+      const hx = sd.pt[0] + Math.cos(a) * spread, hy = sd.pt[1] + Math.sin(a) * spread;
+      const hx2 = hx + Math.cos(a) * size * 0.022, hy2 = hy + Math.sin(a) * size * 0.022;
+      hairs.push(`<path d="M ${hx.toFixed(1)} ${hy.toFixed(1)} L ${hx2.toFixed(1)} ${hy2.toFixed(1)}" stroke="${MOLD_HEX}" stroke-width="${Math.max(0.5, size * 0.004).toFixed(2)}" fill="none"/>`);
+    }
+  });
+  return dots.join('') + hairs.join('');
+}
+
+function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
+  const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
+  const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
+  const uid = 'fline' + (fridgeShapeCounter++);
+  const strokeW = Math.max(1, size * 0.008).toFixed(2);
+  const isMushroom = shape === 'mushroom';
+  const strokes = isMushroom ? mushroomLines(deformed, fraction, wrinkleW, size, seed) : '';
+  const spots = isMushroom ? mushroomBrownSpots(deformed, fraction, size, seed) : '';
+  const moldInner = isMushroom
+    ? mushroomMoldMarkup(deformed, fraction, moldW, size, seed)
+    : moldDotsMarkup(size, fraction, moldW, seed);
+  const mold = moldInner ? `<g clip-path="url(#${uid}-clip)">${moldInner}</g>` : '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
+    <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
+    <g>${spots}</g>
+    <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${strokes}</g>
     ${mold}
   </svg>`;
 }
@@ -1158,7 +1408,7 @@ function buildShelfItem(p, day){
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = d === 0 ? 'today' : d + 'd';
   const itemStyle = `left:${x}px;bottom:${p.bottom}px;z-index:${p.z}`;
-  const svg = foodShapeMarkup(cat.shape, color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
+  const svg = foodShapeMarkup(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
   return `<div class="fridge-item${covered ? ' covered' : ''}" style="${itemStyle}">
     <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
     <div class="fridge-label mono">${f.en}<span class="fridge-days">${dayLabel}</span></div>
@@ -1179,7 +1429,7 @@ function buildDrawerItem(it, day){
   const size = Math.round(58 * (1 - 0.18 * cat.shrink));
   const color = decayColor(d, frac, cat.darken, true);
   const shapeStyle = `width:${size}px;height:${size}px`;
-  const svg = foodShapeMarkup(cat.shape, color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
+  const svg = foodShapeMarkup(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
   return `<div class="fridge-item">
     <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
     <div class="fridge-label mono">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span></div>

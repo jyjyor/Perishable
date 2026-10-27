@@ -256,7 +256,7 @@ async function fridgeGradientScenario(browser) {
   await page.waitForTimeout(150);
 
   console.log('\n--- FRIDGE GRADIENT: 25/50/75/95% ---');
-  const fills = await page.$$eval('#fridgeShelf .fridge-item .fridge-shape svg > :first-child',
+  const fills = await page.$$eval('#fridgeShelf .fridge-item .fridge-shape svg > path',
     els => els.map(e => e.getAttribute('fill')));
   console.log('shelf fills (front to back):', JSON.stringify(fills));
   if (new Set(fills).size < 4) throw new Error(`expected 4 distinct colors across the decay gradient, got ${JSON.stringify(fills)}`);
