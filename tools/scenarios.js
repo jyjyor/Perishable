@@ -137,6 +137,102 @@ async function scenario(browser, name, entryText, shotName) {
   await page.context().close();
 }
 
+// Phase 2: a suggestion should name only the ingredients actually at risk
+// (this week or sooner), soonest first, and the ledger it credits on Cook
+// must match that same set -- not every matched ingredient, which is what
+// was wired before this pass. Chicken (2d, crit) and spinach/milk (7d,
+// turn) are at risk; onion (10d) is fresh and matched but not at risk.
+async function recommendationScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'spinach, milk, chicken, onion');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- RECOMMENDATION: at-risk naming ---');
+  const usesUp = await page.textContent('#tonight .dish-usesup');
+  console.log('uses-up line:', usesUp);
+  const expected = 'Uses up Chicken breast (2d), Spinach (7d), and Milk (7d) before they turn.';
+  if (usesUp.trim() !== expected) throw new Error(`uses-up line was "${usesUp.trim()}", expected "${expected}"`);
+
+  const chipColors = await page.$$eval('#tonight .chip.use', els => els.map(e => ({
+    text: e.textContent.trim(),
+    style: e.getAttribute('style') || ''
+  })));
+  console.log('chip styles:', JSON.stringify(chipColors));
+  const chicken = chipColors.find(c => c.text.startsWith('Chicken'));
+  const spinach = chipColors.find(c => c.text.startsWith('Spinach'));
+  const milk = chipColors.find(c => c.text.startsWith('Milk'));
+  const onion = chipColors.find(c => c.text.startsWith('Onion'));
+  if (!chicken.style.includes('--crit')) throw new Error('chicken (2d, crit) chip should be colored --crit');
+  if (!spinach.style.includes('--turn')) throw new Error('spinach (7d, turn) chip should be colored --turn');
+  if (!milk.style.includes('--turn')) throw new Error('milk (7d, turn) chip should be colored --turn');
+  if (onion.style.trim()) throw new Error(`onion (10d, fresh) chip should carry no color override, got "${onion.style}"`);
+
+  const eyebrow = await page.textContent('.tonight .eyebrow');
+  console.log('eyebrow:', eyebrow);
+  if (eyebrow.trim() !== 'Tonight · rescues 3 items') throw new Error(`eyebrow was "${eyebrow.trim()}", expected "Tonight · rescues 3 items" (onion isn't at risk)`);
+
+  await page.click('.js-cook');
+  await page.waitForTimeout(150);
+  const savedG = await page.textContent('#savedG');
+  console.log('savedG after cook:', savedG);
+  // chicken 500g + spinach 200g + milk 900g = 1600g at risk; onion's 150g
+  // must not be in this number even though it was matched and consumed.
+  if (savedG.trim() !== '1600 g') throw new Error(`savedG was "${savedG.trim()}", expected "1600 g" (at-risk grams only)`);
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'scn-recommendation.png'), fullPage: true });
+  await page.context().close();
+}
+
+// Phase 2: a fridge where nothing is at risk (everything well past this
+// week) should suggest no dish at all, on any of the three day cards --
+// "closest match" is still a recipe-app move if nothing in it is actually
+// about to be lost. Egg/cheese/butter are all deep in the fresh bucket
+// bought today, and together they fully match "Cheese omelette" -- proving
+// the gap is the urgency requirement, not a lack of matchable dishes.
+async function noRiskScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.fill('#entry', 'egg, cheese, butter');
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+
+  console.log('\n--- NO RISK: nothing to suggest ---');
+  const tonightH2 = await page.textContent('#tonight h2');
+  console.log('tonight h2:', tonightH2);
+  if (tonightH2.trim() !== 'Nothing here is about to turn.') throw new Error(`tonight h2 was "${tonightH2.trim()}"`);
+  const tonightChips = await page.$$eval('#tonight .chip', els => els.length);
+  if (tonightChips !== 0) throw new Error(`expected no dish chips on a noRisk tonight, found ${tonightChips}`);
+  const cookBtn = await page.$('#tonight .js-cook');
+  if (cookBtn) throw new Error('a noRisk tonight should have no Cook button');
+
+  for (const [boxId, label] of [['tomorrow', 'Tomorrow'], ['dayAfter', 'The day after']]) {
+    const visible = await page.isVisible('#' + boxId);
+    if (!visible) throw new Error(`#${boxId} should render (with the plain line), not stay hidden`);
+    const dishName = await page.textContent('#' + boxId + ' .dish-name');
+    console.log(`${label}:`, dishName.trim());
+    if (dishName.trim() !== 'Nothing here is about to turn.') throw new Error(`${label} dish-name was "${dishName.trim()}"`);
+  }
+
+  if (errors.length) console.log('console errors:', errors);
+  await page.screenshot({ path: path.join(OUT, 'scn-norisk.png'), fullPage: true });
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -145,6 +241,8 @@ async function scenario(browser, name, entryText, shotName) {
   await scenario(browser, 'ALL PAST DATE', 'spinach 10d, milk 12d, chicken 10d', 'scn-gone.png');
   await scenario(browser, 'MIXED', 'chicken 10d, spinach, milk, onion', 'scn-mixed.png');
   await receiptScenario(browser);
+  await recommendationScenario(browser);
+  await noRiskScenario(browser);
 
   await browser.close();
   server.close();

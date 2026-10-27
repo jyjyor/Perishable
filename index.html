@@ -175,6 +175,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 }
 .dish-sub{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
 .dish-sub .dish-name{font-weight:700;font-size:17px;color:var(--ink);margin-top:2px}
+.dish-usesup{margin-top:10px;color:var(--ink-2);max-width:48ch}
 .rescue{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .chip{
   font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;letter-spacing:.04em;
@@ -684,7 +685,13 @@ function haveAt(sourceFridge, day){
 }
 const ownedNow = () => haveAt(fridge, today());
 
-function recommendAt(sourceFridge, day, skipSet){
+// requireAtRisk (on by default) rejects any dish where every matched
+// ingredient is still in the 'fresh' bucket -- a suggestion only earns the
+// name if it actually uses up something that's close to turning. Pass
+// false only to ask the weaker question "would anything match at all,
+// urgency aside" (buildDayProjections uses this to tell a fridge with
+// nothing urgent apart from a fridge with nothing cookable).
+function recommendAt(sourceFridge, day, skipSet, requireAtRisk = true){
   const have = haveAt(sourceFridge, day);
   let best = null;
   DISHES.forEach(dish => {
@@ -692,6 +699,7 @@ function recommendAt(sourceFridge, day, skipSet){
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 2) return;
+    if (requireAtRisk && !matched.some(k => state(leftAt(have[k], day)) !== 'fresh')) return;
     let score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
     score -= missing.length * 0.45;
     if (missing.length > 1) return;
@@ -707,7 +715,7 @@ const recommend = () => recommendAt(fridge, today(), skipped);
 // recommendAt() has failed are two-ingredient dishes where exactly one is
 // owned -- there is no broader "missing two things" fallback tier, because
 // then "one more thing" would stop being true.
-function nearMissAt(sourceFridge, day, skipSet){
+function nearMissAt(sourceFridge, day, skipSet, requireAtRisk = true){
   const have = haveAt(sourceFridge, day);
   let best = null;
   DISHES.forEach(dish => {
@@ -715,6 +723,7 @@ function nearMissAt(sourceFridge, day, skipSet){
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 1 || missing.length !== 1) return;
+    if (requireAtRisk && !matched.some(k => state(leftAt(have[k], day)) !== 'fresh')) return;
     const score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
     if (!best || score > best.score) best = {dish, matched, missing, score, have};
   });
@@ -776,8 +785,18 @@ function buildDayProjections(){
   for (let d = 0; d < 3; d++){
     const day = today() + d;
     let r = recommendAt(workingFridge, day, skipSets[d]);
-    let tier = 'recommend';
-    if (!r){ r = nearMissAt(workingFridge, day, skipSets[d]); tier = r ? 'nearmiss' : 'terminal'; }
+    let tier = r ? 'recommend' : null;
+    if (!r){ r = nearMissAt(workingFridge, day, skipSets[d]); tier = r ? 'nearmiss' : null; }
+    if (!r){
+      // Neither search found anything with an at-risk ingredient. Re-run
+      // both with the urgency requirement dropped, purely to tell "dishes
+      // would match, just nothing in them is at risk" (noRisk) apart from
+      // "not even one ingredient away from a dish" (terminal) -- same
+      // matching logic, not a parallel implementation of it.
+      const anyDishAtAll = recommendAt(workingFridge, day, skipSets[d], false)
+        || nearMissAt(workingFridge, day, skipSets[d], false);
+      tier = anyDishAtAll ? 'noRisk' : 'terminal';
+    }
     results.push({dayIndex: d, day, tier, result: r});
     if (tier === 'terminal') break;
     if (tier === 'recommend'){
@@ -890,6 +909,15 @@ function renderChart(){
   });
 }
 
+// Which of a matched dish's ingredients are genuinely at risk (this week
+// or sooner) as of `day` -- the one definition buildDishCard, cook(), and
+// recommendAt/nearMissAt's eligibility filter all read from, so a
+// suggestion's claim, its chip colors, and what the ledger credits can
+// never drift apart.
+function atRiskMatches(r, day){
+  return r.matched.filter(k => state(leftAt(r.have[k], day)) !== 'fresh');
+}
+
 // Shared by a real recommendation and a near-miss: the ingredient chip row,
 // pantry chips, and the "missing one thing" substitution block mean the
 // same thing regardless of which tier found the dish -- only the framing
@@ -900,14 +928,34 @@ function renderChart(){
 function buildDishCard(r, day = today()){
   const swap = swapped[r.dish.name];
   const chips = r.dish.needs.map(k => {
-    if (r.have[k]) return `<span class="chip use">${FOODS[k].en} · ${leftAt(r.have[k], day)}d</span>`;
+    if (r.have[k]){
+      const d = leftAt(r.have[k], day);
+      const risky = state(d) !== 'fresh';
+      const style = risky ? ` style="border-color:${COLOR[state(d)]};color:${COLOR[state(d)]}"` : '';
+      return `<span class="chip use"${style}>${FOODS[k].en} · ${d}d</span>`;
+    }
     if (swap && swap.key === k) return `<span class="chip use">${swap.label} (swap)</span>`;
     return `<span class="chip" style="border-color:var(--turn);color:var(--turn)">${FOODS[k].en} — missing</span>`;
   }).join('');
   const pantry = r.dish.pantry.map(p => `<span class="chip pantry">${p}</span>`).join('');
 
-  const grams = r.matched.reduce((s,k) => s + food(r.have[k]).g, 0);
-  const usd = r.matched.reduce((s,k) => s + food(r.have[k]).usd, 0);
+  // Named explicitly, soonest first -- a suggestion should say what it's
+  // actually saving, not just list every ingredient the recipe happens
+  // to call for.
+  const atRisk = atRiskMatches(r, day);
+  const atRiskSorted = atRisk.slice().sort((a,b) => leftAt(r.have[a], day) - leftAt(r.have[b], day));
+  const usesUpHTML = atRisk.length
+    ? `<p class="dish-usesup">Uses up ${joinWords(atRiskSorted.map(k => `${FOODS[k].en} (${leftAt(r.have[k], day)}d)`))} before ${atRisk.length === 1 ? 'it turns' : 'they turn'}.</p>`
+    : '';
+
+  // Two totals: "all matched" (what the near-miss tier's plain ownership
+  // stat means) and "at-risk only" (what a real recommendation's "kept
+  // out of the bin" claim means -- a fresh matched ingredient was never
+  // headed for the bin, so it doesn't belong in that count).
+  const gramsAll = r.matched.reduce((s,k) => s + food(r.have[k]).g, 0);
+  const usdAll = r.matched.reduce((s,k) => s + food(r.have[k]).usd, 0);
+  const gramsAtRisk = atRisk.reduce((s,k) => s + food(r.have[k]).g, 0);
+  const usdAtRisk = atRisk.reduce((s,k) => s + food(r.have[k]).usd, 0);
 
   let missingHTML = '';
   const miss = r.missing.filter(k => !(swap && swap.key === k));
@@ -923,7 +971,7 @@ function buildDishCard(r, day = today()){
       <div class="sub">${opts || '<span class="mono">no substitute on file</span>'}</div>
     </div>`;
   }
-  return {chips, pantry, grams, usd, missingHTML};
+  return {chips, pantry, gramsAll, usdAll, gramsAtRisk, usdAtRisk, missingHTML, usesUpHTML, atRiskCount: atRisk.length};
 }
 
 // Wires the Cook/Show another/swap buttons inside whichever container is
@@ -963,16 +1011,29 @@ function renderTodayCard(entry){
     return;
   }
 
+  if (entry.tier === 'noRisk'){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">Tonight</div>
+      <h2>Nothing here is about to turn.</h2>
+      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
+        Everything in the fridge has more than a few days left. No dish needed tonight.</p>
+    </div>`;
+    return;
+  }
+
   const r = entry.result;
-  const {chips, pantry, grams, usd, missingHTML} = buildDishCard(r, day);
+  const {chips, pantry, gramsAll, usdAll, gramsAtRisk, usdAtRisk, missingHTML, usesUpHTML, atRiskCount} = buildDishCard(r, day);
+  const grams = entry.tier === 'recommend' ? gramsAtRisk : gramsAll;
+  const usd = entry.tier === 'recommend' ? usdAtRisk : usdAll;
   const eyebrow = entry.tier === 'recommend'
-    ? `Tonight · rescues ${r.matched.length} ${r.matched.length === 1 ? 'item' : 'items'}`
+    ? `Tonight · rescues ${atRiskCount} ${atRiskCount === 1 ? 'item' : 'items'}`
     : 'Closest match · one ingredient short';
   const statLabel = entry.tier === 'recommend' ? 'kept out of the bin' : 'already in the fridge for this';
   box.innerHTML = `
     <div>
       <div class="eyebrow mono">${eyebrow}</div>
       <h2>${r.dish.name}</h2>
+      ${usesUpHTML}
       <div class="rescue">${chips}${pantry}</div>
       <div class="stats">
         <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">${statLabel}</span></div>
@@ -1013,12 +1074,28 @@ function renderProjectedCard(entry, boxId, skipSet){
     return;
   }
 
+  if (entry.tier === 'noRisk'){
+    subHTML = `<div class="dish-sub">
+      <div class="eyebrow mono">${entry.clause}</div>
+      <div class="dish-name" style="color:var(--ink-3);font-weight:600">Nothing here is about to turn.</div>
+    </div>`;
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">${label}</div>
+      <div class="daily-fact">${fact}</div>
+      ${subHTML}
+    </div>`;
+    return;
+  }
+
   const r = entry.result;
-  const {chips, pantry, grams, usd, missingHTML} = buildDishCard(r, day);
+  const {chips, pantry, gramsAll, usdAll, gramsAtRisk, usdAtRisk, missingHTML, usesUpHTML} = buildDishCard(r, day);
+  const grams = entry.tier === 'recommend' ? gramsAtRisk : gramsAll;
+  const usd = entry.tier === 'recommend' ? usdAtRisk : usdAll;
   const statLabel = entry.tier === 'recommend' ? 'would be kept out of the bin' : 'already in the fridge for this';
   subHTML = `<div class="dish-sub">
     <div class="eyebrow mono">${entry.clause}</div>
     <div class="dish-name">${r.dish.name}</div>
+    ${usesUpHTML}
     <div class="rescue">${chips}${pantry}</div>
     <div class="stats">
       <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">${statLabel}</span></div>
@@ -1230,12 +1307,20 @@ function removeStanding(key){
   render();
 }
 
+// Removes every matched ingredient -- all of it is really getting used --
+// but only credits the "rescued" ledger for the at-risk ones, same rule
+// buildDishCard's own "kept out of the bin" stat uses, so the card's claim
+// and what the bottom of the page counts up never disagree.
 function cook(r){
+  const atRisk = atRiskMatches(r, today());
   let g = 0;
   r.matched.forEach(k => {
     const it = r.have[k];
     const i = fridge.findIndex(x => x.id === it.id);
-    if (i >= 0){ g += food(it).g; fridge.splice(i, 1); }
+    if (i >= 0){
+      if (atRisk.includes(k)) g += food(it).g;
+      fridge.splice(i, 1);
+    }
   });
   ledger.savedG += g;
   toast(Math.round(g) + ' g rescued');
