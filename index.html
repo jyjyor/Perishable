@@ -725,21 +725,21 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    falls back to DEFAULT_BASE_HEX.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy', base:'#297037'},
+  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
   lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
-  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy', base:'#e8e7e3'},
+  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
   yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
-  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein', base:'#c3ada2'},
+  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
   beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20, cat:'protein', base:'#91473b'},
   bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00, cat:'protein', base:'#c76b60'},
-  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy', plural:true, base:'#e5e2dc'},
-  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein', base:'#ecebea'},
-  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg', base:'#ddd7e0'},
+  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
+  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
+  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg', shape:'halfonion', base:'#ddd7e0'},
   scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
-  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg', base:'#e8e7e3'},
+  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
   ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
   tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
-  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg', base:'#d08a4e'},
+  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
   pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft', base:'#c65539'},
   broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg', base:'#287139'},
   mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
@@ -755,7 +755,7 @@ const FOODS = {
   // ripe -- an unripe banana belongs on the counter, not in here, but the
   // app has no "pantry" concept, so this is the fridge number as given.
   banana:     {en:'Banana',         zh:['香蕉'],            shelf:3,  g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
-  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy', base:'#cdc6a2'},
+  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
   butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
   cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
@@ -1517,6 +1517,120 @@ function bananaOutline(s){
   const offY = marginY - minY * scale + ((s - 2 * marginY) - (maxY - minY) * scale) / 2;
   return raw.map(([px, py]) => [px * scale + offX, py * scale + offY]);
 }
+// ---- Nine bespoke silhouettes (chicken, tofu, milk, spinach, carrot,
+// cut onion, eggs, cheese, garlic), same approach as potato/apple/banana/
+// tomato above: the outline is the FOOD itself (what natureColor fills
+// and decay deforms), drawn in the item's own units of s. Packaging that
+// sits behind it (a tray's back wall, an egg carton's open lid) is an
+// UNDERLAY, drawn before the body; packaging in front of it (a tray's
+// front wall, the carton's cups) belongs to its identity cue, drawn over
+// the body. Packaging keeps one flat tone of its own and never decays --
+// only the food does. Each outline's bottom sits exactly at its
+// packaging's bottom, so the object stands on a shelf by its real base.
+
+// A fillet in side view: a plump rounded end tapering away, its lower
+// edge carried down to the tray's floor (hidden behind the tray's front
+// wall). Index 0 is the plump end, where mold starts.
+function chickenOutline(s){
+  return [[0.13, 0.70], [0.15, 0.54], [0.25, 0.42], [0.40, 0.36], [0.56, 0.38], [0.72, 0.45],
+    [0.86, 0.55], [0.90, 0.63], [0.87, 0.72], [0.72, 0.82], [0.45, 0.855], [0.18, 0.82]]
+    .map(([x, y]) => [x * s, y * s]);
+}
+// A block of tofu, straight-edged; it stands in its tray of water.
+function tofuOutline(s){
+  return rectCorners(s * 0.24, s * 0.30, s * 0.76, s * 0.86);
+}
+// A gable-top carton seen from the front: the box, its sloped roof and the
+// sealed fin on top. Index 0 is bottom-left, 2 the right shoulder, 7 the
+// left shoulder.
+function cartonOutline(s){
+  return [[0.30, 0.93], [0.70, 0.93], [0.70, 0.31], [0.53, 0.17], [0.53, 0.07], [0.47, 0.07],
+    [0.47, 0.17], [0.30, 0.31]].map(([x, y]) => [x * s, y * s]);
+}
+// A loose bunch: four broad, round-tipped leaves of unequal length on
+// short stems from one gathered point -- spade-shaped spinach leaves, not
+// narrow pointed ones (five thin points fanned from one spot reads as a
+// different plant entirely). Notches between leaves are deep so each
+// reads as its own leaf. Sits left of centre, well inside the frame,
+// because leafy sag leans the top rightward as it wilts. Per leaf: notch,
+// left side, near-tip, tip, near-tip, right side; then the stem's two cut
+// ends. Leaf tips at 3, 9, 15, 21 (spinachRibs follows them); notches at
+// 0, 6, 12, 18, 24; stem ends at 25 and 26.
+function spinachOutline(s){
+  const gx = 0.44, gy = 0.70;
+  const leaves = [{a: -158, L: 0.40}, {a: -114, L: 0.58}, {a: -70, L: 0.52}, {a: -26, L: 0.42}];
+  const P = (deg, r) => [gx + Math.cos(deg * Math.PI / 180) * r, gy + Math.sin(deg * Math.PI / 180) * r];
+  const pts = [P(-186, 0.12)];
+  leaves.forEach((lf, i) => {
+    pts.push(P(lf.a - 21, lf.L * 0.55), P(lf.a - 10, lf.L * 0.93), P(lf.a, lf.L),
+      P(lf.a + 10, lf.L * 0.93), P(lf.a + 21, lf.L * 0.55));
+    const next = leaves[i + 1];
+    pts.push(next ? P((lf.a + next.a) / 2, Math.min(lf.L, next.L) * 0.26) : P(lf.a + 30, 0.12));
+  });
+  pts.push([gx + 0.05, 0.93], [gx - 0.03, 0.93]);
+  return pts.map(([x, y]) => [x * s, y * s]);
+}
+// Long and tapered, lying almost level: a rounded shoulder on the left
+// (where the tops grow from) narrowing to a fine root tip on the right.
+// Index 0 is the shoulder's top; points 0..6 run along the top edge,
+// 7 is the tip, 8..13 come back along the underside, 14..15 round the
+// shoulder.
+function carrotOutline(s){
+  const ax = 0.20, ay = 0.60, bx = 0.95, by = 0.70;
+  const len = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / len, uy = (by - ay) / len;
+  const nx = -uy, ny = ux; // points toward the underside
+  const half = t => 0.115 * Math.pow(1 - t, 0.9) + 0.006;
+  const at = (t, side) => [ax + ux * len * t + nx * half(t) * side, ay + uy * len * t + ny * half(t) * side];
+  const ts = [0.02, 0.15, 0.30, 0.45, 0.60, 0.75, 0.88];
+  const top = ts.map(t => at(t, -1));
+  const tip = [bx, by];
+  const under = ts.slice().reverse().map(t => at(t, 1));
+  const capLow = [ax - 0.06, ay + 0.06], capHigh = [ax - 0.06, ay - 0.06];
+  return [...top, tip, ...under.slice(0, 6), capLow, capHigh].map(([x, y]) => [x * s, y * s]);
+}
+// An onion cut top to bottom, cut face to the viewer: a round body
+// rising to a pointed neck. Index 0 is the neck tip.
+function halfOnionOutline(s){
+  const cx = s * 0.5, cy = s * 0.58, rx = s * 0.37, ry = s * 0.30;
+  const n = 20, pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const d = a + Math.PI / 2, dd = Math.min(Math.abs(d), Math.abs(d - Math.PI * 2));
+    const neck = Math.exp(-((dd / 0.45) ** 2)) * 0.42;
+    pts.push([cx + Math.cos(a) * rx * (1 - neck * 0.5), cy + Math.sin(a) * ry * (1 + neck)]);
+  }
+  return pts;
+}
+// Three eggs side by side in the carton's front row: their domes above
+// the cups, their lower halves carried down to the carton floor (hidden
+// behind the cups). Index 0 the middle of the base; the middle egg's top
+// is index 8, so mold starts at the base and the middle egg.
+function eggsOutline(s){
+  return [[0.50, 0.855], [0.18, 0.855], [0.12, 0.58], [0.13, 0.40], [0.23, 0.30], [0.33, 0.40], [0.365, 0.50],
+    [0.40, 0.40], [0.50, 0.30], [0.60, 0.40], [0.635, 0.50], [0.67, 0.40], [0.77, 0.30],
+    [0.87, 0.40], [0.88, 0.58], [0.82, 0.855]].map(([x, y]) => [x * s, y * s]);
+}
+// A wedge lying on its side, in three-quarter view: its thin point on the
+// left, the rind face at the back right. Outline only (tip, front-bottom,
+// back-bottom, back-top); the front-top corner where the faces meet is
+// wedgeFaces' to draw, at a fixed place relative to these four.
+function wedgeOutline(s){
+  return [[0.07, 0.75], [0.78, 0.84], [0.93, 0.75], [0.93, 0.36]].map(([x, y]) => [x * s, y * s]);
+}
+// A garlic bulb: round, a little flattened at the root, narrowing to a
+// papery neck. Index 0 is the neck tip; index 10 the root.
+function garlicOutline(s){
+  const cx = s * 0.5, cy = s * 0.62, rx = s * 0.36, ry = s * 0.27;
+  const n = 20, pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const d = a + Math.PI / 2, dd = Math.min(Math.abs(d), Math.abs(d - Math.PI * 2));
+    const neck = Math.exp(-((dd / 0.32) ** 2));
+    const flat = Math.exp(-(((a - Math.PI / 2) / 0.6) ** 2)) * 0.12;
+    pts.push([cx + Math.cos(a) * rx * (1 - neck * 0.82), cy + Math.sin(a) * ry * (1 + neck * 0.95 - flat)]);
+  }
+  return pts;
+}
 function catOutlinePoints(shape, s){
   const cx = s / 2;
   switch(shape){
@@ -1529,12 +1643,21 @@ function catOutlinePoints(shape, s){
     case 'apple':    return appleOutline(s);
     case 'banana':   return bananaOutline(s);
     case 'tomato':   return tomatoOutline(s);
+    case 'chicken':  return chickenOutline(s);
+    case 'tofu':     return tofuOutline(s);
+    case 'carton':   return cartonOutline(s);
+    case 'spinach':  return spinachOutline(s);
+    case 'carrot':   return carrotOutline(s);
+    case 'halfonion':return halfOnionOutline(s);
+    case 'eggs':     return eggsOutline(s);
+    case 'wedge':    return wedgeOutline(s);
+    case 'garlic':   return garlicOutline(s);
     case 'dairy':    return rectCorners(s*0.28, s*0.08, s*0.72, s*0.92);
     case 'protein':  return rectCorners(s*0.10, s*0.28, s*0.90, s*0.68);
     default:         return rectCorners(s*0.08, s*0.08, s*0.92, s*0.92);
   }
 }
-const BOXY_SHAPES = {dairy:1, protein:1};
+const BOXY_SHAPES = {dairy:1, protein:1, tofu:1, carton:1, wedge:1};
 
 // The outline losing symmetry as decay climbs: the top droops, the whole
 // shape leans, the sides bow out, the base spreads -- all scaled by the
@@ -2020,7 +2143,204 @@ function genericMoldMarkup(deformed, fraction, moldW, size, seed){
 // decay mechanics (discoloration, mold) stay on the generic path below;
 // only the identity line differs. Mushroom is the one shape with a fully
 // bespoke decay treatment (its own brown spots and rim-seeded mold).
-const IDENTITY_CUES = {potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx};
+// ---- Identity cues and underlays for the nine bespoke silhouettes above.
+// Every cue reads the actually-deformed outline (so it rides along with
+// sag and shrivel) except where it is packaging, which stays put.
+const TRAY_HEX = '#E4E9E8', CARTON_HEX = '#D3CEC4', WATER_HEX = '#BFD6DF', LEAF_HEX = '#4C7A3E', DRIED_HEX = '#6B5438';
+const rfLerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+const centroidOf = pts => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
+const f1 = n => n.toFixed(1);
+const polyD = pts => 'M ' + pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L ') + ' Z';
+const lineD = pts => 'M ' + pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L ');
+const scalePts = (s, pts) => pts.map(([x, y]) => [x * s, y * s]);
+// Points pulled toward the centroid -- an inset line that sits on the
+// body rather than retracing the outline (same move as bananaRidge).
+const insetPts = (pts, c, pull) => pts.map(([x, y]) => [x + (c[0] - x) * pull, y + (c[1] - y) * pull]);
+function smoothOpenPath(pts){
+  let d = `M ${f1(pts[0][0])} ${f1(pts[0][1])} `;
+  for (let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    d += `C ${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)}, ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)}, ${f1(p2[0])} ${f1(p2[1])} `;
+  }
+  return d;
+}
+// A small pointed leaf, filled in its own (drying) green -- same shape
+// language as tomatoCalyx's leaves.
+function leafPath(base, angle, len, width, color, size){
+  const dx = Math.cos(angle), dy = Math.sin(angle), px = -dy, py = dx;
+  const tip = [base[0] + dx * len, base[1] + dy * len];
+  const mid = [base[0] + dx * len * 0.45, base[1] + dy * len * 0.45];
+  const l = [mid[0] + px * width, mid[1] + py * width], r = [mid[0] - px * width, mid[1] - py * width];
+  return `<path d="M ${f1(base[0])} ${f1(base[1])} Q ${f1(l[0])} ${f1(l[1])} ${f1(tip[0])} ${f1(tip[1])} Q ${f1(r[0])} ${f1(r[1])} ${f1(base[0])} ${f1(base[1])} Z" fill="${color}" stroke="${INK_HEX}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>`;
+}
+
+// Chicken: the foam tray's back and floor behind the fillet ...
+function chickenTrayBack(deformed, size){
+  return `<path d="${polyD(scalePts(size, [[0.03, 0.58], [0.97, 0.58], [0.92, 0.86], [0.08, 0.86]]))}" fill="${TRAY_HEX}"/>`;
+}
+// ... its front wall over it, and two fibre lines along the fillet's top.
+function chickenFillet(deformed, size){
+  const c = centroidOf(deformed);
+  const ridge = insetPts(deformed.slice(2, 8), c, 0.32);
+  const ridge2 = insetPts(deformed.slice(3, 7), c, 0.58);
+  const wall = scalePts(size, [[0.05, 0.68], [0.95, 0.68], [0.91, 0.86], [0.09, 0.86]]);
+  return `<path d="${smoothOpenPath(ridge)}"/><path d="${smoothOpenPath(ridge2)}"/>
+    <path d="${polyD(wall)}" fill="${TRAY_HEX}"/>
+    <path d="${lineD(scalePts(size, [[0.10, 0.72], [0.90, 0.72]]))}"/>`;
+}
+// Tofu: the tray's back wall behind the block ...
+function tofuTrayBack(deformed, size){
+  return `<path d="${polyD(scalePts(size, [[0.06, 0.50], [0.94, 0.50], [0.90, 0.86], [0.10, 0.86]]))}" fill="${TRAY_HEX}"/>`;
+}
+// ... the block's top face, and the water standing in the tray in front of
+// it: a translucent front wall with its waterline.
+function tofuBlock(deformed, size){
+  const [tl, tr] = [deformed[0], deformed[1]];
+  const drop = size * 0.07;
+  const face = `<path d="${lineD([[tl[0] + size * 0.02, tl[1] + drop], [tr[0] - size * 0.02, tr[1] + drop]])}"/>`;
+  const wall = scalePts(size, [[0.04, 0.58], [0.96, 0.58], [0.90, 0.86], [0.10, 0.86]]);
+  let wave = '';
+  for (let i = 0; i <= 8; i++){
+    const x = 0.06 + i * 0.11;
+    wave += `${i ? 'L' : 'M'} ${f1(x * size)} ${f1((0.615 + (i % 2 ? 0.012 : -0.012)) * size)} `;
+  }
+  return `${face}
+    <path d="${polyD(wall)}" fill="${WATER_HEX}" fill-opacity="0.55"/>
+    <path d="${wave}" stroke="#7FA3B2"/>`;
+}
+// Milk: the roof's crease to the fin, the shoulder seam, the side panel's
+// edge (a three-quarter turn), and a plain label panel -- no lettering.
+function cartonPanels(deformed){
+  const [bl, br, rs, rr, , , rl, ls] = deformed;
+  const sideTop = rfLerp(ls, rs, 0.8), sideBot = rfLerp(bl, br, 0.8);
+  const labTL = rfLerp(rfLerp(ls, bl, 0.25), rfLerp(sideTop, sideBot, 0.25), 0.12);
+  const labBR = rfLerp(rfLerp(ls, bl, 0.62), rfLerp(sideTop, sideBot, 0.62), 0.9);
+  return `<path d="${lineD([ls, rs])}"/><path d="${lineD([sideTop, sideBot])}"/>
+    <path d="${lineD([sideTop, rr])}"/><path d="${lineD([rl, rr])}"/>
+    <path d="${polyD([labTL, [labBR[0], labTL[1]], labBR, [labTL[0], labBR[1]]])}"/>`;
+}
+// Spinach: a midrib from where the stems gather out into each leaf, the
+// edge of each leaf where it overlaps the one beside it (a short curve in
+// from each notch), and the stems down to their cut ends.
+function spinachRibs(deformed, size){
+  const stemTop = rfLerp(deformed[0], deformed[24], 0.5);
+  const gather = rfLerp(stemTop, rfLerp(deformed[25], deformed[26], 0.5), -0.15);
+  const ribs = [3, 9, 15, 21].map((i, k) => {
+    const tip = rfLerp(gather, deformed[i], 0.86);
+    const mid = rfLerp(gather, tip, 0.5);
+    const bow = (k - 1.5) * size * 0.014;
+    return `<path d="M ${f1(gather[0])} ${f1(gather[1])} Q ${f1(mid[0] + bow)} ${f1(mid[1])} ${f1(tip[0])} ${f1(tip[1])}"/>`;
+  }).join('');
+  const overlaps = [6, 12, 18].map(i => {
+    const notch = deformed[i], toward = rfLerp(notch, gather, 0.55);
+    const side = rfLerp(deformed[i - 1], deformed[i + 1], 0.5);
+    const ctrl = rfLerp(toward, side, 0.25);
+    return `<path d="M ${f1(notch[0])} ${f1(notch[1])} Q ${f1(ctrl[0])} ${f1(ctrl[1])} ${f1(toward[0])} ${f1(toward[1])}"/>`;
+  }).join('');
+  const stems = [0.3, 0.7].map(t => `<path d="${lineD([gather, rfLerp(deformed[26], deformed[25], t)])}"/>`).join('');
+  return ribs + overlaps + stems;
+}
+// Carrot: the green tops from its shoulder -- three stems, each carrying
+// a few leaflets that dry and droop on their own clock, like the
+// tomato's calyx -- and the faint rings across the root.
+function carrotTops(deformed, size, seed, fraction){
+  const cFrac = Math.max(0, Math.min(1, fraction / 0.6));
+  const color = oklchLerp(LEAF_HEX, DRIED_HEX, cFrac);
+  const shoulder = rfLerp(deformed[14], deformed[15], 0.5);
+  const droop = cFrac * 0.7;
+  let out = '';
+  [-2.25, -1.85, -1.45].forEach((a0, k) => {
+    const a = a0 + droop * (k === 0 ? -0.4 : 0.5);
+    const len = size * (0.30 - 0.06 * k) * (1 - 0.25 * cFrac);
+    const end = [shoulder[0] + Math.cos(a) * len, shoulder[1] + Math.sin(a) * len];
+    out += `<path d="${lineD([shoulder, end])}" stroke="${color}" stroke-width="${Math.max(1, size * 0.012).toFixed(2)}"/>`;
+    [0.45, 0.7, 1].forEach((t, j) => {
+      const b = rfLerp(shoulder, end, t);
+      const side = j % 2 ? 1 : -1;
+      out += leafPath(b, a + side * 0.7, size * 0.07 * (1 - 0.3 * cFrac), size * 0.022, color, size);
+    });
+  });
+  const rings = [2, 3, 4, 5].map(i => {
+    const topP = deformed[i], botP = deformed[14 - i];
+    return `<path d="${lineD([rfLerp(topP, botP, 0.12), rfLerp(topP, botP, 0.45)])}"/>`;
+  }).join('');
+  return rings + out;
+}
+// Cut onion: the papery skin as a thin inner line, then the rings, each a
+// smaller copy of the actual (deformed) outline drawn in toward the core
+// near the root -- so the rings shrivel along with the onion.
+function onionRings(deformed, size){
+  const root = deformed[10];
+  const core = [root[0], root[1] - size * 0.14];
+  const ring = k => smoothClosedPath(insetPts(deformed, core, k));
+  return `<path d="${ring(0.07)}"/><path d="${ring(0.30)}"/><path d="${ring(0.52)}"/><path d="${ring(0.72)}"/>
+    <path d="${lineD([[root[0] - size * 0.04, root[1] - size * 0.01], [root[0] + size * 0.04, root[1] - size * 0.01]])}"/>`;
+}
+// Eggs: the carton's open lid standing up behind them ...
+function eggCartonLid(deformed, size){
+  const lid = scalePts(size, [[0.07, 0.56], [0.93, 0.56], [0.87, 0.10], [0.13, 0.10]]);
+  let cups = '';
+  [0.28, 0.5, 0.72].forEach(x => {
+    cups += `<path d="M ${f1((x - 0.09) * size)} ${f1(0.20 * size)} Q ${f1(x * size)} ${f1(0.30 * size)} ${f1((x + 0.09) * size)} ${f1(0.20 * size)}" fill="none"/>`;
+  });
+  return `<path d="${polyD(lid)}" fill="${CARTON_HEX}"/>${cups}`;
+}
+// ... and its front wall of cups over their lower halves.
+function eggCartonCups(deformed, size){
+  let top = `M ${f1(0.05 * size)} ${f1(0.58 * size)} `;
+  [0.23, 0.5, 0.77].forEach(x => {
+    top += `Q ${f1(x * size)} ${f1(0.66 * size)} ${f1((x + 0.135) * size)} ${f1(0.58 * size)} `;
+  });
+  const wall = `${top}L ${f1(0.92 * size)} ${f1(0.87 * size)} L ${f1(0.08 * size)} ${f1(0.87 * size)} Z`;
+  const dividers = [0.365, 0.635].map(x => `<path d="${lineD(scalePts(size, [[x, 0.64], [x, 0.86]]))}"/>`).join('');
+  return `<path d="${wall}" fill="${CARTON_HEX}"/>${dividers}`;
+}
+// Cheese: the faces of the wedge -- the front-top corner fixed relative
+// to the four outline points, the rind face a flat darker tone, and a
+// few holes in the cut face.
+function wedgeFaces(deformed, size, seed){
+  const [tip, fb, bb, bt] = deformed;
+  const ft = [fb[0] + (bt[0] - bb[0]), fb[1] + (bt[1] - bb[1])];
+  // Three holes at fixed places in the cut face (as fractions toward
+  // front-bottom and front-top from the tip), jittered a little per item.
+  const rand = seededRand(seed + 91);
+  let holes = '';
+  [[0.55, 0.30], [0.70, 0.52], [0.40, 0.42]].forEach(([u, v], i) => {
+    const uu = u + (rand() - 0.5) * 0.06, vv = v + (rand() - 0.5) * 0.06;
+    const p = [tip[0] + (fb[0] - tip[0]) * uu * (1 - vv) + (ft[0] - tip[0]) * uu * vv,
+               tip[1] + (fb[1] - tip[1]) * uu * (1 - vv) + (ft[1] - tip[1]) * uu * vv];
+    const r = size * (0.018 + 0.01 * (i === 1 ? 1 : rand()));
+    holes += `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(r)}" ry="${f1(r * 0.75)}" fill="#3B2E22" fill-opacity="0.18"/>`;
+  });
+  return `<path d="${polyD([fb, bb, bt, ft])}" fill="#3B2E22" fill-opacity="0.16"/>
+    <path d="${lineD([tip, ft, bt])}"/><path d="${lineD([ft, fb])}"/>${holes}`;
+}
+// Garlic: the cloves' seams curving from the neck to the root, the root
+// plate, and the papery neck tip.
+function garlicCloves(deformed, size){
+  const neck = deformed[0], root = deformed[10];
+  const left = deformed[15], right = deformed[5];
+  const top = rfLerp(neck, root, 0.18);
+  const seams = [-0.62, -0.22, 0.22, 0.62].map(f => {
+    const midX = (left[0] + right[0]) / 2 + f * (right[0] - left[0]) / 2;
+    const midY = (left[1] + right[1]) / 2;
+    const bot = [root[0] + f * size * 0.12, root[1] - size * 0.02];
+    return `<path d="M ${f1(top[0])} ${f1(top[1])} Q ${f1(midX)} ${f1(midY)} ${f1(bot[0])} ${f1(bot[1])}"/>`;
+  }).join('');
+  const plate = `<path d="${lineD([[root[0] - size * 0.08, root[1] - size * 0.025], [root[0] + size * 0.08, root[1] - size * 0.025]])}"/>`;
+  const tip = `<path d="${lineD([rfLerp(neck, top, 0.0), rfLerp(neck, top, 0.6)])}"/>`;
+  return seams + plate + tip;
+}
+
+const IDENTITY_CUES = {potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
+  chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, spinach: spinachRibs, carrot: carrotTops,
+  halfonion: onionRings, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves};
+// Packaging behind the food, drawn before its body (see the note above
+// chickenOutline). Kept in its own group so the body outline stays the
+// svg's first direct <path> child. A packaged food's mold is drawn under
+// its cue layer, so it grows on the food, not on the tray or carton wall
+// in front of it.
+const UNDERLAYS = {chicken: chickenTrayBack, tofu: tofuTrayBack, eggs: eggCartonLid};
 
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
@@ -2038,12 +2358,16 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
     ? mushroomMoldMarkup(deformed, fraction, moldW, size, seed)
     : genericMoldMarkup(deformed, fraction, moldW, size, seed);
   const mold = moldInner ? `<g clip-path="url(#${uid}-clip)">${moldInner}</g>` : '';
+  const under = UNDERLAYS[shape]
+    ? `<g stroke="${INK_HEX}" stroke-width="${strokeW}" stroke-linejoin="round">${UNDERLAYS[shape](deformed, size, seed, fraction)}</g>` : '';
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
+    ${under}
     <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
     <g>${spots}</g>
+    ${under ? mold : ''}
     <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${strokes}</g>
-    ${mold}
+    ${under ? '' : mold}
   </svg>`;
 }
 
