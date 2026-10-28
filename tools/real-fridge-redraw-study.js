@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-// Design-review render for the real-fridge redraw: the static open fridge,
-// 7-item scenario, desktop width, in both body options (data-body cool /
-// cream), composited side by side into one image. Same seeding as
+// Design-review render for the real-fridge redraw: the static open fridge
+// (cream body) for the 7-item scenario and the ~25-item haul at desktop
+// width, and the 7-item scenario at phone width. Same seeding as
 // real-fridge-study.js, through the real renderRealFridge().
 //
 // Run: node tools/real-fridge-redraw-study.js
-// Output: tools/screenshots/real-fridge-redraw-7item-desktop-open-bodies.png
-//         (plus one file per body option)
+// Output: tools/screenshots/real-fridge-redraw-*.png
 
 const { chromium } = require('playwright-core');
 const http = require('http');
@@ -36,7 +35,10 @@ function serve(){
 
 async function seedFridge(page, n){
   await page.evaluate(n => {
-    const KEYS = ['spinach', 'milk', 'chicken', 'tofu', 'onion', 'tomato', 'carrot'];
+    const KEYS = ['spinach', 'milk', 'chicken', 'tofu', 'onion', 'tomato', 'carrot',
+      'pepper', 'broccoli', 'mushroom', 'potato', 'lemon', 'mango', 'apple', 'banana',
+      'cheese', 'cookedrice', 'bokchoy', 'cucumber', 'zucchini', 'cauliflower', 'corn',
+      'beef', 'bacon', 'egg', 'yogurt', 'garlic', 'ginger'];
     const day = today();
     fridge = [];
     for (let i = 0; i < n; i++){
@@ -48,36 +50,32 @@ async function seedFridge(page, n){
   }, n);
 }
 
+const SHOTS = [
+  {name: '7item-desktop', n: 7, vp: {width: 1200, height: 1400}},
+  {name: '25item-desktop', n: 25, vp: {width: 1200, height: 1400}},
+  {name: '7item-phone', n: 7, vp: {width: 390, height: 1000}},
+];
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({executablePath: CHROME_PATH, headless: true});
-  const shots = [];
-  for (const body of ['cream', 'cool']){
+  const only = process.argv.slice(2);
+  for (const shot of SHOTS.filter(s => !only.length || only.includes(s.name))){
     const page = await (await browser.newContext({deviceScaleFactor: 2})).newPage();
-    await page.setViewportSize({width: 1200, height: 1400});
+    await page.setViewportSize(shot.vp);
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(`http://localhost:${PORT}/index.html?v=${Date.now()}`);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.waitForSelector('#headline');
-    await page.evaluate(b => { document.getElementById('rfUnit').dataset.body = b; }, body);
-    await seedFridge(page, 7);
+    await seedFridge(page, shot.n);
     await page.waitForTimeout(1800); // auto-open finished; this render is the static open state
-    const file = path.join(OUT, `real-fridge-redraw-7item-desktop-open-${body}.png`);
+    const file = path.join(OUT, `real-fridge-redraw-${shot.name}-open.png`);
     await (await page.$('.rf-stage')).screenshot({path: file});
-    shots.push({body, file});
     console.log('  wrote', path.basename(file), errors.length ? 'ERRORS ' + JSON.stringify(errors) : '');
     await page.context().close();
   }
-  const page = await browser.newPage();
-  const imgs = shots.map(s => `<figure><img src="data:image/png;base64,${fs.readFileSync(s.file).toString('base64')}"><figcaption>${s.body}</figcaption></figure>`).join('');
-  await page.setContent(`<style>body{margin:0;background:#E6EAE8;display:flex;gap:0}figure{margin:0}img{display:block;width:900px}
-    figcaption{font:12px ui-monospace,monospace;color:#5C6664;padding:0 0 14px 24px;text-transform:uppercase;letter-spacing:.06em}</style>${imgs}`);
-  const comp = path.join(OUT, 'real-fridge-redraw-7item-desktop-open-bodies.png');
-  await page.setViewportSize({width: 1800, height: 800});
-  await page.screenshot({path: comp, fullPage: true});
-  console.log('  wrote', path.basename(comp));
   await browser.close();
   server.close();
 })();

@@ -185,10 +185,14 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-cavity .rf-svg.front{z-index:2;pointer-events:none}
 
 /* A gone item's line (name, days gone, Toss) is wider than its body. */
-#rfCrisperItems{gap:15cqw}
 .rf-row{
-  position:absolute;display:flex;justify-content:center;align-items:flex-end;gap:1.6cqw;
+  position:absolute;display:flex;justify-content:center;align-items:flex-end;
 }
+.rf-row > .rf-item + .rf-item{margin-left:var(--rf-gap,1.6cqw)}
+/* When they fit without overlapping, gone items spread across the
+   drawer, so their wider tags (with Toss) have room side by side. */
+.rf-row.spread{justify-content:space-evenly}
+.rf-row.spread > .rf-item + .rf-item{margin-left:0}
 .rf-item{position:relative}
 .rf-fooditem{
   position:relative;display:block;cursor:pointer;background:none;border:none;padding:0;font:inherit;
@@ -202,19 +206,32 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-foodshape svg > path{stroke-width:2.5px}
 .rf-foodshape svg > g[stroke]{stroke-width:1.25px}
 .rf-under{
-  position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);z-index:3;
-  display:flex;align-items:center;gap:6px;
+  /* The tag hangs below its item, clear of the shelf: --rf-drop (set per
+     row) clears the shelf's front edge, the string bridges the gap, and a
+     crowded row's tags step down a tier (--rf-tier) rather than collide. */
+  position:absolute;left:50%;z-index:3;
+  top:calc(100% + var(--rf-drop, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
+  transform:translateX(-50%);
 }
-/* Never break inside a word: each line is one unbroken run, the label
-   simply as wide as its longest line, centered under the food. */
-.rf-foodlabel{
-  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;letter-spacing:.03em;
-  color:var(--ink);text-align:center;line-height:1.2;
-  white-space:nowrap;overflow-wrap:normal;word-break:keep-all;hyphens:none;
+.rf-tag{
+  position:relative;width:max-content;display:flex;flex-direction:column;align-items:center;gap:1px;
+  background:var(--paper);border:1px solid var(--line);padding:2px 6px 3px;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.02em;line-height:1.2;
+  text-align:center;
+  /* Never break inside a word: a name wraps only at its spaces
+     ("Chicken / breast"), so the tag is as narrow as its longest word. */
+  white-space:normal;overflow-wrap:normal;word-break:keep-all;hyphens:none;
 }
-.rf-under button{font-size:9px;padding:1px 7px;letter-spacing:.02em;pointer-events:auto}
+.rf-tag > span{max-width:14ch}
+.rf-tag .rf-tag-days{white-space:nowrap;display:flex;align-items:center;gap:4px}
+.rf-tag::before{
+  content:'';position:absolute;left:50%;bottom:100%;width:1px;background:var(--ink-3);
+  height:calc(var(--rf-string, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
+}
+.rf-tag .rf-tag-days{opacity:.85}
+.rf-tag button{font-size:10px;padding:0 4px;letter-spacing:.02em;color:var(--ink-2)}
 .rf-crisper-label{
-  position:absolute;z-index:3;
+  position:absolute;z-index:2;
   font-family:'tonos-mono-vf',ui-monospace,monospace;
   font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;
 }
@@ -280,8 +297,15 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 }
 .rf-popover .rf-pop-close:hover{color:var(--ink)}
 
+/* Phone: the door's inside would nearly double the drawing's width and
+   shrink the food below legibility, so the door swings to square -- only
+   its thick edge shows -- and the fridge takes the screen's width. What
+   would sit in the door bins goes on the upper shelf instead (RF_PHONE in
+   renderRealFridge), so nothing is hidden behind the turned door. */
 @media (max-width:720px){
-  .rf-unit{width:min(320px,80vw)}
+  .rf-stage{--rf-w:min(92vw,440px)}
+  .rf-unit{margin-right:calc(var(--rf-w) * .05)}
+  .rf-unit.open .rf-door{transform:rotateY(90deg)}
 }
 
 /* ---------- hero ---------- */
@@ -540,7 +564,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
         <div class="rf-cavity">
           <svg class="rf-svg" id="rfInteriorSvg" viewBox="0 0 360 640" aria-hidden="true"></svg>
           <div class="rf-row" id="rfShelfEye"></div>
-          <div class="rf-row" id="rfShelfLower"></div>
+          <div class="rf-row" id="rfShelfUpper"></div>
           <div class="rf-row" id="rfCrisperItems"></div>
           <svg class="rf-svg front" id="rfCrisperFrontSvg" viewBox="0 0 360 640" aria-hidden="true"></svg>
           <div class="rf-crisper-label" id="rfCrisperLabel">Crisper — past date</div>
@@ -2156,15 +2180,18 @@ function rfAtRiskCount(day){
 // the whole drawing, food included, scales as one.
 const RF = {
   W: 360, H: 640, PX: 600 / 360,
-  vx: 180, vy: 225, k: 0.74, lip: 0.04,
+  vx: 180, vy: 380, k: 0.74, lip: 0.04,
   open: {x0: 32, y0: 136, x1: 328, y1: 580},
   door: {x0: 20, y0: 124, x1: 340, y1: 592},
-  eyeY: 300, lowY: 440, edge: 12, crispTop: 500, crispBaseY: 522,
+  upperY: 280, eyeY: 418, edge: 12, crispTop: 476, crispBaseY: 498,
   bins: [60, 190, 320]
 };
 // Carton, tub and box items live in the door bins -- unless urgency has
 // already put them on the eye-level shelf, which always wins.
 const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt']);
+// Must match the phone breakpoint in the .rf CSS, where the door only
+// opens to square and its bins can't be seen.
+const RF_PHONE = window.matchMedia('(max-width:720px)');
 
 function rfP(x, y, d){
   const f = 1 - d * (1 - RF.k);
@@ -2237,7 +2264,7 @@ function rfDrawCabinet(){
   inner += rfPoly([TL(0), TL(L), BL(L), BL(0)], 'b2');
   inner += rfPoly([TR(0), TR(L), BR(L), BR(0)], 'b2');
   inner += rfPoly([TL(1), TR(1), BR(1), BL(1)], 'backwall');
-  const poolY = C(RF.vx, RF.eyeY, 1)[1];
+  const poolY = C(RF.vx, RF.upperY, 1)[1];
   inner += rfPoly([[domeC[0] - 22, TL(1)[1]], [domeC[0] + 22, TL(1)[1]], [domeC[0] + 46, poolY], [domeC[0] - 46, poolY]], 'pool');
   inner += rfPoly([TL(L), TR(L), TR(1), TL(1)], 'ceil');
   inner += rfPoly([BL(L), BR(L), BR(1), BL(1)], 'floor');
@@ -2257,7 +2284,7 @@ function rfDrawCabinet(){
   inner += rfPoly([C(xb, RF.crispTop, .06), C(xb, RF.crispTop, .95), C(xb, cb, .95), C(xb, cb, .06)], 'side i');
 
   // Glass shelves: a trapezoid surface wall to wall, and a thick front edge.
-  [RF.eyeY, RF.lowY].forEach(y => {
+  [RF.upperY, RF.eyeY].forEach(y => {
     const fl = C(o.x0, y, .05), fr = C(o.x1, y, .05);
     inner += rfPoly([fl, fr, C(o.x1, y, 1), C(o.x0, y, 1)], 'glass i');
     inner += rfPoly([fl, fr, [fr[0], fr[1] + RF.edge], [fl[0], fl[1] + RF.edge]], 'glassedge o');
@@ -2322,27 +2349,35 @@ function rfDrawCabinet(){
     <line class="i" x1="5" y1="4" x2="5" y2="456" vector-effect="non-scaling-stroke"/>`;
 }
 
-// Same size the line-art fridge view gives this item's front-row body
-// (layoutShelfRow + buildShelfItem's decay shrink, or buildDrawerItem's
-// for a gone one), in design px -- the floor every item here starts from.
-function rfLineArtPx(it, day){
+// Size follows urgency and nothing else: days left through the same
+// sqrt scale the decay line and the line-art fridge use (pos), so a
+// today item is the largest thing in the drawing and a 28-day carrot one
+// of the smallest -- whatever their category. Gone items share one size.
+// In design px at the unit's full 600px width.
+function rfUrgencyPx(it, day){
   const d = leftAt(it, day);
-  const cat = fridgeCatOf(it);
-  if (d < 0) return Math.round(76 * (1 - 0.18 * cat.shrink));
+  if (d < 0) return 82;
   const frontness = 1 - pos(Math.max(0, d)) / 100;
-  return Math.max(18, Math.round((44 + frontness * 130) * (1 - decayFraction(it, day) * 0.22 * cat.shrink)));
+  return Math.round(60 + frontness * 110);
 }
 
-// Scales one row of items up (never below their line-art size unless the
-// row is genuinely too crowded to fit) until it fills `fill` of the
-// shelf's width or its tallest item reaches the space above the shelf.
-function rfFitRow(items, day, widthU, capU, minU, maxScale, fill){
-  const gapU = 1.6 * RF.W / 100;
-  const base = items.map(it => Math.max(minU, rfLineArtPx(it, day) / RF.PX));
-  if (!base.length) return [];
-  const sum = base.reduce((a, b) => a + b, 0) + gapU * (base.length - 1);
-  const s = Math.min(widthU * fill / sum, capU / Math.max(...base), maxScale);
-  return items.map((it, i) => ({it, u: base[i] * Math.max(s, Math.min(1, widthU / sum))}));
+// Fits a row into the shelf's width: spaced out when there's room,
+// overlapping (nearer items in front) when there isn't, and only scaled
+// down once overlap alone can't make it fit. Returns sizes in units and
+// the gap between neighbours (negative = overlap).
+function rfFitRow(items, day, widthU, scale = 1){
+  if (!items.length) return {items: [], gapU: 0, scale};
+  const base = items.map(it => rfUrgencyPx(it, day) / RF.PX * scale);
+  const sum = base.reduce((a, b) => a + b, 0), n = base.length;
+  const avg = sum / n;
+  let gapU = n > 1 ? Math.min(avg * 0.25, (widthU * 0.96 - sum) / (n - 1)) : 0;
+  let s = 1;
+  if (gapU < -avg * 0.4){
+    gapU = -avg * 0.4;
+    s = widthU * 0.96 / (sum + gapU * (n - 1));
+    gapU *= s;
+  }
+  return {items: items.map((it, i) => ({it, u: base[i] * s})), gapU, scale: scale * s};
 }
 
 function rfPlaceRow(el, x0, x1, baseY, total = RF.W, totalH = RF.H){
@@ -2351,7 +2386,20 @@ function rfPlaceRow(el, x0, x1, baseY, total = RF.W, totalH = RF.H){
   el.style.bottom = rfPct(totalH - baseY, totalH);
 }
 
-function rfBuildFoodItem(it, day, u){
+const rfCq = u => (u * 100 / RF.W).toFixed(3) + 'cqw';
+
+// dropU: from the row's base line to where its tags start (clear of the
+// shelf edge below the items); stringU: how much of that the string shows.
+function rfFillRow(el, fit, day, opts = {}){
+  el.style.setProperty('--rf-gap', rfCq(fit.gapU));
+  if (opts.dropU != null){
+    el.style.setProperty('--rf-drop', rfCq(opts.dropU));
+    el.style.setProperty('--rf-string', rfCq(opts.stringU));
+  }
+  el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null)).join('');
+}
+
+function rfBuildFoodItem(it, day, u, z){
   const f = food(it);
   const cat = fridgeCatOf(it);
   const d = leftAt(it, day);
@@ -2362,23 +2410,30 @@ function rfBuildFoodItem(it, day, u){
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
   const dayLabel = gone ? `${Math.abs(d)}d gone` : d === 0 ? 'today' : d + 'd';
-  // One line, written on the shelf's front edge like a shelf strip.
+  // The tag is this item's label in CLAUDE.md's sense: name and days left
+  // in the urgency bucket's colour, the same state()/COLOR lookup as the
+  // list, the decay line and the line-art fridge.
+  const c = COLOR[state(d)];
   const toss = gone ? `<button type="button" class="ghost" data-rf-toss="${it.id}">Toss</button>` : '';
-  return `<div class="rf-item">
+  return `<div class="rf-item"${z != null ? ` style="z-index:${z}"` : ''}>
     <button type="button" class="rf-fooditem" data-rf-item="${it.id}" aria-label="${f.en}">
       <span class="rf-foodshape" data-u="${u.toFixed(2)}" style="width:${cq};height:${cq}">${svg}</span>
     </button>
-    <div class="rf-under"><span class="rf-foodlabel">${f.en} · ${dayLabel}</span>${toss}</div>
+    <div class="rf-under"><div class="rf-tag"><span style="color:${c}">${f.en}</span><span class="rf-tag-days" style="color:${c}">${dayLabel}${toss}</span></div></div>
   </div>`;
 }
 
 function renderRealFridge(){
   const day = today();
   const unit = document.getElementById('rfUnit');
-  if (!unit.dataset.drawn){ rfDrawCabinet(); unit.dataset.drawn = '1'; }
+  if (!unit.dataset.drawn){
+    rfDrawCabinet();
+    unit.dataset.drawn = '1';
+    RF_PHONE.addEventListener('change', renderRealFridge);
+  }
   const closedLine = document.getElementById('rfClosedLine');
   const eyeShelf = document.getElementById('rfShelfEye');
-  const lowerShelf = document.getElementById('rfShelfLower');
+  const upperShelf = document.getElementById('rfShelfUpper');
   const crisperItems = document.getElementById('rfCrisperItems');
   const bins = [1, 2, 3].map(n => document.getElementById('rfDoorBin' + n));
   const emptyCavity = document.getElementById('rfEmptyCavity');
@@ -2391,7 +2446,7 @@ function renderRealFridge(){
       : 'Nothing needs attention yet';
 
   if (!fridge.length){
-    [eyeShelf, lowerShelf, crisperItems, ...bins].forEach(el => { el.innerHTML = ''; });
+    [eyeShelf, upperShelf, crisperItems, ...bins].forEach(el => { el.innerHTML = ''; });
     emptyCavity.hidden = false;
     emptyCavity.innerHTML = 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
     unit.classList.remove('has-items');
@@ -2403,50 +2458,65 @@ function renderRealFridge(){
   const active = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
   const gone = fridge.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
 
-  // The most urgent items go on the eye-level shelf, front and center,
-  // whatever they are; cartons and tubs that aren't among them go to the
-  // door bins; everything else to the lower shelf, soonest first.
-  const EYE_COUNT = Math.min(active.length, 3);
-  const eyeItems = active.slice(0, EYE_COUNT);
-  const rest = active.slice(EYE_COUNT);
-  const doorItems = rest.filter(it => RF_DOOR_KEYS.has(it.key));
-  const restItems = rest.filter(it => !RF_DOOR_KEYS.has(it.key));
+  // Most urgent means the 72-hour bucket, state() === 'crit', and only
+  // that: those go on the middle, eye-level shelf, front and center,
+  // whatever they are. Cartons and tubs outside it go to the door bins;
+  // everything else to the upper shelf, soonest first. A bin with nothing
+  // assigned stays empty.
+  const eyeItems = active.filter(it => state(leftAt(it, day)) === 'crit');
+  const rest = active.filter(it => state(leftAt(it, day)) !== 'crit');
+  const toDoor = it => RF_DOOR_KEYS.has(it.key) && !RF_PHONE.matches;
+  const doorItems = rest.filter(toDoor);
+  const upperItems = rest.filter(it => !toDoor(it));
 
   // The single most urgent item lands in the middle of the row, not at
-  // one end -- alternate the rest to either side of it so left-to-right
-  // reading order still tracks outward from "most urgent," matching how
-  // a glance at a real shelf would find the thing in front first.
+  // one end -- alternate the rest to either side of it so reading order
+  // still tracks outward from "most urgent," and when a crowded row
+  // overlaps, the more urgent item is the one in front.
   const left = [], right = [];
   eyeItems.forEach((it, i) => (i % 2 === 0 ? right : left).push(it));
   const ordered = [...left.reverse(), ...right];
+  const rank = new Map(eyeItems.map((it, i) => [it.id, i]));
 
   const o = RF.open;
-  // Items stand on the glass just behind its front edge, so each label
-  // lands on the edge itself; the row's width is the shelf's at that depth.
+  // Items stand on the glass just behind its front edge; the row's width
+  // is the shelf's at that depth.
   const rowAt = (y, inset) => {
     const baseY = rfP(RF.vx, y, .05)[1] - 1.5;
     const f = (baseY - RF.vy) / (y - RF.vy);
     const half = ((o.x1 - o.x0) / 2 - inset) * f;
     return {x0: RF.vx - half, x1: RF.vx + half, y: baseY, w: half * 2};
   };
-  const eye = rowAt(RF.eyeY, 4), low = rowAt(RF.lowY, 4);
-  const eyeCap = eye.y - (o.y0 + 34);
-  const lowCap = low.y - (RF.eyeY + RF.edge + 8);
+  const eye = rowAt(RF.eyeY, 4), up = rowAt(RF.upperY, 4);
   rfPlaceRow(eyeShelf, eye.x0, eye.x1, eye.y);
-  rfPlaceRow(lowerShelf, low.x0, low.x1, low.y);
+  rfPlaceRow(upperShelf, up.x0, up.x1, up.y);
   const ca = rfP(o.x0 + 14, RF.crispBaseY, .06)[0], cbx = rfP(o.x1 - 14, RF.crispBaseY, .06)[0];
   rfPlaceRow(crisperItems, ca, cbx, RF.crispBaseY);
 
-  eyeShelf.innerHTML = rfFitRow(ordered, day, eye.w, eyeCap, 50, 1.6, 0.94).map(p => rfBuildFoodItem(p.it, day, p.u)).join('');
-  lowerShelf.innerHTML = rfFitRow(restItems, day, low.w, lowCap, 50, 1.9, 0.86).map(p => rfBuildFoodItem(p.it, day, p.u)).join('');
-  crisperItems.innerHTML = rfFitRow(gone, day, cbx - ca, 62, 40, 1.5, 0.7).map(p => rfBuildFoodItem(p.it, day, p.u)).join('');
+  // One shared scale for both shelves, so a crowded eye-level row that has
+  // to shrink never ends up smaller than the less urgent things above it.
+  const eyeFit = rfFitRow(ordered, day, eye.w);
+  const upFit = rfFitRow(upperItems, day, up.w, eyeFit.scale);
+  const shared = Math.min(eyeFit.scale, upFit.scale);
+  const eyeFinal = shared < eyeFit.scale ? rfFitRow(ordered, day, eye.w, shared) : eyeFit;
+  // Tags start 4 units under the shelf's front edge, the string covering
+  // those 4: the edge itself (and the 1.5 the base sits above it) stays clear.
+  const shelfTag = {dropU: 1.5 + RF.edge + 4, stringU: 4};
+  // Shelf rows stack above the crisper's front panel (z 2) and its tags
+  // (z 3); the upper shelf's hanging tags above the eye-level food.
+  rfFillRow(eyeShelf, eyeFinal, day, {...shelfTag, z: (i, n) => 10 + n - rank.get(eyeFinal.items[i].it.id)});
+  rfFillRow(upperShelf, upFit, day, {...shelfTag, z: (i, n) => 40 + n - i});
+  const goneFit = rfFitRow(gone, day, cbx - ca);
+  crisperItems.classList.toggle('spread', goneFit.gapU >= 0);
+  rfFillRow(crisperItems, goneFit, day, {dropU: 3, stringU: 3});
 
   const DW = RF.door.x1 - RF.door.x0, DH = RF.door.y1 - RF.door.y0;
   bins.forEach((el, i) => {
     const bt = RF.bins[i];
     rfPlaceRow(el, 30, DW - 30, bt + 52, DW, DH);
     const mine = doorItems.slice(i * 3, i * 3 + 3);
-    el.innerHTML = rfFitRow(mine, day, DW - 60, 92, 40, 1.2, 0.9).map(p => rfBuildFoodItem(p.it, day, p.u)).join('');
+    const tallest = Math.max(0, ...mine.map(it => rfUrgencyPx(it, day) / RF.PX));
+    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4});
   });
 
   // foodShapeMarkupLine centres a body in its square; pull each one down
@@ -2458,11 +2528,36 @@ function renderRealFridge(){
     const gap = Math.max(0, size - (box.y + box.height)) / size;
     span.style.marginBottom = `-${(gap * +span.dataset.u * 100 / RF.W).toFixed(3)}cqw`;
   });
+  rfStaggerTags([upperShelf, eyeShelf, crisperItems]);
+  bins.forEach(b => rfStaggerTags([b]));
   unit.querySelectorAll('[data-rf-item]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
   });
   unit.querySelectorAll('[data-rf-toss]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); useItem(+b.dataset.rfToss, true); };
+  });
+}
+
+// Rows in order (upper shelf, eye level, crisper), each tag left to
+// right takes the first tier where it overlaps no tag already placed --
+// from any row, since one shelf's hanging tags reach down toward the next
+// one's. Read off real rendered boxes, not an estimate.
+function rfStaggerTags(rows){
+  const placed = [], M = 3;
+  rows.forEach(row => {
+    const tagH = Math.max(0, ...[...row.querySelectorAll('.rf-tag')].map(t => t.offsetHeight));
+    const step = tagH + 5;
+    row.style.setProperty('--rf-tier-h', step + 'px');
+    row.querySelectorAll('.rf-under').forEach(u => {
+      u.style.removeProperty('--rf-tier');
+      const r = u.getBoundingClientRect();
+      const hits = dy => placed.some(p => r.left < p.right + M && r.right > p.left - M
+        && r.top + dy < p.bottom + M && r.bottom + dy > p.top - M);
+      let tier = 0;
+      while (tier < 6 && hits(tier * step)) tier++;
+      if (tier) u.style.setProperty('--rf-tier', tier);
+      placed.push({left: r.left, right: r.right, top: r.top + tier * step, bottom: r.bottom + tier * step});
+    });
   });
 }
 
