@@ -277,6 +277,10 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-handle svg{display:block;width:100%;height:100%;overflow:visible}
 .rf-handle:hover .handle{fill:var(--rf-bh)}
 .rf-handle:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+/* Open, the door's inside face and edge close it (rfInit); and since the
+   handle then faces away, its keyboard focus shows on the inside face. */
+.rf-unit.open .rf-door-inside,.rf-unit.open .rf-door-edge{cursor:pointer}
+.rf-unit.open:has(.rf-handle:focus-visible) .rf-door-inside{outline:2px solid var(--ink);outline-offset:-4px}
 
 .rf-popover{
   position:fixed;z-index:40;background:var(--paper);border:1px solid var(--ink);
@@ -2927,12 +2931,29 @@ function rfInit(){
   } else {
     setTimeout(() => unit.classList.add('open'), 500);
   }
+  // One place that moves the door, so the handle's pressed/label state
+  // stays true whichever control moved it.
+  const setDoor = open => {
+    rfHidePopover(); // closing or reopening the door shouldn't leave a popover pointing at a now-hidden item
+    unit.classList.toggle('open', open);
+    handle.setAttribute('aria-pressed', open ? 'true' : 'false');
+    handle.setAttribute('aria-label', open ? 'Close fridge door' : 'Open fridge door');
+  };
   handle.addEventListener('click', e => {
     e.stopPropagation();
-    rfHidePopover(); // closing or reopening the door shouldn't leave a popover pointing at a now-hidden item
-    const nowOpen = unit.classList.toggle('open');
-    handle.setAttribute('aria-pressed', nowOpen ? 'true' : 'false');
-    handle.setAttribute('aria-label', nowOpen ? 'Close fridge door' : 'Open fridge door');
+    setDoor(!unit.classList.contains('open'));
+  });
+  // Open past square on desktop (to square on phone), the door turns its
+  // handle away from the viewer -- so whatever of the door is still in
+  // view, its inside face and its edge, closes it. The handle stays the
+  // focusable control for the keyboard. A food item in a door bin stops
+  // its own click, so tapping it still shows its popover instead.
+  document.querySelectorAll('.rf-door-inside, .rf-door-edge').forEach(el => {
+    el.addEventListener('click', e => {
+      if (!unit.classList.contains('open')) return;
+      e.stopPropagation();
+      setDoor(false);
+    });
   });
   document.addEventListener('click', e => {
     const pop = document.getElementById('rfPopover');

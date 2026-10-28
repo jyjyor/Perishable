@@ -610,27 +610,47 @@ async function realFridgeHandleToggleScenario(browser) {
   await page.waitForSelector('#headline');
   await page.waitForTimeout(900); // let the load-open animation finish first
 
+  // Open, the door swings past square: its handle faces away, so the
+  // pointer closes it by the door's visible inside face, and the keyboard
+  // by the handle, which stays the focusable control. Closed, the handle
+  // is in view and opens it by pointer.
   console.log('\n--- REAL FRIDGE: handle toggles the door ---');
-  const openBefore = await page.$eval('#rfUnit', el => el.classList.contains('open'));
-  if (!openBefore) throw new Error('expected the door to already be open before testing the handle');
+  const state = async () => ({
+    open: await page.$eval('#rfUnit', el => el.classList.contains('open')),
+    label: await page.getAttribute('#rfHandle', 'aria-label'),
+    pressed: await page.getAttribute('#rfHandle', 'aria-pressed'),
+  });
+  const expectClosed = (st, how) => {
+    console.log(`closed after ${how}:`, !st.open, '· aria-label:', st.label, '· aria-pressed:', st.pressed);
+    if (st.open) throw new Error(`${how} did not close the open door`);
+    if (st.label !== 'Open fridge door') throw new Error(`expected aria-label "Open fridge door" once closed, got "${st.label}"`);
+    if (st.pressed !== 'false') throw new Error(`expected aria-pressed="false" once closed, got "${st.pressed}"`);
+  };
+  const expectOpen = (st, how) => {
+    console.log(`open after ${how}:`, st.open, '· aria-label:', st.label, '· aria-pressed:', st.pressed);
+    if (!st.open) throw new Error(`${how} did not open the closed door`);
+    if (st.label !== 'Close fridge door') throw new Error(`expected aria-label "Close fridge door" once open, got "${st.label}"`);
+    if (st.pressed !== 'true') throw new Error(`expected aria-pressed="true" once open, got "${st.pressed}"`);
+  };
+
+  if (!(await state()).open) throw new Error('expected the door to already be open before testing the handle');
+
+  await page.click('.rf-door-inside');
+  await page.waitForTimeout(1100);
+  expectClosed(await state(), 'clicking the open door\'s inside face');
 
   await page.click('#rfHandle');
   await page.waitForTimeout(1100);
-  const closedAfterClick = await page.$eval('#rfUnit', el => !el.classList.contains('open'));
-  const ariaLabelClosed = await page.getAttribute('#rfHandle', 'aria-label');
-  const ariaPressedClosed = await page.getAttribute('#rfHandle', 'aria-pressed');
-  console.log('closed after one click:', closedAfterClick, '· aria-label:', ariaLabelClosed, '· aria-pressed:', ariaPressedClosed);
-  if (!closedAfterClick) throw new Error('clicking the handle did not close the open door');
-  if (ariaLabelClosed !== 'Open fridge door') throw new Error(`expected aria-label "Open fridge door" once closed, got "${ariaLabelClosed}"`);
-  if (ariaPressedClosed !== 'false') throw new Error(`expected aria-pressed="false" once closed, got "${ariaPressedClosed}"`);
+  expectOpen(await state(), 'clicking the handle on the closed door');
 
-  await page.click('#rfHandle');
+  await page.focus('#rfHandle');
+  await page.keyboard.press('Enter');
   await page.waitForTimeout(1100);
-  const openAgain = await page.$eval('#rfUnit', el => el.classList.contains('open'));
-  const ariaLabelOpen = await page.getAttribute('#rfHandle', 'aria-label');
-  console.log('open again after a second click:', openAgain, '· aria-label:', ariaLabelOpen);
-  if (!openAgain) throw new Error('clicking the handle a second time did not reopen the door');
-  if (ariaLabelOpen !== 'Close fridge door') throw new Error(`expected aria-label "Close fridge door" once open, got "${ariaLabelOpen}"`);
+  expectClosed(await state(), 'Enter on the focused handle');
+
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(1100);
+  expectOpen(await state(), 'Enter on the handle again');
 
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();

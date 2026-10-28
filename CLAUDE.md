@@ -113,15 +113,16 @@ square-root scale, every item pinned at its expiry — it still carries the
 dates, now that the fridge carries the feeling. Both read from the same
 shelf-life math (leftAt, pos) and must never disagree with each other.
 
-As of the real-fridge branch, a second, literal illustration of a fridge
-(door, shelves, crisper, the works) sits above this one, built on the
-real-fridge branch and not yet merged into how the page actually opens —
-see REPORT.md there for what it is and the decisions behind it. It draws
+A second, literal illustration of a fridge (door, shelves, crisper, the
+works) is merged into main and live on the page, directly above this
+one — both render the same fridge contents, one after the other. See
+REPORT.md for how it was first built and the decisions behind it. It draws
 every item through the same food-rendering and decay functions as the
 line-art view below it (foodShapeMarkupLine, natureColor, fridgeCatOf/
 fridgeShapeOf) rather than a second implementation, and keeps urgency
-colour to the same role it already has elsewhere: the one on-screen
-label a tapped item's popover shows, nothing on the closed door itself.
+colour to the same role it already has elsewhere: each item's label —
+here a small tag hung below the item (name and days left), and the
+popover a tapped item shows — and nothing on the closed door itself.
 Which of the two fridges stays is an open decision, not a resolved one.
 
 ## Voice
