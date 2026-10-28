@@ -77,6 +77,14 @@ tones sit outside the decay-sequence set above deliberately — they are
 not a second brand palette, and nothing else on the page should start
 using them.
 
+The real fridge's body is the second exception, for the same reason:
+it is an illustrated object like the food, not page UI, so it is drawn
+in a muted cream (the cream body option, chosen over a cool white-blue
+one) with its own two or three flat shade tones, scoped to that drawing.
+Its interior stays a pale cold blue. The page, the type, the tags and
+every control stay in the cold fridge palette above; the cream never
+leaves the fridge body.
+
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a
 real cap-and-stem with gills; the other categories carry a basic version
