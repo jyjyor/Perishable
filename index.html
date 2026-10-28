@@ -119,6 +119,187 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .fridge-drawer-items{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
 .fridge-drawer-items button{margin-top:2px}
 
+/* ---------- real fridge (new) ----------
+   A second, far more literal fridge view, above the line-art one, which
+   is left completely untouched below -- same food-rendering and decay
+   functions, same color roles (urgency only on the item label/popover,
+   same "exactly four places" allowance stretched to its on-screen double
+   rather than a fifth; the closed-door count line stays plain ink,
+   deliberately not urgency-colored, see REPORT.md). Everything here is
+   flat fill + thin ink stroke, no gradients, no drop shadows, no
+   realistic metal -- the appliance rendered in the same voice as the
+   food inside it. */
+.rf{padding:30px 0 10px}
+.rf-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:18px}
+.rf-stage{display:flex;justify-content:center;padding:4px 0 34px}
+.rf-unit{
+  position:relative;width:min(380px,88vw);aspect-ratio:300/540;
+  /* Origin shifted toward the hinge-opposite (left) side -- straight-on
+     is a true but useless view of an open door: hinged on the right, it
+     swings so its face ends up pointing left-of-forward, and dead-center
+     perspective just watches it foreshorten edge-on. Viewing from the
+     left instead sees that face closer to head-on while the opening it
+     swung away from (also on the left) stays in clear view too. */
+  perspective:1400px;perspective-origin:18% 46%;
+}
+.rf-shadow{
+  position:absolute;left:10%;right:10%;bottom:-14px;height:14px;
+  background:var(--panel-2);border-radius:50%;
+}
+.rf-frame{
+  position:absolute;inset:0;border:1.5px solid var(--ink);border-radius:16px;
+  background:var(--panel);
+}
+.rf-freezer{
+  position:absolute;top:3.5%;left:5%;right:5%;height:14%;
+  border:1px solid var(--ink);border-radius:5px;background:var(--panel-2);
+}
+.rf-freezer-vent{position:absolute;left:12%;right:12%;height:1px;background:var(--line)}
+.rf-doorseam{position:absolute;top:19.5%;left:4%;right:4%;height:1px;background:var(--ink);opacity:.5}
+.rf-hinge{
+  position:absolute;right:-1.6%;width:3.2%;height:6%;
+  background:var(--panel-2);border:1px solid var(--ink);border-radius:2px;
+}
+.rf-vent{
+  position:absolute;bottom:1%;left:15%;width:42%;height:2.4%;
+  border:1px solid var(--ink);border-radius:2px;overflow:hidden;background:var(--panel-2);
+}
+.rf-vent-slat{position:absolute;left:3px;right:3px;height:1px;background:var(--ink-3)}
+.rf-foot{
+  position:absolute;bottom:-1.4%;width:5%;height:2%;
+  background:var(--panel-2);border:1px solid var(--ink);border-radius:1px;
+}
+.rf-foot.left{left:13%}
+.rf-foot.right{right:13%}
+
+.rf-opening{position:absolute;top:21%;left:4.6%;right:4.6%;bottom:4.2%;overflow:hidden;border-radius:2px}
+.rf-cavity{position:absolute;inset:0}
+.rf-back{position:absolute;inset:0;background:var(--ink-3);transition:background-color .9s ease}
+.rf-unit.open .rf-back{background:var(--paper)}
+.rf-light{
+  position:absolute;top:3%;left:35%;width:30%;height:3%;
+  border:1px solid var(--ink);background:var(--panel-2);
+  transition:background-color .6s ease .25s;
+}
+.rf-unit.open .rf-light{background:#F6F4EC}
+
+.rf-shelf{position:absolute;left:3%;right:3%;height:2.6%;background:var(--panel-2);border-top:1px solid var(--ink)}
+.rf-shelf.eye{top:36%}
+.rf-shelf.lower{top:62%}
+.rf-rail{position:absolute;width:1px;background:var(--line)}
+.rf-rail.left{left:2%}
+.rf-rail.right{right:2%}
+
+.rf-shelfitems{
+  /* bottom:100% of the shelf's OWN (2.6%-tall) box -- i.e. flush with its
+     top edge, items resting on the shelf, not the much smaller 2.6% of
+     2.6% a same-looking "bottom:2.6%" here actually resolves to, which
+     put items at the shelf's bottom edge instead and let them overlap
+     into whatever sat below. */
+  position:absolute;left:0;right:0;bottom:100%;
+  display:flex;align-items:flex-end;justify-content:center;gap:3%;
+  /* Extra reserved space on the right biases the centered group left --
+     at the door's resting open angle (and its left-shifted camera) the
+     hinge-side third of the shelf is partly behind the door's own
+     retreating edge, so "front and center" has to mean centered in the
+     portion that's actually unoccluded from this view, not the full
+     shelf width. */
+  padding:0 26% 0 4%;
+}
+.rf-fooditem{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;background:none;border:none;padding:0;font:inherit;
+}
+.rf-fooditem .rf-foodlabel{
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:8px;letter-spacing:.02em;
+  color:var(--ink-2);max-width:100%;text-align:center;line-height:1.15;
+  overflow-wrap:anywhere;
+}
+
+.rf-crisper{
+  position:absolute;left:3%;right:3%;bottom:1.6%;height:24%;
+  background:var(--panel);border:1px solid var(--ink);border-radius:3px 3px 6px 6px;
+}
+.rf-crisper-label{
+  position:absolute;top:4px;left:8px;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;
+  font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+}
+.rf-crisper-handle{position:absolute;top:5px;right:8px;width:24%;height:3px;background:var(--ink-3);border-radius:2px}
+.rf-crisper-items{
+  position:absolute;left:6px;right:6px;bottom:5px;top:17px;
+  display:flex;align-items:flex-end;gap:7px;overflow-x:auto;overflow-y:hidden;
+}
+.rf-crisper-item{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.rf-crisper-item .rf-foodlabel{font-size:7px}
+.rf-crisper-item button{font-size:7px;padding:1px 5px;margin-top:1px;letter-spacing:0}
+
+.rf-emptycavity{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--ink-3);padding:12%;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;line-height:1.6;
+}
+/* [hidden] and a class both at (0,1,0) specificity -- without this, the
+   class's own display:flex above wins the tie by appearing later in the
+   sheet, and the hidden attribute stops hiding anything. */
+.rf-emptycavity[hidden]{display:none}
+
+.rf-door{
+  position:absolute;top:21%;left:4.6%;right:4.6%;bottom:4.2%;
+  transform-style:preserve-3d;transform-origin:right center;
+  transition:transform 1s cubic-bezier(.22,.8,.3,1);
+  transform:rotateY(0deg);
+}
+.rf-unit.open .rf-door{transform:rotateY(70deg)}
+.rf-door-front,.rf-door-inside{position:absolute;inset:0;backface-visibility:hidden;border-radius:2px}
+.rf-door-front{background:var(--panel);border:1px solid var(--ink);transform:translateZ(7px)}
+.rf-gasket{position:absolute;inset:6px;border:1px solid var(--line);border-radius:2px;pointer-events:none}
+.rf-closedline{
+  position:absolute;top:50%;left:4px;right:4px;transform:translateY(-50%);
+  text-align:center;color:var(--ink-2);
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10.5px;letter-spacing:.03em;
+  transition:opacity .3s ease;
+}
+.rf-unit.open .rf-closedline{opacity:0;pointer-events:none}
+.rf-handle{
+  position:absolute;top:12%;bottom:12%;left:5px;width:10px;
+  background:var(--ink);border:none;border-radius:3px;cursor:pointer;padding:0;
+}
+.rf-handle:hover{background:#000}
+.rf-handle:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.rf-handle-bracket{position:absolute;left:-2px;width:14px;height:6px;background:var(--panel-2);border:1px solid var(--ink)}
+.rf-handle-bracket.top{top:-4px}
+.rf-handle-bracket.bottom{bottom:-4px}
+
+.rf-door-inside{background:var(--panel-2);border:1px solid var(--ink);transform:rotateY(180deg) translateZ(7px)}
+.rf-bin{position:absolute;left:10%;right:10%;height:13%;background:var(--panel);border:1px solid var(--ink);border-radius:2px}
+.rf-bin.b1{top:12%}
+.rf-bin.b2{top:30%}
+.rf-bin.b3{top:48%}
+
+.rf-popover{
+  position:fixed;z-index:40;background:var(--paper);border:1px solid var(--ink);
+  padding:12px 14px;width:220px;color:var(--ink-2);
+}
+.rf-popover .rf-pop-name{
+  display:block;color:var(--ink);font-size:16px;margin-bottom:8px;
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;font-weight:700;
+}
+.rf-popover .rf-pop-row{
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.02em;
+  display:flex;justify-content:space-between;gap:10px;margin-top:5px;
+}
+.rf-popover .rf-pop-status{font-weight:500}
+.rf-popover .rf-pop-close{
+  position:absolute;top:6px;right:8px;border:none;background:none;color:var(--ink-3);
+  cursor:pointer;font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:14px;line-height:1;padding:4px;
+}
+.rf-popover .rf-pop-close:hover{color:var(--ink)}
+
+@media (max-width:720px){
+  .rf-unit{width:min(320px,80vw)}
+}
+
 /* ---------- hero ---------- */
 
 .hero{padding:56px 0 28px}
@@ -366,6 +547,68 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     </div>
     <div class="mono" id="settingsStatus" style="margin-top:8px;color:var(--ink-3)"></div>
   </div>
+
+  <section class="rf" id="rf">
+    <div class="rf-head mono"><span>The fridge</span></div>
+    <div class="rf-stage">
+      <div class="rf-unit" id="rfUnit">
+        <div class="rf-shadow"></div>
+        <div class="rf-frame">
+          <div class="rf-freezer">
+            <div class="rf-freezer-vent" style="top:35%"></div>
+            <div class="rf-freezer-vent" style="top:55%"></div>
+            <div class="rf-freezer-vent" style="top:75%"></div>
+          </div>
+          <div class="rf-doorseam"></div>
+          <div class="rf-hinge" style="top:28%"></div>
+          <div class="rf-hinge" style="top:76%"></div>
+          <div class="rf-vent" id="rfVent">
+            <div class="rf-vent-slat" style="top:25%"></div>
+            <div class="rf-vent-slat" style="top:50%"></div>
+            <div class="rf-vent-slat" style="top:75%"></div>
+          </div>
+          <div class="rf-foot left"></div>
+          <div class="rf-foot right"></div>
+        </div>
+        <div class="rf-opening">
+          <div class="rf-cavity">
+            <div class="rf-back"></div>
+            <div class="rf-light" id="rfLight"></div>
+            <div class="rf-rail left" style="top:36%;bottom:26%"></div>
+            <div class="rf-rail right" style="top:36%;bottom:26%"></div>
+            <div class="rf-shelf eye">
+              <div class="rf-shelfitems" id="rfShelfEye"></div>
+            </div>
+            <div class="rf-shelf lower">
+              <div class="rf-shelfitems" id="rfShelfLower"></div>
+            </div>
+            <div class="rf-crisper">
+              <div class="rf-crisper-label">Crisper — past date</div>
+              <div class="rf-crisper-handle"></div>
+              <div class="rf-crisper-items" id="rfCrisperItems"></div>
+            </div>
+            <div class="rf-emptycavity" id="rfEmptyCavity" hidden></div>
+          </div>
+        </div>
+        <div class="rf-door" id="rfDoor">
+          <div class="rf-door-front">
+            <div class="rf-gasket"></div>
+            <div class="rf-closedline mono" id="rfClosedLine">—</div>
+            <button class="rf-handle" id="rfHandle" aria-label="Open fridge door" aria-pressed="false">
+              <span class="rf-handle-bracket top"></span>
+              <span class="rf-handle-bracket bottom"></span>
+            </button>
+          </div>
+          <div class="rf-door-inside">
+            <div class="rf-bin b1"></div>
+            <div class="rf-bin b2"></div>
+            <div class="rf-bin b3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rf-popover" id="rfPopover" hidden></div>
+  </section>
 
   <section class="fridgeview" id="fridgeview">
     <div class="fridgeview-head mono">
@@ -908,6 +1151,7 @@ function render(){
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
 
   renderFridgeView();
+  renderRealFridge();
   renderHeadline();
   renderChart();
   renderTonight();
@@ -1912,6 +2156,174 @@ function preventLabelOverlap(shelf){
     }
     prevRight = labelLeft + labelRect.width;
   });
+}
+
+/* ---------- real fridge (new) ----------
+   A far more literal illustration, above the line-art fridge view (left
+   untouched below), reusing all of its food-rendering and decay
+   functions -- foodShapeMarkupLine, natureColor/foodBaseColor,
+   fridgeCatOf/fridgeShapeOf, state()/COLOR for the one label/popover use
+   -- rather than any parallel implementation. rfInit() (called once, at
+   boot) wires the door's one-time load animation and the handle's
+   toggle; renderRealFridge() re-runs every render(), alongside the old
+   view, off the same `fridge` array, placing items and updating the
+   closed-door count and crisper fresh. */
+
+// "Need attention" reuses state()'s own bucket: not fresh (not urgent
+// yet) and not gone (that's the crisper's job below, with its own Toss
+// action -- a past-date item needs tossing, not a number read off a
+// closed door). Deliberately plain ink on the door, not urgency-colored
+// -- see REPORT.md for why that line was kept out of the four-places rule.
+function rfAtRiskCount(day){
+  return fridge.filter(it => {
+    const d = leftAt(it, day);
+    return d >= 0 && state(d) !== 'fresh';
+  }).length;
+}
+
+function rfBuildFoodItem(it, day, size){
+  const f = food(it);
+  const cat = fridgeCatOf(it);
+  const d = leftAt(it, day);
+  const frac = decayFraction(it, day);
+  const color = natureColor(foodBaseColor(it), frac);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
+  const dayLabel = d === 0 ? 'today' : d + 'd';
+  return `<button type="button" class="rf-fooditem" style="width:${size}px" data-rf-item="${it.id}">
+    <span class="rf-foodshape" style="width:${size}px;height:${size}px;display:block">${svg}</span>
+    <span class="rf-foodlabel">${f.en}<br>${dayLabel}</span>
+  </button>`;
+}
+
+function rfBuildCrisperItem(it, day){
+  const f = food(it);
+  const cat = fridgeCatOf(it);
+  const d = leftAt(it, day);
+  const size = 34;
+  const color = natureColor(foodBaseColor(it), 1);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, 1, cat.sag, cat.mold, cat.wrinkle, size, it.id);
+  return `<div class="rf-crisper-item">
+    <button type="button" class="rf-fooditem" style="width:${size}px" data-rf-item="${it.id}">
+      <span class="rf-foodshape" style="width:${size}px;height:${size}px;display:block">${svg}</span>
+    </button>
+    <span class="rf-foodlabel mono">${f.en}<br>${Math.abs(d)}d gone</span>
+    <button type="button" class="ghost" data-rf-toss="${it.id}">Toss</button>
+  </div>`;
+}
+
+function renderRealFridge(){
+  const day = today();
+  const unit = document.getElementById('rfUnit');
+  const closedLine = document.getElementById('rfClosedLine');
+  const eyeShelf = document.getElementById('rfShelfEye');
+  const lowerShelf = document.getElementById('rfShelfLower');
+  const crisperItems = document.getElementById('rfCrisperItems');
+  const emptyCavity = document.getElementById('rfEmptyCavity');
+
+  const atRisk = rfAtRiskCount(day);
+  closedLine.textContent = !fridge.length
+    ? 'The fridge is empty'
+    : atRisk
+      ? `${atRisk} ${atRisk === 1 ? 'item needs' : 'items need'} attention`
+      : 'Nothing needs attention yet';
+
+  if (!fridge.length){
+    eyeShelf.innerHTML = '';
+    lowerShelf.innerHTML = '';
+    crisperItems.innerHTML = '';
+    emptyCavity.hidden = false;
+    emptyCavity.innerHTML = 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
+    unit.classList.remove('has-items');
+    return;
+  }
+  emptyCavity.hidden = true;
+  unit.classList.add('has-items');
+
+  const active = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  const gone = fridge.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+
+  // The most urgent items go on the eye-level shelf, front and center;
+  // everything else recedes onto the lower shelf, soonest first but
+  // smaller, a depth cue rather than a size contest with the hero item.
+  const EYE_COUNT = Math.min(active.length, 3);
+  const eyeItems = active.slice(0, EYE_COUNT);
+  const restItems = active.slice(EYE_COUNT);
+
+  // The single most urgent item lands in the middle of the row, not at
+  // one end -- alternate the rest to either side of it so left-to-right
+  // reading order still tracks outward from "most urgent," matching how
+  // a glance at a real shelf would find the thing in front first.
+  const left = [], right = [];
+  eyeItems.forEach((it, i) => (i % 2 === 0 ? right : left).push(it));
+  const ordered = [...left.reverse(), ...right];
+  const heroId = eyeItems.length ? eyeItems[0].id : null;
+  eyeShelf.innerHTML = ordered.map(it => rfBuildFoodItem(it, day, it.id === heroId ? 58 : 38)).join('');
+
+  lowerShelf.innerHTML = restItems.map((it, i) => rfBuildFoodItem(it, day, Math.max(20, 32 - i * 2))).join('');
+  crisperItems.innerHTML = gone.map(it => rfBuildCrisperItem(it, day)).join('');
+
+  unit.querySelectorAll('[data-rf-item]').forEach(b => {
+    b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
+  });
+  unit.querySelectorAll('[data-rf-toss]').forEach(b => {
+    b.onclick = e => { e.stopPropagation(); useItem(+b.dataset.rfToss, true); };
+  });
+}
+
+function rfShowPopover(id, anchorEl){
+  const it = fridge.find(x => x.id === id);
+  if (!it) return;
+  const day = today();
+  const f = food(it);
+  const d = leftAt(it, day);
+  const leftLabel = d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
+    : d === 0 ? 'last day' : `${d} ${d === 1 ? 'day' : 'days'} left`;
+  const statusName = {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
+  const pop = document.getElementById('rfPopover');
+  pop.innerHTML = `<button type="button" class="rf-pop-close" aria-label="Close">×</button>
+    <span class="rf-pop-name">${f.en}</span>
+    <div class="rf-pop-row"><span>Bought</span><span>${fmtDate(it.bought)}</span></div>
+    <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
+    <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>`;
+  pop.hidden = false;
+  pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
+  const r = anchorEl.getBoundingClientRect();
+  const popW = pop.offsetWidth || 220;
+  let left = r.left + r.width / 2 - popW / 2;
+  left = Math.max(10, Math.min(left, window.innerWidth - popW - 10));
+  pop.style.left = left + 'px';
+  const popH = pop.offsetHeight || 120;
+  const above = r.top - popH - 10;
+  pop.style.top = (above > 10 ? above : r.bottom + 10) + 'px';
+}
+function rfHidePopover(){
+  document.getElementById('rfPopover').hidden = true;
+}
+
+// Runs once, at boot -- the door's own load animation and the handle's
+// toggle are wired once and persist; everything that changes per render
+// (items, counts) is renderRealFridge()'s job instead.
+function rfInit(){
+  const unit = document.getElementById('rfUnit');
+  const handle = document.getElementById('rfHandle');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced){
+    unit.classList.add('open'); // no delay: reduced motion shows it open from first paint, not a snap after a wait
+  } else {
+    setTimeout(() => unit.classList.add('open'), 500);
+  }
+  handle.addEventListener('click', e => {
+    e.stopPropagation();
+    rfHidePopover(); // closing or reopening the door shouldn't leave a popover pointing at a now-hidden item
+    const nowOpen = unit.classList.toggle('open');
+    handle.setAttribute('aria-pressed', nowOpen ? 'true' : 'false');
+    handle.setAttribute('aria-label', nowOpen ? 'Close fridge door' : 'Open fridge door');
+  });
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('rfPopover');
+    if (!pop.hidden && !pop.contains(e.target)) rfHidePopover();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') rfHidePopover(); });
 }
 
 function renderFridgeView(){
@@ -3275,6 +3687,7 @@ initReceipt();
 
 boot();
 render();
+rfInit();
 </script>
 </body>
 </html>
