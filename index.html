@@ -481,43 +481,60 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    mushrooms still decay by soft produce's weights (shrinks/wrinkles
    hardest) but render as an actual cap-and-stem, not soft's plain circle.
    Most foods have no shape and just use their category's default.
+
+   base is the food's own fresh-state body colour -- a muted, desaturated
+   tone (every one deliberately paler/less saturated than the three
+   urgency colours, so a body never reads as an urgency signal), like a
+   faded hand-tinted botanical plate rather than a photo. decayColor()'s
+   successor, natureColor(base, fraction), blends this toward the shared
+   decay brown and near-black as fraction climbs -- so color itself
+   drains away as part of decay, not just darkens from one shared start.
+   A custom item (typed/voice/receipt, never in FOODS) has no base and
+   falls back to DEFAULT_BASE_HEX.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy'},
-  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60, cat:'leafy'},
-  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy'},
-  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90, cat:'dairy'},
-  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein'},
-  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20, cat:'protein'},
-  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00, cat:'protein'},
-  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy', plural:true},
-  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein'},
-  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg'},
-  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20, cat:'leafy'},
-  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg'},
-  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40, cat:'veg'},
-  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00, cat:'soft'},
-  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg'},
-  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft'},
-  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg'},
-  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom'},
-  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10, cat:'leafy'},
-  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20, cat:'veg'},
-  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90, cat:'soft'},
-  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00, cat:'soft'},
-  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy'},
-  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00, cat:'dairy'},
-  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00, cat:'cooked'},
-
+  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy', base:'#297037'},
+  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
+  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy', base:'#e8e7e3'},
+  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
+  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein', base:'#c3ada2'},
+  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20, cat:'protein', base:'#91473b'},
+  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00, cat:'protein', base:'#c76b60'},
+  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy', plural:true, base:'#e5e2dc'},
+  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein', base:'#ecebea'},
+  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg', base:'#ddd7e0'},
+  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg', base:'#e8e7e3'},
+  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
+  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
+  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg', base:'#d08a4e'},
+  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft', base:'#c65539'},
+  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg', base:'#287139'},
+  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
+  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
+  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
+  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
+  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
+  // Apple: FoodKeeper gives refrigerator life as a 4-6 week range (28-42
+  // days) -- using the conservative 28, same "don't round up" rule as
+  // every ranged value here.
+  apple:      {en:'Apple',          zh:['苹果'],            shelf:28, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
+  // Banana: FoodKeeper's refrigerator figure (3 days) only applies once
+  // ripe -- an unripe banana belongs on the counter, not in here, but the
+  // app has no "pantry" concept, so this is the fridge number as given.
+  banana:     {en:'Banana',         zh:['香蕉'],            shelf:3,  g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
+  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy', base:'#cdc6a2'},
+  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
+  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper category, e.g. Chinese eggplant via the
   // generic "Eggplant" entry). No `estimated` flag.
-  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80, cat:'leafy'},
-  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50, cat:'veg'},
-  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10, cat:'soft'},
-  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30, cat:'veg', plural:true},
-  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom'},
-  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom'},
+  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
+  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
+  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10, cat:'soft', base:'#7e4592'},
+  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
+  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
+  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -525,15 +542,14 @@ const FOODS = {
   // dataset). Shipping the sourced figure as-is rather than quietly
   // correcting it toward intuition — that correction is exactly the kind
   // of move that turns a source into a guess. Revisit if verified.
-  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50, cat:'veg'},
-  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90, cat:'veg', plural:true},
-  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40, cat:'veg'},
-  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70, cat:'leafy', plural:true},
-  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40, cat:'soft'},
-  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90, cat:'soft'},
-  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70, cat:'veg'},
-  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60, cat:'veg'},
-
+  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
+  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
+  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40, cat:'veg', base:'#46a44a'},
+  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
+  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40, cat:'soft', base:'#54ab54'},
+  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90, cat:'soft', base:'#328640'},
+  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
+  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
   // No FoodKeeper entry, and no same-species proxy close enough to call
   // sourced — either nothing in the dataset resembles them (lotus root,
   // winter melon, water spinach, snow peas) or the closest entry is a
@@ -542,14 +558,14 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed/spoken items.
-  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy'},
-  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy', plural:true},
-  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg'},
-  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy'},
-  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy'},
-  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy'},
-  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true, cat:'veg'},
-  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true, cat:'veg', plural:true}
+  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy', base:'#a7c0a5'},
+  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy', plural:true, base:'#429453'},
+  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg', base:'#dfdad8'},
+  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy', base:'#3a8847'},
+  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy', base:'#489953'},
+  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy', base:'#429450'},
+  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true, cat:'veg', base:'#b8cfb4'},
+  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true, cat:'veg', plural:true, base:'#5bae61'}
 };
 
 const DISHES = [
@@ -886,7 +902,7 @@ function buildDayProjections(){
 function render(){
   document.getElementById('date').textContent = fmtDate(today());
   document.getElementById('dayCount').textContent = 'Day ' + (today() - startedAt + 1);
-  document.getElementById('count').textContent = fridge.length + ' items';
+  document.getElementById('count').textContent = fridge.length + (fridge.length === 1 ? ' item' : ' items');
   document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
   document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
@@ -984,23 +1000,96 @@ const INK_HEX = '#141817'; // --ink: the line-art exploration's stroke color
 // mushroom. It now colors only the label (name + days-left; see
 // buildShelfItem/buildDrawerItem), which is what actually needs to match
 // the list, the decay line, and the legend. The body uses natureColor:
-// the food's own tones, cream through brown to near-black -- kept cool
-// and desaturated on purpose, so it never visually competes with the
-// label's more saturated urgency color sitting right next to it. Uses
-// tones outside the current decay-sequence palette; see CLAUDE.md.
+// each food's own clear base tone (FOODS[key].base -- see the FOODS
+// comment), blended toward a shared decay brown and then a deep brown
+// still tinted with that food's own hue as fraction climbs -- never to
+// near-black, so a fully gone potato/apple/banana/tomato still reads as
+// its own rotten version of itself rather than a black lump; the gone
+// drawer uses this same call at fraction 1, and lets shrinking, collapse
+// and mold carry "gone" instead of blackness. Distinct from the three
+// urgency colors by hue, not by greying down -- the body never visually
+// competes with (or gets mistaken for) the label's urgency color sitting
+// right next to it. Uses tones outside the current decay-sequence
+// palette; see CLAUDE.md.
 // (neutralWashColor -- one flat wash for every food, darkening with
 // decay -- was explored and set aside in favor of this; kept here only
 // because tools/mushroom-study.js's side-by-side comparison still calls it.)
+const DEFAULT_BASE_HEX = '#C9BFAE'; // a custom (typed/voice/receipt) item has no FOODS.base
+function foodBaseColor(it){ return food(it).base || DEFAULT_BASE_HEX; }
 function hexLerp(hexA, hexB, t){
   const a = hexToRgb(hexA), b = hexToRgb(hexB);
   const tt = Math.max(0, Math.min(1, t));
-  return `rgb(${a.map((c, i) => Math.round(c + (b[i] - c) * tt)).join(',')})`;
+  const rgb = a.map((c, i) => Math.round(c + (b[i] - c) * tt));
+  return '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
 }
-function natureColor(fraction){
-  const CREAM = '#D6D6CE', BROWN = '#6E6457', NEARBLACK = '#201F1C';
-  return fraction <= 0.5
-    ? hexLerp(CREAM, BROWN, fraction / 0.5)
-    : hexLerp(BROWN, NEARBLACK, (fraction - 0.5) / 0.5);
+// Straight-line sRGB interpolation (hexLerp) between a yellow and a brown
+// doesn't travel through a yellow-to-brown hue path -- it travels through
+// whatever the two channels' straight average happens to be, which for
+// yellow->brown lands on a muddy olive partway through (bananas don't
+// turn olive; "holding" olive is also --fresh's own urgency hue, so a
+// banana mid-decay could misread as a label color). OKLCH interpolation
+// moves lightness/chroma/hue independently and takes the SHORT way around
+// the hue circle, so yellow drops toward brown through a warm amber
+// instead. Used for every natureColor blend now, not just banana's --
+// any other food's own hue could hit the same muddy midpoint depending on
+// where its base and BROWN happen to sit relative to each other.
+function srgbToLinear(c){ return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
+function linearToSrgb(c){ c = Math.max(0, Math.min(1, c)); return c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055; }
+function hexToOklch(hex){
+  const [r8, g8, b8] = hexToRgb(hex);
+  const r = srgbToLinear(r8 / 255), g = srgbToLinear(g8 / 255), b = srgbToLinear(b8 / 255);
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  const L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+  const A = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+  const B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+  const C = Math.hypot(A, B);
+  let H = Math.atan2(B, A);
+  if (H < 0) H += Math.PI * 2;
+  return [L, C, H];
+}
+function oklchToHex(L, C, H){
+  const A = Math.cos(H) * C, B = Math.sin(H) * C;
+  const l_ = L + 0.3963377774 * A + 0.2158037573 * B;
+  const m_ = L - 0.1055613458 * A - 0.0638541728 * B;
+  const s_ = L - 0.0894841775 * A - 1.2914855480 * B;
+  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+  const r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const b = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+  const toByte = v => Math.round(linearToSrgb(v) * 255).toString(16).padStart(2, '0');
+  return '#' + toByte(r) + toByte(g) + toByte(b);
+}
+function oklchLerp(hexA, hexB, t){
+  const tt = Math.max(0, Math.min(1, t));
+  const [L1, C1, H1] = hexToOklch(hexA);
+  const [L2, C2, H2] = hexToOklch(hexB);
+  let dH = H2 - H1;
+  if (dH > Math.PI) dH -= Math.PI * 2;
+  if (dH < -Math.PI) dH += Math.PI * 2;
+  return oklchToHex(L1 + (L2 - L1) * tt, C1 + (C2 - C1) * tt, H1 + dH * tt);
+}
+function natureColor(baseHex, fraction){
+  const BROWN = '#6E6457', ROT = '#3B2E22';
+  // The food's own hue stays clearly visible through HOLD (only drifting
+  // DRIFT of the way to brown by then, which is discoloration-spot
+  // territory, not a wholesale color change) -- then it closes out to
+  // brown by TURN. Past TURN it goes toward ROT, a deep brown, but mixed
+  // with a trace of the food's own base hue (HUE_TRACE) rather than all
+  // the way to black -- a rotten tomato reads dark red-brown, a rotten
+  // potato dark earth brown, never the same black lump. 100% decayed
+  // (frac=1, same call the gone drawer uses) lands on that tinted deep
+  // brown, not near-black -- shrinking/collapse/mold carry "gone" instead.
+  const HOLD = 0.6, TURN = 0.85, DRIFT = 0.18, HUE_TRACE = 0.22;
+  if (fraction <= HOLD) return oklchLerp(baseHex, BROWN, (fraction / HOLD) * DRIFT);
+  const rotHex = oklchLerp(ROT, baseHex, HUE_TRACE);
+  if (fraction <= TURN){
+    const driftHex = oklchLerp(baseHex, BROWN, DRIFT);
+    return oklchLerp(driftHex, BROWN, (fraction - HOLD) / (TURN - HOLD));
+  }
+  return oklchLerp(BROWN, rotHex, (fraction - TURN) / (1 - TURN));
 }
 function neutralWashColor(fraction){
   return hexLerp('#D7D2C6', '#1E1B18', fraction);
@@ -1060,6 +1149,141 @@ function mushroomOutline(s){
     [s*0.44, s*0.92], [s*0.42, s*0.80], [s*0.38, s*0.43]
   ];
 }
+// Nine points, deliberately uneven radii rather than a smooth ellipse --
+// a potato is a lumpy tuber even fresh, before any decay deformation.
+// Index 0 is the point potatoEyes() anchors its scatter around.
+// A superellipse (|x/a|^n + |y/b|^n = 1, Lamé parametric form), not a
+// plain ellipse with bulges -- exponent 2.5 is what gives it a slightly
+// squarish fullness along the sides without any actual corner (2 would
+// be a true ellipse, higher exponents push toward a rounded rectangle;
+// 2.5 sits close to the ellipse end, just enough to read as "oval but
+// slightly squarish"). Wider than tall (a:b = 1.4:1), tilted a few
+// degrees so it doesn't sit perfectly level, with one or two very gentle
+// bulges multiplied into the radius on top of that -- dense sampling (20
+// points) and a continuous radius function throughout mean there is
+// nowhere in this construction a point, at any decay stage, the same
+// reasoning as appleOutline and tomatoOutline's own dense rings.
+function potatoOutline(s){
+  const cx = s * 0.5, cy = s * 0.52;
+  const a = s * 0.40, b = a / 1.4, nExp = 2.5, tilt = 6 * Math.PI / 180;
+  const bumps = [{angle: 0.3, amp: 0.035, sigma: 0.9}, {angle: -2.1, amp: 0.03, sigma: 1.0}];
+  const n = 20, pts = [];
+  for (let i = 0; i < n; i++){
+    const th = (i / n) * Math.PI * 2;
+    const cosT = Math.cos(th), sinT = Math.sin(th);
+    let ex = Math.sign(cosT) * Math.abs(cosT) ** (2 / nExp) * a;
+    let ey = Math.sign(sinT) * Math.abs(sinT) ** (2 / nExp) * b;
+    let bulge = 0;
+    for (const bp of bumps){
+      let d = Math.abs(th - bp.angle);
+      if (d > Math.PI) d = Math.PI * 2 - d;
+      bulge += bp.amp * Math.exp(-((d / bp.sigma) ** 2));
+    }
+    ex *= 1 + bulge;
+    ey *= 1 + bulge;
+    const rx = ex * Math.cos(tilt) - ey * Math.sin(tilt);
+    const ry = ex * Math.sin(tilt) + ey * Math.cos(tilt);
+    pts.push([cx + rx, cy + ry]);
+  }
+  return pts;
+}
+// A full circle, slightly wider than tall, not a sparse hand-placed
+// polygon -- a dense ring (20 points) is what reads as genuinely round
+// after the Catmull-Rom smoothing, where the earlier 12 sparse points
+// read as boxy with corners. The two dimples are a smooth Gaussian dip
+// in that ring's radius centered on top (deeper, where the stem sits)
+// and bottom (shallower) -- a bell-curve dip blends into its neighbors
+// on both sides, which is what keeps it a shallow dimple instead of the
+// sharp V-notch a single pulled-in point reads as (a "tooth"). Index 0
+// is the ring's top point (angle -90, ellipseRing's own convention) --
+// the deepest part of the top dimple, where appleStem() anchors, same
+// "use the actually-deformed point" reasoning as before: deformPoints()
+// soft-clamps every point toward the viewBox centre even at fraction 0,
+// so a decoration anchored to this function's raw output would visibly
+// float off the real rendered curve.
+function appleOutline(s){
+  const cx = s * 0.5, cy = s * 0.54, rx = s * 0.40, ry = s * 0.39;
+  const n = 20, pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const topDimple = Math.exp(-(((a + Math.PI / 2) / 0.35) ** 2)) * 0.14;
+    const bottomDimple = Math.exp(-(((a - Math.PI / 2) / 0.35) ** 2)) * 0.07;
+    const r = 1 - topDimple - bottomDimple;
+    pts.push([cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r]);
+  }
+  return pts;
+}
+// A slightly flattened sphere -- a dense ring (16 points), same reasoning
+// as appleOutline, but closer to round (rx only a little past ry) rather
+// than apple's wider oval, and no dimples: the one feature that marks
+// this as a tomato rather than a plain soft-produce circle is the calyx
+// tomatoCalyx() draws on top, not the outline itself. Index 0 is this
+// ring's top point (ellipseRing's own convention, angle -90) -- where the
+// calyx attaches, read from the caller's already-deformed array so the
+// star of leaves rides along with the real rendered point, not a raw one.
+function tomatoOutline(s){
+  return ellipseRing(16, s * 0.41, s * 0.37, s * 0.5, s * 0.54);
+}
+// One smooth, even arc -- a single circular centerline (radius R, center
+// C) spanning 100 degrees, a0 to a1 straddling the arc's own lowest point
+// (90 degrees, straight down from C) symmetrically, so both ends sit
+// higher than the middle -- a smile, not a lean to one side. There is no
+// separate straight-line segment anywhere, including through the stem:
+// the stem is this same arc continued a little further past a0, at the
+// same R, only narrower -- its flat cap is the radial cut between the
+// inner and outer point at that continued angle, a cross-section, not a
+// travel direction, so "no straight segments" still holds for the path
+// itself. Thickness (the gap between inner and outer radius) stays at
+// BODY_HALF through the middle 70% of the main sweep and only tapers in
+// the outer 15% at each end -- toward STEM_HALF on the a0 side (where the
+// stem continues from) and toward the blunter NUB_HALF on the a1 side
+// (which gets no extra protrusion, just that taper, so it closes in a
+// rounded cap rather than a cut one). R is sized so the arc's chord
+// spans about 8 * BODY_HALF -- thickness about a quarter of length, per
+// spec. bananaRidge() (unchanged) finds the nub at the array's split
+// point (t=1, a1) and the stem tip at its wraparound ends (t=0 and the
+// protrusion beyond a0) -- true here exactly as under earlier versions.
+function bananaOutline(s){
+  const BODY_HALF = 1, STEM_HALF = 0.38, NUB_HALF = 0.62;
+  const R = 5.22;
+  const a0 = 40 * Math.PI / 180, a1 = 140 * Math.PI / 180; // stem side (t=0) to nub side (t=1), 100 degrees
+  const smoothstep = u => u * u * (3 - 2 * u);
+  function halfThickAt(t){
+    if (t < 0.15) return STEM_HALF + (BODY_HALF - STEM_HALF) * smoothstep(t / 0.15);
+    if (t < 0.85) return BODY_HALF;
+    return BODY_HALF + (NUB_HALF - BODY_HALF) * smoothstep((t - 0.85) / 0.15);
+  }
+  const n = 11;
+  const top = [], bottom = [];
+  for (let i = 0; i < n; i++){
+    const t = i / (n - 1);
+    const a = a0 + (a1 - a0) * t;
+    const hw = halfThickAt(t);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    top.push([ca * (R - hw), sa * (R - hw)]);
+    bottom.push([ca * (R + hw), sa * (R + hw)]);
+  }
+  // The stem: this same arc continued past a0, narrow and constant width,
+  // ending in a flat radial cap -- never a taper to a single point.
+  const stemSweep = 16 * Math.PI / 180;
+  const tipA = a0 - stemSweep, neckA = a0 - stemSweep * 0.4;
+  const tipTop = [Math.cos(tipA) * (R - STEM_HALF), Math.sin(tipA) * (R - STEM_HALF)];
+  const tipBottom = [Math.cos(tipA) * (R + STEM_HALF), Math.sin(tipA) * (R + STEM_HALF)];
+  const neckTop = [Math.cos(neckA) * (R - STEM_HALF), Math.sin(neckA) * (R - STEM_HALF)];
+  const neckBottom = [Math.cos(neckA) * (R + STEM_HALF), Math.sin(neckA) * (R + STEM_HALF)];
+  const raw = [tipTop, neckTop, ...top, ...bottom.reverse(), neckBottom, tipBottom];
+
+  // Fit to the canvas: uniform scale (never stretch, which would distort
+  // the authored thickness-to-length ratio above), centered with margin.
+  const xs = raw.map(p => p[0]), ys = raw.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const marginX = s * 0.08, marginY = s * 0.12;
+  const scale = Math.min((s - 2 * marginX) / (maxX - minX), (s - 2 * marginY) / (maxY - minY));
+  const offX = marginX - minX * scale + ((s - 2 * marginX) - (maxX - minX) * scale) / 2;
+  const offY = marginY - minY * scale + ((s - 2 * marginY) - (maxY - minY) * scale) / 2;
+  return raw.map(([px, py]) => [px * scale + offX, py * scale + offY]);
+}
 function catOutlinePoints(shape, s){
   const cx = s / 2;
   switch(shape){
@@ -1068,6 +1292,10 @@ function catOutlinePoints(shape, s){
     case 'veg':      return ellipseRing(6, s*0.30, s*0.40, cx, s*0.52);
     case 'cooked':   return ellipseRing(7, s*0.44, s*0.21, cx, s*0.60);
     case 'mushroom': return mushroomOutline(s);
+    case 'potato':   return potatoOutline(s);
+    case 'apple':    return appleOutline(s);
+    case 'banana':   return bananaOutline(s);
+    case 'tomato':   return tomatoOutline(s);
     case 'dairy':    return rectCorners(s*0.28, s*0.08, s*0.72, s*0.92);
     case 'protein':  return rectCorners(s*0.10, s*0.28, s*0.90, s*0.68);
     default:         return rectCorners(s*0.08, s*0.08, s*0.92, s*0.92);
@@ -1096,17 +1324,23 @@ function deformPoints(points, fraction, sagW, wrinkleW, seed, size){
   // (below, uncapped) is what keeps showing decay through 100% instead.
   const sag = Math.min(fraction, 0.75) * sagW;
   const wrinkle = fraction * wrinkleW;
-  // Deformed points are soft-clamped into the viewBox (a tanh squash, not
-  // a hard cutoff) rather than tuned by trial and error to just barely
-  // stay inside it -- a strong coefficient on a point that started near
-  // the edge would otherwise push it past the SVG's bounds and get
-  // silently clipped (invisible, not subtle), and a hard min/max clamp on
-  // several neighboring points creates a flat, unnatural notch where they
-  // all pile up on the same boundary value.
-  const lo = size * 0.03, hi = size * 0.97;
-  const mid = (lo + hi) / 2, half = (hi - lo) / 2;
-  const soft = v => mid + half * Math.tanh((v - mid) / half);
+  // The soft clamp (a tanh squash, not a hard cutoff) now applies only to
+  // the OFFSET decay introduces, never to the point's own base position.
+  // It used to clamp the absolute coordinate, which pulled every point
+  // toward the viewBox centre by several percent even at fraction 0 -- no
+  // sag, no wrinkle, offset genuinely zero -- compressing a shape's own
+  // horizontal or vertical extremes far more than its near-centre points
+  // and rounding circles into squircles, flattening shallow curves, all
+  // before any decay had happened. Clamping the offset instead guarantees
+  // fraction 0 returns every input point completely unchanged, while
+  // still stopping a pathological decay offset from pushing a point off
+  // the canvas (the original purpose a hard min/max clamp couldn't serve
+  // without piling several neighbors onto the same boundary value and
+  // reading as a flat, unnatural notch).
+  const OFFSET_CAP = size * 0.22;
+  const softOffset = v => OFFSET_CAP * Math.tanh(v / OFFSET_CAP);
   return points.map((p, i) => {
+    const [origX, origY] = p;
     let [x, y] = p;
     const heightFrac = (y - minY) / h; // 0 top .. 1 bottom
     if (heightFrac < 0.4) y += sag * h * 0.40 * (0.4 - heightFrac);        // droop: top sinks
@@ -1128,7 +1362,7 @@ function deformPoints(points, fraction, sagW, wrinkleW, seed, size){
     const dx = x - cx, dy = y - cy, dist = Math.hypot(dx, dy) || 1;
     x += (dx / dist) * jr;
     y += (dy / dist) * jr;
-    return [soft(x), soft(y)];
+    return [origX + softOffset(x - origX), origY + softOffset(y - origY)];
   });
 }
 function smoothClosedPath(points){
@@ -1346,6 +1580,141 @@ function mushroomMoldMarkup(deformed, fraction, moldW, size, seed){
   ], fraction, moldW, size, seed);
 }
 
+/* ---------- per-item identity cues (potato, apple, banana, tomato) ----
+   One static cue each, the same scope as mushroom's gills: what makes the
+   silhouette recognizable, not a decay signal. None of these change with
+   fraction -- darkening, the outline's own droop/lean/bow/spread/shrivel,
+   discoloration, and mold are still entirely the shared generic mechanics
+   below; only the silhouette and this one cue are per-item so far. */
+
+// Eyes don't move with decay -- scattered once per item (seeded, so the
+// same potato looks the same across re-renders) at a fixed faint opacity.
+// Each eye is a short curved stroke (an SVG arc), not a filled dot -- a
+// filled dot reads as a spot, so a fresh potato already looked flecked,
+// and by 50% decayed an eye was indistinguishable from a real
+// genericDiscolorationSpots mark. A curved line is a different visual
+// vocabulary from a round spot at any decay stage, in a fresh potato too.
+function potatoEyes(deformed, size, seed){
+  const rand = seededRand(seed + 440);
+  const cx = deformed.reduce((s, p) => s + p[0], 0) / deformed.length;
+  const cy = deformed.reduce((s, p) => s + p[1], 0) / deformed.length;
+  let marks = '';
+  for (let i = 0; i < 3; i++){
+    const a = rand() * Math.PI * 2, dist = (0.15 + rand() * 0.35) * size * 0.4;
+    const ex = cx + Math.cos(a) * dist, ey = cy + Math.sin(a) * dist;
+    const r = size * (0.022 + rand() * 0.012);
+    const rot = rand() * Math.PI * 2;
+    const x1 = ex + Math.cos(rot) * r, y1 = ey + Math.sin(rot) * r;
+    const x2 = ex + Math.cos(rot + Math.PI) * r, y2 = ey + Math.sin(rot + Math.PI) * r;
+    const sweepR = r * 1.3;
+    marks += `<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${sweepR.toFixed(1)} ${sweepR.toFixed(1)} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke-width="${Math.max(0.8, size * 0.006).toFixed(2)}" opacity="0.55"/>`;
+  }
+  return marks;
+}
+
+// A short stem from the dimple -- deformed[0], the point as actually
+// rendered (deformPoints() soft-clamps every point toward the viewBox
+// centre even at fraction 0, so the raw appleOutline() coordinate and the
+// real rendered position aren't quite the same spot; anchoring to the raw
+// one is what left the stem visibly floating off the body). Using the
+// real point also means the stem rides along as the dimple shifts with
+// decay, instead of staying pinned to a position the fruit has moved away
+// from underneath it.
+// The stem, plus a small leaf partway up it -- without it, apple and
+// tomato were both just red circles, and at shelf size the stem alone is
+// thin enough to miss entirely. The leaf is a filled shape with its own
+// green-to-brown color (same cFrac/oklchLerp pacing as tomatoCalyx: dry
+// and curled by fraction 0.5, well ahead of the fruit's own natureColor
+// fill), which is why it carries explicit fill/stroke rather than
+// relying on the shared identity-line <g>.
+function appleStem(deformed, size, seed, fraction){
+  const base = deformed[0];
+  const tipX = base[0] + size * 0.04, tipY = base[1] - size * 0.12;
+  const stem = `<path d="M ${base[0].toFixed(1)} ${base[1].toFixed(1)} L ${tipX.toFixed(1)} ${tipY.toFixed(1)}"/>`;
+
+  const cFrac = Math.max(0, Math.min(1, (fraction || 0) / 0.5));
+  const GREEN = '#4C7A3E', DRIED = '#6B5438';
+  const color = oklchLerp(GREEN, DRIED, cFrac);
+  const attachT = 0.55;
+  const ax = base[0] + (tipX - base[0]) * attachT, ay = base[1] + (tipY - base[1]) * attachT;
+  const stemAngle = Math.atan2(tipY - base[1], tipX - base[0]);
+  const leafAngle = stemAngle - (1.0 - cFrac * 0.5); // curls back toward the stem as it dries
+  const leafLen = size * (0.09 - 0.035 * cFrac);
+  const leafWidth = size * 0.03;
+  const px = -Math.sin(leafAngle), py = Math.cos(leafAngle);
+  const tipLX = ax + Math.cos(leafAngle) * leafLen, tipLY = ay + Math.sin(leafAngle) * leafLen;
+  const leftX = ax + px * leafWidth, leftY = ay + py * leafWidth;
+  const rightX = ax - px * leafWidth, rightY = ay - py * leafWidth;
+  const leaf = `<path d="M ${leftX.toFixed(1)} ${leftY.toFixed(1)} L ${tipLX.toFixed(1)} ${tipLY.toFixed(1)} L ${rightX.toFixed(1)} ${rightY.toFixed(1)} Z" fill="${color}" stroke="${color}" stroke-width="${Math.max(0.6, size * 0.006).toFixed(2)}"/>`;
+  return stem + leaf;
+}
+
+// One ridge line along the top edge, plus the small dark nub the shape
+// description calls for at its narrow (right-hand, t=1) end. deformed is
+// [top(n points)...bottom(n points)], so the first half is the top edge;
+// drop its two end corners (the squared stem tip and the nub) and pull
+// what's left partway toward the shape's centroid so the ridge sits
+// inset, on the body, rather than retracing the outline itself. The nub
+// is a small dark dot at the midpoint of the two points that meet at the
+// narrow end -- deformed[n-1] (top) and deformed[n] (bottom, first after
+// the reversal) -- not a second identity line, just a fixed dark fleck
+// real bananas carry even fresh.
+function bananaRidge(deformed, size){
+  const n = deformed.length / 2;
+  const top = deformed.slice(0, n);
+  const cx = deformed.reduce((sum, p) => sum + p[0], 0) / deformed.length;
+  const cy = deformed.reduce((sum, p) => sum + p[1], 0) / deformed.length;
+  const pull = 0.3;
+  const pts = top.slice(1, -1).map(([x, y]) => [x + (cx - x) * pull, y + (cy - y) * pull]);
+  let ridge = '';
+  if (pts.length >= 2){
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+    ridge = `<path d="${d}"/>`;
+  }
+  const nubTop = deformed[n - 1], nubBottom = deformed[n];
+  const nx = (nubTop[0] + nubBottom[0]) / 2, ny = (nubTop[1] + nubBottom[1]) / 2;
+  const r = Math.max(1.4, size * 0.018);
+  const nub = `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}" fill="#3B2E22" stroke="none"/>`;
+  return ridge + nub;
+}
+
+// A small star of five pointed leaves around a short stem -- filled
+// green shapes, not ink strokes, which is why each one carries its own
+// explicit fill/stroke rather than relying on the shared identity-line
+// <g> (that wrapper sets fill:none and an ink stroke, both overridden
+// here per-path). Anchored on deformed[0], the tomato's own actually-
+// rendered top point -- same reasoning as appleStem/bananaRidge.
+// The calyx dries out on its own clock, cFrac = fraction/0.5, reaching
+// fully brown and curled by the halfway point -- well before the fruit's
+// own natureColor fill has done much past a slight drift (see
+// natureColor's HOLD=0.6) -- because a real tomato's crown visibly dries
+// and curls before the fruit itself starts to go. "Curl" is the leaf
+// tip's angle bending back in toward the stem, and its reach shortening,
+// as cFrac climbs -- not a straight shrink, an actual fold.
+function tomatoCalyx(deformed, size, seed, fraction){
+  const base = deformed[0];
+  const cFrac = Math.max(0, Math.min(1, fraction / 0.5));
+  const GREEN = '#4C7A3E', DRIED = '#6B5438';
+  const color = oklchLerp(GREEN, DRIED, cFrac);
+  const stemOut = size * 0.02; // small gap between the attachment point and each leaf's own base
+  const leafLen = size * (0.15 - 0.06 * cFrac);
+  const leafWidth = size * 0.045;
+  const curl = cFrac * 0.9; // radians the tip folds back in toward the stem
+  let leaves = '';
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI / 2 + (i - 2) * (Math.PI * 2 / 5.6);
+    const dx = Math.cos(a), dy = Math.sin(a), px = -dy, py = dx;
+    const baseX = base[0] + dx * stemOut, baseY = base[1] + dy * stemOut;
+    const tipA = a - curl;
+    const tipX = base[0] + Math.cos(tipA) * (stemOut + leafLen), tipY = base[1] + Math.sin(tipA) * (stemOut + leafLen);
+    const leftX = baseX + px * leafWidth, leftY = baseY + py * leafWidth;
+    const rightX = baseX - px * leafWidth, rightY = baseY - py * leafWidth;
+    leaves += `<path d="M ${leftX.toFixed(1)} ${leftY.toFixed(1)} L ${tipX.toFixed(1)} ${tipY.toFixed(1)} L ${rightX.toFixed(1)} ${rightY.toFixed(1)} Z" fill="${color}" stroke="${color}" stroke-width="${Math.max(0.6, size * 0.006).toFixed(2)}"/>`;
+  }
+  const stem = `<path d="M ${base[0].toFixed(1)} ${base[1].toFixed(1)} L ${base[0].toFixed(1)} ${(base[1] - size * 0.05).toFixed(1)}" stroke="${color}" stroke-width="${Math.max(1, size * 0.012).toFixed(2)}"/>`;
+  return leaves + stem;
+}
+
 /* ---------- generic line-art (every non-mushroom category) ----------
    Basic level only -- no per-category refinement yet, just the shared
    decay mechanics (identity lines, discoloration, mold) expressed
@@ -1414,6 +1783,12 @@ function genericMoldMarkup(deformed, fraction, moldW, size, seed){
   );
 }
 
+// Shapes with one static identity cue (potato/apple/banana/tomato) --
+// decay mechanics (discoloration, mold) stay on the generic path below;
+// only the identity line differs. Mushroom is the one shape with a fully
+// bespoke decay treatment (its own brown spots and rim-seeded mold).
+const IDENTITY_CUES = {potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx};
+
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
@@ -1422,7 +1797,7 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   const isMushroom = shape === 'mushroom';
   const strokes = isMushroom
     ? mushroomLines(deformed, fraction, wrinkleW, size, seed)
-    : genericIdentityLines(deformed, size, seed);
+    : (IDENTITY_CUES[shape] || genericIdentityLines)(deformed, size, seed, fraction);
   const spots = isMushroom
     ? mushroomBrownSpots(deformed, fraction, size, seed)
     : genericDiscolorationSpots(deformed, fraction, size, seed);
@@ -1475,9 +1850,10 @@ function buildShelfItem(p, day){
   const cat = fridgeCatOf(it);
   const frac = decayFraction(it, day);
   const shownSize = Math.max(18, Math.round(size * (1 - frac * 0.22 * cat.shrink)));
-  // Body color is the food's own tone (natureColor); urgency lives only on
-  // the label now, via the same state()/COLOR lookup the list and legend use.
-  const color = natureColor(frac);
+  // Body color is this food's own base tone, decaying (natureColor);
+  // urgency lives only on the label now, via the same state()/COLOR
+  // lookup the list and legend use.
+  const color = natureColor(foodBaseColor(it), frac);
   const labelColor = COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
@@ -1500,7 +1876,7 @@ function buildDrawerItem(it, day){
   const cat = fridgeCatOf(it);
   const frac = 1;
   const size = Math.round(76 * (1 - 0.18 * cat.shrink));
-  const color = natureColor(frac);
+  const color = natureColor(foodBaseColor(it), frac);
   const labelColor = COLOR[state(d)]; // always 'gone' here, same lookup as everywhere else
   const shapeStyle = `width:${size}px;height:${size}px`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
@@ -1544,7 +1920,7 @@ function renderFridgeView(){
   const drawerItems = document.getElementById('fridgeDrawerItems');
   const day = today();
 
-  document.getElementById('fridgeCount').textContent = fridge.length ? fridge.length + ' items' : '—';
+  document.getElementById('fridgeCount').textContent = fridge.length ? fridge.length + (fridge.length === 1 ? ' item' : ' items') : '—';
 
   if (!fridge.length){
     shelf.style.height = '';

@@ -56,7 +56,10 @@ function serve() {
     // at the front (d=0) down to 0 at the back (d>=21). Study size is just
     // "large enough to inspect," same as the earlier study.
     const SIZES = { study: 220, front: 104, back: 34 };
-    const FILLS = { A: natureColor, B: neutralWashColor };
+    // natureColor now takes the item's own base tone (FOODS[key].base)
+    // rather than always starting from one shared cream -- A still means
+    // "the food's own tones," so it's still the mushroom's base here.
+    const FILLS = { A: frac => natureColor(FOODS.mushroom.base, frac), B: neutralWashColor };
 
     // Real item + real fraction, same as before. color now comes from the
     // chosen body-fill direction (A/B), never decayColor() -- that's only

@@ -39,16 +39,43 @@ migrate anywhere else.
   --crit:#6E3448    bruise plum
   --gone:#2B2320
 
-Food, in the fridge view specifically, is told by what it actually looks
-like decaying — cream through brown to near-black (natureColor() in
-index.html) — not by urgency. A mustard mushroom turning bruise-plum read
-as a dye, not a mushroom: urgency and decay are different questions, and
-one fill trying to answer both was the mistake this corrects. These
-tones are kept cool and desaturated on purpose, so the body never visually
-competes with the more saturated urgency colour sitting right next to it
-on the label, and they sit outside the decay-sequence set above
-deliberately — they are not a second brand palette, and nothing else on
-the page should start using them.
+The rest of the page stays in the cold fridge palette above. Food bodies
+are the one deliberate exception: they are told by what they actually
+look like decaying, not by urgency, and that means drawing them in clear
+natural colour on purpose — a lemon-straw banana, a true orange-red
+tomato, a true red apple, a golden tan potato, leaf greens for spinach
+and its relatives — so that losing that colour to decay reads as a loss,
+not as a shift between two already-muted tones. Every FOODS entry
+carries its own base colour (FOODS[key].base in index.html), including
+the ones still on generic shapes, like a hand-tinted botanical plate
+rather than a photo. A mustard mushroom turning bruise-plum read as a
+dye, not a mushroom: urgency and decay are different questions, and one
+fill trying to answer both was the mistake this corrects.
+
+Distinctness from the three urgency colours is by hue, never by greying
+a food's colour down — muting was tried and it pushed apple toward mauve,
+close enough to the plum label to read as the same signal. Reds lean
+orange, away from the plum's purple side. Yellows lean lemon, away from
+the ochre's dull side. Greens lean leaf, away from the olive's dull side.
+Hue is what keeps a body from ever being misread as an urgency colour;
+lightness and saturation are free to follow the real food.
+
+natureColor(base, fraction) blends that base colour toward a shared decay
+brown as fraction climbs, but slowly: a food keeps its own hue clearly
+recognisable through roughly 60% decayed (discoloration spots appear on
+top of it well before that), and only closes out to brown by around 85%.
+Past that it goes darker still, but never to black — 100% decayed lands
+on a deep brown that still carries a trace of the food's own hue, so a
+rotten tomato reads dark red-brown, a rotten potato dark earth brown, a
+rotten banana dark brown with a trace of its own warmth, never the same
+black lump every food collapses into. This applies to the gone drawer
+too, at fraction 1 through the same function — shrinking, collapse, and
+mold are what carry "gone," not blackness. Colour draining away is
+itself part of decay, not an early cue that fires before anything else
+does, and not the thing that erases a food's identity at the end. These
+tones sit outside the decay-sequence set above deliberately — they are
+not a second brand palette, and nothing else on the page should start
+using them.
 
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a

@@ -68,13 +68,17 @@ async function receiptScenario(browser) {
 
   // Stub the network call: canned items cover a FOODS match (milk), an
   // unrecognised item that should fall back to the 7-day estimate
-  // (bananas, quantity 2 -> two fridge rows), and a non-food line that
-  // must land unchecked. The date is legible, so age is receipt-derived.
+  // (dragonfruit, quantity 2 -> two fridge rows), and a non-food line
+  // that must land unchecked. The date is legible, so age is
+  // receipt-derived. (Bananas were the unrecognised fixture here until
+  // banana joined FOODS -- lookup() now resolves it correctly, which is
+  // the point, so this moved to dragonfruit to keep testing the
+  // unresolved path rather than accidentally validating recognition.)
   await page.evaluate(() => {
     window.__receiptApiOverride = async () => ({
       date: '2026-10-20',
       items: [
-        {raw: 'ORG BANANA', expanded: 'organic bananas', quantity: 2, is_food: true},
+        {raw: 'ORG DRAGONFRUIT', expanded: 'organic dragonfruit', quantity: 2, is_food: true},
         {raw: 'MILK 2% GAL', expanded: 'Milk', quantity: 1, is_food: true},
         {raw: 'PAPER TOWEL 12CT', expanded: 'Paper towels', quantity: 3, is_food: false}
       ]
@@ -101,7 +105,7 @@ async function receiptScenario(browser) {
   rows.forEach((r, i) => {
     if (r.checked !== expectChecked[i]) throw new Error(`row ${i} checked=${r.checked}, expected ${expectChecked[i]}`);
   });
-  if (!rows[0].unresolved) throw new Error('bananas should be flagged unresolved');
+  if (!rows[0].unresolved) throw new Error('dragonfruit should be flagged unresolved');
   if (rows[1].unresolved) throw new Error('milk should resolve against FOODS, not be flagged');
 
   await page.click('#receiptConfirm');
@@ -109,8 +113,8 @@ async function receiptScenario(browser) {
 
   const rowNames = await page.$$eval('#rows .row .name', els => els.map(e => e.childNodes[0].textContent.trim()));
   console.log('fridge rows after confirm:', JSON.stringify(rowNames));
-  if (rowNames.length !== 3) throw new Error(`expected 3 fridge rows (2 bananas + 1 milk), got ${rowNames.length}`);
-  if (rowNames.filter(n => n === 'Organic bananas').length !== 2) throw new Error('expected two banana rows from quantity 2');
+  if (rowNames.length !== 3) throw new Error(`expected 3 fridge rows (2 dragonfruit + 1 milk), got ${rowNames.length}`);
+  if (rowNames.filter(n => n === 'Organic dragonfruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
   if (!rowNames.includes('Milk')) throw new Error('expected milk to resolve and commit');
   if (rowNames.includes('Paper towels')) throw new Error('unchecked paper towels should not have been added');
 
