@@ -559,6 +559,172 @@ async function migrationScenario(browser) {
   await page.context().close();
 }
 
+/* ---------- real fridge (new section, above the untouched line-art
+   fridge view) -- door-on-load, handle toggle, reduced motion, the
+   closed-state count, and item tap. Seeds `fridge` directly (same
+   methodology as tools/real-fridge-study.js) rather than through
+   #entry/#addbtn, for precise control over each item's days-left. ---------- */
+
+async function rfSeed(page, day){
+  await page.evaluate(day => {
+    fridge = [
+      {id: uid++, key: 'chicken', bought: day},       // today, critical
+      {id: uid++, key: 'spinach', bought: day - 5},    // turn
+      {id: uid++, key: 'cheese', bought: day - 5},     // fresh (42-day shelf)
+      {id: uid++, key: 'tomato', bought: day - 9},     // gone, into the crisper
+    ];
+    render();
+  }, day);
+}
+
+async function realFridgeDoorLoadScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+
+  console.log('\n--- REAL FRIDGE: door opens on load ---');
+  const beforeOpen = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  console.log('open before the auto-open delay elapses:', beforeOpen);
+  if (beforeOpen) throw new Error('door was already open immediately on load -- expected a closed first paint, then an auto-open animation');
+
+  await page.waitForTimeout(900); // past rfInit's 500ms delay + most of the 1s transition
+  const afterOpen = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  console.log('open after the delay:', afterOpen);
+  if (!afterOpen) throw new Error('door did not open on its own after loading');
+
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+async function realFridgeHandleToggleScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(900); // let the load-open animation finish first
+
+  console.log('\n--- REAL FRIDGE: handle toggles the door ---');
+  const openBefore = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  if (!openBefore) throw new Error('expected the door to already be open before testing the handle');
+
+  await page.click('#rfHandle');
+  await page.waitForTimeout(1100);
+  const closedAfterClick = await page.$eval('#rfUnit', el => !el.classList.contains('open'));
+  const ariaLabelClosed = await page.getAttribute('#rfHandle', 'aria-label');
+  const ariaPressedClosed = await page.getAttribute('#rfHandle', 'aria-pressed');
+  console.log('closed after one click:', closedAfterClick, '· aria-label:', ariaLabelClosed, '· aria-pressed:', ariaPressedClosed);
+  if (!closedAfterClick) throw new Error('clicking the handle did not close the open door');
+  if (ariaLabelClosed !== 'Open fridge door') throw new Error(`expected aria-label "Open fridge door" once closed, got "${ariaLabelClosed}"`);
+  if (ariaPressedClosed !== 'false') throw new Error(`expected aria-pressed="false" once closed, got "${ariaPressedClosed}"`);
+
+  await page.click('#rfHandle');
+  await page.waitForTimeout(1100);
+  const openAgain = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  const ariaLabelOpen = await page.getAttribute('#rfHandle', 'aria-label');
+  console.log('open again after a second click:', openAgain, '· aria-label:', ariaLabelOpen);
+  if (!openAgain) throw new Error('clicking the handle a second time did not reopen the door');
+  if (ariaLabelOpen !== 'Close fridge door') throw new Error(`expected aria-label "Close fridge door" once open, got "${ariaLabelOpen}"`);
+
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+async function realFridgeReducedMotionScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+
+  console.log('\n--- REAL FRIDGE: prefers-reduced-motion skips the load animation ---');
+  // No wait for rfInit's normal 500ms delay -- reduced motion should show
+  // it open essentially immediately, not after the same pause.
+  await page.waitForTimeout(80);
+  const openImmediately = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  console.log('open within 80ms of load:', openImmediately);
+  if (!openImmediately) throw new Error('prefers-reduced-motion did not show the door open immediately on load');
+
+  const transitionDuration = await page.$eval('#rfDoor', el => getComputedStyle(el).transitionDuration);
+  console.log('door transition-duration under reduced motion:', transitionDuration);
+  if (!/^0s(,\s*0s)*$/.test(transitionDuration.trim())) throw new Error(`expected the door's transition to be suppressed (0s) under reduced motion, got "${transitionDuration}"`);
+
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+async function realFridgeClosedCountScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  const day = await page.evaluate(() => today());
+  await rfSeed(page, day);
+
+  console.log('\n--- REAL FRIDGE: closed-door count matches the turn/crit "at risk" bucket ---');
+  // chicken (today, crit) and spinach (5d bought, 7d shelf -> 2d left, crit)
+  // are at risk; cheese (5d bought, 42d shelf) is fresh; tomato (9d bought,
+  // 7d shelf) is already gone, into the crisper, not this count.
+  const line = await page.textContent('#rfClosedLine');
+  console.log('closed-door line:', line.trim());
+  if (line.trim() !== '2 items need attention') throw new Error(`expected "2 items need attention", got "${line.trim()}"`);
+
+  await page.screenshot({ path: path.join(OUT, 'scn-realfridge-closedcount.png') });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+async function realFridgeItemTapScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  const day = await page.evaluate(() => today());
+  await rfSeed(page, day);
+  await page.waitForTimeout(900); // past the load-open animation
+
+  console.log('\n--- REAL FRIDGE: tapping an item shows a popover and never the door ---');
+  const openBefore = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+
+  await page.click('[data-rf-item]');
+  await page.waitForTimeout(150);
+  const popoverVisible = await page.$eval('#rfPopover', el => !el.hidden);
+  const popoverText = await page.textContent('#rfPopover');
+  console.log('popover visible after item tap:', popoverVisible, '· text:', popoverText.replace(/\s+/g, ' ').trim());
+  if (!popoverVisible) throw new Error('tapping an item did not open the popover');
+  if (!/Bought|Status|Left/.test(popoverText)) throw new Error('popover is missing the expected name/bought/status/left fields');
+
+  const openAfterTap = await page.$eval('#rfUnit', el => el.classList.contains('open'));
+  console.log('door state unchanged by the item tap:', openBefore === openAfterTap);
+  if (openBefore !== openAfterTap) throw new Error('tapping an item changed the door state -- it must never trigger the door');
+
+  // Clicking elsewhere (outside the popover) dismisses it.
+  await page.click('.rf-head');
+  await page.waitForTimeout(100);
+  const popoverAfterOutsideClick = await page.$eval('#rfPopover', el => el.hidden);
+  console.log('popover hidden after an outside click:', popoverAfterOutsideClick);
+  if (!popoverAfterOutsideClick) throw new Error('clicking outside the popover did not dismiss it');
+
+  await page.screenshot({ path: path.join(OUT, 'scn-realfridge-popover.png') });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -575,6 +741,11 @@ async function migrationScenario(browser) {
   await pluralAgreementScenario(browser);
   await dishRepeatScenario(browser);
   await migrationScenario(browser);
+  await realFridgeDoorLoadScenario(browser);
+  await realFridgeHandleToggleScenario(browser);
+  await realFridgeReducedMotionScenario(browser);
+  await realFridgeClosedCountScenario(browser);
+  await realFridgeItemTapScenario(browser);
 
   await browser.close();
   server.close();
