@@ -3298,16 +3298,20 @@ function packagedMarkupLine(shape, color, fraction, size, seed){
   </svg>`;
 }
 
-// Shelves, front (soonest) first, each holding one row -- the illustrated
-// fridge's rfFitRow rule: an item's size is its depth (nearer to turning,
-// larger and in front), a row is spaced out when there is room and
-// overlaps by at most 40% of its average size when there isn't, and a new
-// shelf starts when the next item would need more overlap than that. Every
-// item stands on a shelf line with its own label showing; nothing sits in
-// a hidden row behind another. minSlot (phone): every item gets at least
-// that much width -- its label with Used and Tossed as 44px buttons -- and
-// slots never overlap, so a row wraps to a new shelf rather than piling
-// its labels into tiers.
+// Shelves, front (soonest) first, each holding one row. An item's size is
+// its depth (nearer to turning, larger and in front). Every item stands on
+// a shelf line with its own label showing; nothing sits in a hidden row
+// behind another.
+// Desktop (no minSlot) counts instead of measuring: at most SHELF_MAX
+// items a shelf, in urgency order, each centred in an equal column at
+// least LABEL_PITCH wide, so every label sits in one row under its shelf
+// without stepping down. A drawing may reach past its column into its
+// neighbour's, by at most 40% of itself (the illustrated fridge's overlap
+// limit), the more urgent painting in front -- never its label.
+// minSlot (phone): every item gets at least that much width -- its label
+// with Used and Tossed as 44px buttons -- and slots never overlap, so a
+// row wraps to a new shelf rather than piling its labels into tiers.
+const SHELF_MAX = 9, LABEL_PITCH = 104; // .fridge-label max-width 96px, plus the stagger's margin
 function layoutShelves(items, day, width, minSlot = 0){
   const W = width * 0.96, x0 = width * 0.02;
   const place = it => {
@@ -3318,10 +3322,20 @@ function layoutShelves(items, day, width, minSlot = 0){
     const size = Math.round(44 + frontness * 130);
     return {it, d, frontness, size, slot: Math.max(size, minSlot)};
   };
+  if (!minSlot){
+    const perRow = Math.max(1, Math.min(SHELF_MAX, Math.floor(W / LABEL_PITCH)));
+    const pitch = W / perRow, placed = items.map(place), rows = [];
+    for (let i = 0; i < placed.length; i += perRow) rows.push(placed.slice(i, i + perRow));
+    rows.forEach(row => row.forEach((p, i) => {
+      p.size = Math.min(p.size, Math.round(pitch / 0.6));
+      p.x = Math.round(x0 + (i + 0.5) * pitch - p.size / 2);
+      p.z = row.length - i;
+    }));
+    return rows;
+  }
   const fits = row => {
     const sum = row.reduce((a, p) => a + p.slot, 0);
-    if (minSlot) return row.length < 2 || sum + 4 * (row.length - 1) <= W;
-    return row.length < 2 || sum - (sum / row.length) * 0.4 * (row.length - 1) <= W;
+    return row.length < 2 || sum + 4 * (row.length - 1) <= W;
   };
   const rows = [];
   let cur = [];

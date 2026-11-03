@@ -356,15 +356,21 @@ async function assertFridgeLayout(page, where) {
     return {
       labels: labels.length, tags: tags.length, rows: document.querySelectorAll('#fridgeShelf .fridge-row').length,
       lineArtLabels: pairs(labels), actHit, acts: actBoxes.length, labelOnFood: labels.flatMap(l => shapes.filter(s => hit(l, s)).map(s => [l, s]))[0] || null,
-      illustratedTags: pairs(tags), aboveHeading: items.filter(i => i.top < head - 0.5)[0] || tagOnHeading
+      illustratedTags: pairs(tags), aboveHeading: items.filter(i => i.top < head - 0.5)[0] || tagOnHeading,
+      // desktop: at most 9 to a shelf, every label in one row (no tier)
+      desktop: innerWidth > 720,
+      perShelf: [...document.querySelectorAll('#fridgeShelf .fridge-row')].map(r => r.querySelectorAll('.fridge-item').length),
+      stepped: [...document.querySelectorAll('#fridgeShelf .fridge-label')].filter(l => l.style.getPropertyValue('--tier')).map(l => l.childNodes[0].textContent)
     };
   });
-  console.log(`${where}: line-art ${res.labels} labels on ${res.rows} shelves, illustrated ${res.tags} tags`);
+  console.log(`${where}: line-art ${res.labels} labels on ${res.rows} shelves ${JSON.stringify(res.perShelf)}, illustrated ${res.tags} tags`);
   if (res.actHit) throw new Error(`${where}: a Used/Tossed button runs into another label: ${JSON.stringify(res.actHit)}`);
   if (res.lineArtLabels) throw new Error(`${where}: line-art labels overlap: ${JSON.stringify(res.lineArtLabels)}`);
   if (res.labelOnFood) throw new Error(`${where}: a line-art label sits on a food: ${JSON.stringify(res.labelOnFood)}`);
   if (res.illustratedTags) throw new Error(`${where}: illustrated tags overlap: ${JSON.stringify(res.illustratedTags)}`);
   if (res.aboveHeading) throw new Error(`${where}: an item is drawn above the fridge heading: ${JSON.stringify(res.aboveHeading)}`);
+  if (res.desktop && res.perShelf.some(n => n > 9)) throw new Error(`${where}: more than 9 items on a shelf: ${JSON.stringify(res.perShelf)}`);
+  if (res.desktop && res.stepped.length) throw new Error(`${where}: labels stepped down a tier: ${JSON.stringify(res.stepped)}`);
   return res;
 }
 

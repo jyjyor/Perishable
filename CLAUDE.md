@@ -194,7 +194,10 @@ an item, and the crisper's Toss all still works. Opened, it does the job
 the list used to: every item drawn by the same food drawings (foodShapeMarkupLine,
 natureColor, fridgeCatOf/fridgeShapeOf), on shelves by urgency, with its
 name and days left in its urgency colour, and Used and Tossed as small
-text buttons under each. Tapping a drawing opens the same popover. On a
+text buttons under each. Tapping a drawing opens the same popover. On
+desktop a shelf holds at most nine items, each in an equal column at
+least a label wide, so every label sits in one row under its shelf; a
+tenth starts the next shelf down, still in urgency order. On a
 phone each button is a full 44px tap target, and each item gets a slot at
 least as wide as its label, so a row wraps to a new shelf rather than
 letting labels or buttons collide. There is no separate list.
