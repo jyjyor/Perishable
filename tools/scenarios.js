@@ -108,6 +108,7 @@ async function receiptScenario(browser) {
   rows.forEach((r, i) => {
     if (r.checked !== expectChecked[i]) throw new Error(`row ${i} checked=${r.checked}, expected ${expectChecked[i]}`);
   });
+  expectEqual('dragonfruit label (the scanned name, cleaned)', rows[0].name, 'Dragonfruit');
   if (rows[0].flag || !rows[0].match.includes('FoodKeeper #480')) throw new Error('dragonfruit should match FoodKeeper #480: ' + JSON.stringify(rows[0]));
   if (rows[1].flag !== 'needs date' || !rows[1].match.includes('FOODS')) throw new Error('milk should match FOODS and ask for its package date: ' + JSON.stringify(rows[1]));
   if (rows[2].flag !== 'no match' || !rows[2].match.includes('no shelf-life data')) throw new Error('potato chips should match nothing: ' + JSON.stringify(rows[2]));
@@ -129,9 +130,9 @@ async function receiptScenario(browser) {
   console.log('fridge rows after confirm:', JSON.stringify(fridgeRows));
   const rowNames = fridgeRows.map(r => r.name);
   if (rowNames.length !== 4) throw new Error(`expected 4 fridge rows (2 dragonfruit + milk + chips), got ${rowNames.length}`);
-  if (rowNames.filter(n => n === 'Pitaya/dragon fruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
+  if (rowNames.filter(n => n === 'Dragonfruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
   const leftOf = n => fridgeRows.find(r => r.name === n).left;
-  expectEqual('dragonfruit days left (21 - age)', leftOf('Pitaya/dragon fruit'), (21 - purchase) + ' days');
+  expectEqual('dragonfruit days left (21 - age)', leftOf('Dragonfruit'), (21 - purchase) + ' days');
   expectEqual('milk days left (package date)', leftOf('Milk'), 7 - purchase < 0 ? Math.abs(7 - purchase) + 'd past' : (7 - purchase) + ' days');
   expectEqual('chips days left (use-by given)', leftOf('Potato chips'), (60 - purchase) + ' days');
   if (rowNames.includes('Paper towels')) throw new Error('unchecked paper towels should not have been added');
@@ -328,11 +329,39 @@ async function fridgeGradientScenario(browser) {
   await page.context().close();
 }
 
+// Both fridges: no two item labels overlap (line-art labels, illustrated
+// tags), no line-art label sits on any food, and no food is drawn above
+// the line-art fridge's heading.
+async function assertFridgeLayout(page, where) {
+  const res = await page.evaluate(() => {
+    const box = el => { const r = el.getBoundingClientRect(); return {left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: el.textContent.trim().slice(0, 30)}; };
+    const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const pairs = list => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return [list[i], list[j]]; return null; };
+    const labels = [...document.querySelectorAll('#fridgeShelf .fridge-label')].map(box);
+    const shapes = [...document.querySelectorAll('#fridgeShelf .fridge-shape svg > path:first-of-type')].map(box);
+    const tags = [...document.querySelectorAll('#rfUnit .rf-tag')].filter(t => t.offsetParent).map(box);
+    const head = document.querySelector('.fridgeview-head').getBoundingClientRect().bottom;
+    const items = [...document.querySelectorAll('#fridgeShelf .fridge-item')].map(box);
+    const headBox = box(document.querySelector('.fridgeview-head'));
+    const tagOnHeading = tags.find(t => hit(t, headBox)) || null;
+    return {
+      labels: labels.length, tags: tags.length, rows: document.querySelectorAll('#fridgeShelf .fridge-row').length,
+      lineArtLabels: pairs(labels), labelOnFood: labels.flatMap(l => shapes.filter(s => hit(l, s)).map(s => [l, s]))[0] || null,
+      illustratedTags: pairs(tags), aboveHeading: items.filter(i => i.top < head - 0.5)[0] || tagOnHeading
+    };
+  });
+  console.log(`${where}: line-art ${res.labels} labels on ${res.rows} shelves, illustrated ${res.tags} tags`);
+  if (res.lineArtLabels) throw new Error(`${where}: line-art labels overlap: ${JSON.stringify(res.lineArtLabels)}`);
+  if (res.labelOnFood) throw new Error(`${where}: a line-art label sits on a food: ${JSON.stringify(res.labelOnFood)}`);
+  if (res.illustratedTags) throw new Error(`${where}: illustrated tags overlap: ${JSON.stringify(res.illustratedTags)}`);
+  if (res.aboveHeading) throw new Error(`${where}: an item is drawn above the fridge heading: ${JSON.stringify(res.aboveHeading)}`);
+  return res;
+}
+
 // Phase 3: a realistic ~25-item haul (22 savable across every category,
 // 3 already gone) -- the point of this one is volume: does the shelf
-// actually wrap into a front row plus rows behind it, and does tapping a
-// covered (behind-row) item reveal its label the way a shelf item that
-// never had a row-mate covering it should not need to.
+// actually spread over several shelves, each with every label showing and
+// none colliding, in both fridges.
 async function fridgeHaulScenario(browser) {
   const page = await (await browser.newContext()).newPage();
   // Phone width, not desktop -- receipt scanning is explicitly a phone
@@ -361,35 +390,14 @@ async function fridgeHaulScenario(browser) {
   console.log('fridge count:', fridgeCount);
   if (fridgeCount.trim() !== '25 items') throw new Error(`expected "25 items", got "${fridgeCount.trim()}"`);
 
-  const covered = await page.$$('#fridgeShelf .fridge-item.covered');
-  console.log('covered (behind-row) items:', covered.length);
-  if (!covered.length) throw new Error('a 25-item haul should overflow into a second row, producing covered items');
-
-  const firstCovered = covered[0];
-  const labelBefore = await firstCovered.evaluate(el => getComputedStyle(el.querySelector('.fridge-label')).opacity);
-  await firstCovered.click();
-  await page.waitForTimeout(250); // let the .15s opacity transition finish before reading it
-  const labelAfter = await firstCovered.evaluate(el => getComputedStyle(el.querySelector('.fridge-label')).opacity);
-  console.log('covered item label opacity before/after tap:', labelBefore, '->', labelAfter);
-  if (labelBefore !== '0' || labelAfter !== '1') throw new Error(`tap-to-reveal didn't toggle label opacity (${labelBefore} -> ${labelAfter})`);
+  await page.waitForTimeout(900);
+  const layout = await assertFridgeLayout(page, 'haul at 390px');
+  if (layout.rows < 2) throw new Error('a 25-item haul at phone width should need more than one shelf');
+  expectEqual('every savable item labelled', layout.labels, 22);
 
   const drawerCount = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
   console.log('drawer (gone) items:', drawerCount);
   if (drawerCount !== 3) throw new Error(`expected 3 gone items in the drawer, got ${drawerCount}`);
-
-  // No two visible (front-row, not covered) labels may overlap -- covered
-  // items are exempt, their labels are hidden until tapped by design.
-  const labelRects = await page.$$eval('#fridgeShelf .fridge-item:not(.covered) .fridge-label', els =>
-    els.map(el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }));
-  console.log('front-row label count:', labelRects.length);
-  for (let i = 0; i < labelRects.length; i++){
-    for (let j = i + 1; j < labelRects.length; j++){
-      const a = labelRects[i], b = labelRects[j];
-      const overlapX = a.left < b.right && b.left < a.right;
-      const overlapY = a.top < b.bottom && b.top < a.bottom;
-      if (overlapX && overlapY) throw new Error(`front-row labels ${i} and ${j} overlap: ${JSON.stringify(a)} / ${JSON.stringify(b)}`);
-    }
-  }
 
   if (errors.length) console.log('console errors:', errors);
   await page.screenshot({ path: path.join(OUT, 'fridge-haul.png'), fullPage: true });
@@ -1057,17 +1065,26 @@ function expectRow(rows, name, left, g) {
 async function fkOnlyScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- FOODKEEPER ONLY: an item outside FOODS gets FoodKeeper days ---');
-  await typeEntry(page, 'plums, chicken salad 1d');
+  await typeEntry(page, 'blackberries, chicken salad 1d');
   if (await previewOpen(page)) throw new Error('both match one FoodKeeper item with days; nothing should be asked');
   const rows = await readInventory(page);
   console.log('inventory:', JSON.stringify(rows));
   const med = await page.evaluate(() => [CAT_MEDIANS.soft.g, CAT_MEDIANS.cooked.g]);
-  expectRow(rows, 'Peaches, nectarines, plums, pears, sapote', '5 days', `≈${med[0]} g`);   // #266, 5
+  expectRow(rows, 'Blackberries', '6 days', `≈${med[0]} g`);   // #253, 6
   expectRow(rows, 'Chicken salad', '3 days', `≈${med[1]} g`);                               // #418, 4, bought 1 day ago
   await page.waitForTimeout(900);
-  const pop = await popoverText(page, '_fk_266');
+  const pop = await popoverText(page, '_fk_253');
   console.log('popover:', pop);
-  if (!pop.includes('FoodKeeper #266')) throw new Error('popover should name FoodKeeper #266 as the source');
+  if (!/^× Blackberries/.test(pop)) throw new Error('popover title should be the typed name');
+  if (!pop.includes('FoodKeeper #253 “Berries (blackberries, boysenberries, currant)”')) throw new Error('popover source should name #253 and its title');
+  // A value FoodKeeper counts from ripeness asks for a date, with the hint.
+  await typeEntry(page, 'kiwi fruit, bananas');
+  const ripe = await readReview(page, '#voicePreview');
+  ripe.forEach(r => console.log(' ', r.name, '|', r.flag, '|', r.match));
+  expectEqual('ripeness flags', ripe.map(r => r.flag), ['needs date', 'needs date']);
+  if (!ripe[0].match.includes('about 6 days after it ripens') || !ripe[1].match.includes('about 3 days after it ripens'))
+    throw new Error('kiwi and bananas should carry their ripeness hints');
+  await page.click('#voiceDiscard');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1102,7 +1119,7 @@ async function noFalseMatchScenario(browser) {
     if (!r.match.includes(src)) throw new Error(`${n} should match ${src}: ${r.match}`);
     if (r.match.includes(not)) throw new Error(`${n} matched ${not}`);
   };
-  expectMatch('Apple juice (fresh squeezed)', 'FoodKeeper #537', 'matched Apple ·');
+  expectMatch('Apple juice', 'FoodKeeper #537', 'matched Apple ·');
   expectMatch('Chicken salad', 'FoodKeeper #418', 'Chicken breast');
   expectMatch('Almond milk', 'FoodKeeper #427', 'matched Milk ·');
   expectEqual('almond milk flag', byName('Almond milk').flag, 'needs date');
@@ -1192,16 +1209,19 @@ async function receiptNewItemsScenario(browser) {
   await page.waitForSelector('#receiptPreview .receipt-row');
   const rows = await readReview(page, '#receiptPreview');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
-  expectEqual('flags', rows.map(r => r.flag), ['', '', 'needs date', 'needs date', 'no match / choice', '', '']);
+  expectEqual('flags', rows.map(r => r.flag), ['', '', 'needs date', 'needs date', 'no match / choice', 'needs date', '']);
+  expectEqual('scanned names, cleaned', rows.map(r => r.name),
+    ['Strawberries', 'Rotisserie chicken', 'Avocados', 'Sour cream', 'Tortillas', 'Plums', 'Salmon']);
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
   if (!rows[2].match.includes('about 4 days after it ripens')) throw new Error('avocados should carry the ripeness hint');
-  if (!rows[5].match.includes('FoodKeeper #266')) throw new Error('plums should match FoodKeeper #266');
+  if (!rows[5].match.includes('FoodKeeper #266') || !rows[5].match.includes('about 5 days after it ripens')) throw new Error('plums should match FoodKeeper #266 and ask from ripeness');
   if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked');
 
   await page.fill('#receiptPreview .entry-date[data-idx="2"]', await isoIn(page, 6));
   await page.fill('#receiptPreview .entry-date[data-idx="3"]', await isoIn(page, 21));
   await page.selectOption('#receiptPreview .entry-pick[data-idx="4"]', 'flourtortilla');
   await page.fill('#receiptPreview .entry-date[data-idx="4"]', await isoIn(page, 30));
+  await page.fill('#receiptPreview .entry-date[data-idx="5"]', await isoIn(page, 8));
   await page.click('#receiptConfirm');
   await page.waitForTimeout(150);
   fs.unlinkSync(fixturePath);
@@ -1213,7 +1233,7 @@ async function receiptNewItemsScenario(browser) {
   expectRow(inv, 'Avocados', '6 days');
   expectRow(inv, 'Sour cream', '21 days');
   expectRow(inv, 'Flour tortillas', '30 days');
-  expectRow(inv, 'Peaches, nectarines, plums, pears, sapote', '5 days');
+  expectRow(inv, 'Plums', '8 days');
   expectRow(inv, 'Salmon', '2 days');
 
   await page.waitForTimeout(900);
@@ -1239,6 +1259,66 @@ async function receiptNewItemsScenario(browser) {
   await page.screenshot({ path: path.join(OUT, 'scn-receipt-new-foods.png'), fullPage: true });
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
+}
+
+// Only a toss is waste: restocking something past date leaves the old one
+// in the drawer, counted nowhere, and adds the new one beside it.
+async function restockNoWasteScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- RESTOCK: a past-date item is not counted as waste ---');
+  await typeEntry(page, 'yogurt 20d');
+  await page.click('[data-restock="yogurt"]');
+  await page.waitForTimeout(100);
+  const inv = await readInventory(page);
+  console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)), '· waste:', await page.textContent('#wasteG'));
+  expectEqual('yogurt rows', inv.map(r => r.left).sort(), ['14 days', '6d past']);
+  expectEqual('waste after restock', (await page.textContent('#wasteG')).trim(), '0 g');
+  expectEqual('ledger', await page.evaluate(() => [ledger.wasteG, ledger.wasteUSD]), [0, 0]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// The same 18 items in both fridges, at desktop and phone width: FOODS
+// additions, FoodKeeper fallbacks under their typed names, estimated
+// items, package and ripeness dates, a no-match item with its own date,
+// and one past date. Asserts the layout and writes four screenshots.
+const MIXED_18 = [
+  ['strawberry', 1], ['avocado', 0, 6], ['salmon', 0], ['onion', 5], ['milk', 2, 9], ['sourcream', 3, 24],
+  ['_fk_266', 2, 7, null, 'Plums'], ['_fk_418', 3, null, null, 'Chicken salad'], ['tomato', 4], ['napacabbage', 2],
+  ['rotisserie', 3], ['beets', 1], ['bread', 15], ['_fk_427', 1, 10, null, 'Almond milk'], ['spinach', 9],
+  ['shrimp', 1], ['chickenthigh', 0], ['_c_potatochips', 0, 60, {en: 'Potato chips', g: 450, usd: 2.99, estWeight: true}]
+];
+async function mixedFridgeScenario(browser) {
+  console.log('\n--- MIXED 18: both fridges, desktop and phone ---');
+  for (const [w, tag] of [[1280, 'desktop'], [390, 'phone']]) {
+    const page = await (await browser.newContext({ viewport: { width: w, height: 1400 } })).newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(`http://localhost:${PORT}/index.html`);
+    await page.evaluate(items => {
+      const d = new Date(), T = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+      const fridge = [], standing = {};
+      items.forEach(([key, ago, shelf, custom, name], i) => {
+        const it = {id: i + 1, key, bought: T - ago, custom: custom || null};
+        if (name) it.name = name;
+        if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
+        fridge.push(it);
+        standing[key] = {count: 1, lastBought: T - ago, custom: custom || null, ...(name ? {name} : {})};
+      });
+      localStorage.setItem('perishable.v1', JSON.stringify({schema: 3, fridge, standing,
+        ledger: {wasteG: 0, wasteUSD: 0, savedG: 0}, uid: items.length, startedAt: T - 15, lastVisit: T}));
+    }, MIXED_18);
+    await page.reload();
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
+    if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
+    await assertFridgeLayout(page, `mixed 18 at ${w}px`);
+    await (await page.$('#rfUnit')).screenshot({ path: path.join(OUT, `mixed18-illustrated-${tag}.png`) });
+    await (await page.$('.fridgeview')).screenshot({ path: path.join(OUT, `mixed18-lineart-${tag}.png`) });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
+  }
 }
 
 (async () => {
@@ -1273,6 +1353,8 @@ async function receiptNewItemsScenario(browser) {
   await ambiguousScenario(browser);
   await noMatchScenario(browser);
   await receiptNewItemsScenario(browser);
+  await restockNoWasteScenario(browser);
+  await mixedFridgeScenario(browser);
 
   await browser.close();
   server.close();
