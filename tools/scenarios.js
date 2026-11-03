@@ -1355,19 +1355,23 @@ async function mixedFridgeScenario(browser) {
     const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
     if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
     await assertFridgeLayout(page, `mixed 18 at ${w}px`);
-    // Illustrated tags: days left only, a name on the three most urgent.
-    const tags = await page.$$eval('#rfUnit .rf-tag', els => els.map(t => ({
-      id: +t.dataset.rfTag, named: t.children.length > 1 && !t.children[0].classList.contains('rf-tag-days'),
-      days: t.querySelector('.rf-tag-days').childNodes[0].textContent.trim() })));
+    // Illustrated fridge: no day tags; a small name label on the three
+    // most urgent only; every item a button that opens the popover.
+    const tags = await page.$$eval('#rfUnit .rf-tag', els => els.map(t => ({ id: +t.dataset.rfTag, text: t.textContent.trim() })));
     const soonest = await page.evaluate(() => fridge.filter(it => left(it) >= 0 && !it.ripening)
-      .sort((a, b) => left(a) - left(b)).slice(0, 3).map(it => it.id));
-    expectEqual(`named tags at ${w}px`, tags.filter(t => t.named).map(t => t.id).sort(), [...soonest].sort());
-    const bad = tags.filter(t => !/^(\d+d|today|gone|ripening)$/.test(t.days));
-    if (bad.length) throw new Error('a tag shows more than days left: ' + JSON.stringify(bad));
-    const quiet = tags.find(t => !t.named);
-    await page.$eval(`[data-rf-tag="${quiet.id}"]`, el => el.click());
+      .sort((a, b) => left(a) - left(b)).slice(0, 3).map(it => ({ id: it.id, name: food(it).en })));
+    expectEqual(`name labels at ${w}px`, tags.map(t => t.id).sort(), soonest.map(s => s.id).sort());
+    for (const t of tags) expectEqual('label is the name only', t.text, soonest.find(s => s.id === t.id).name);
+    expectEqual('no Toss under items', await page.$$eval('#rfUnit [data-rf-toss]', els => els.length), 0);
+    const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
+    const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
+    expectEqual('drawer front', crisper, `${goneN} past date · Toss all`);
+    const look = await page.$eval('#rfUnit .rf-fooditem', b => getComputedStyle(b).cursor);
+    expectEqual('items show a pointer', look, 'pointer');
+    const quiet = await page.evaluate(ids => fridge.find(it => left(it) >= 0 && !ids.includes(it.id)).id, tags.map(t => t.id));
+    await page.$eval(`[data-rf-item="${quiet}"]`, el => el.click());
     const popName = await page.textContent('#rfPopover .rf-pop-name');
-    expectEqual('tap shows the name', popName.trim(), await page.evaluate(id => food(fridge.find(i => i.id === id)).en, quiet.id));
+    expectEqual('tap shows the name', popName.trim(), await page.evaluate(id => food(fridge.find(i => i.id === id)).en, quiet));
     await page.mouse.click(2, 2);
     await page.waitForTimeout(100);
     await (await page.$('#rfUnit')).screenshot({ path: path.join(OUT, `mixed18-illustrated-${tag}.png`) });
@@ -1433,6 +1437,35 @@ async function decayLineScenario(browser) {
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await page.context().close();
   }
+}
+
+// A gone item: no tag under it; Toss is in its popover and counts as
+// waste; the drawer front's Toss all opens the list's confirmation.
+async function goneTossScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- GONE: Toss in the popover, Toss all on the drawer front ---');
+  await typeEntry(page, 'spinach 10d, chicken 12d, tofu');
+  if (await previewOpen(page)) await answerPreview(page);
+  await page.waitForTimeout(900);
+  expectEqual('drawer front', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date · Toss all');
+  const spinach = await page.evaluate(() => fridge.find(i => i.key === 'spinach').id);
+  await page.$eval(`[data-rf-item="${spinach}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  await page.click('#rfPopover .rf-pop-toss');
+  await page.waitForTimeout(100);
+  const s = await page.evaluate(() => ({ n: fridge.length, waste: ledger.wasteG }));
+  expectEqual('spinach tossed', s.n, 2);
+  if (!(s.waste > 0)) throw new Error('a toss from the popover should count as waste');
+  expectEqual('drawer front after', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '1 past date · Toss all');
+  await page.click('#rfTossAll');
+  await page.waitForTimeout(100);
+  if (!(await page.isVisible('#clearConfirm'))) throw new Error('Toss all should open the confirmation');
+  expectEqual('nothing tossed before confirming', await page.evaluate(() => fridge.length), 2);
+  await page.click('#clearConfirmBtn');
+  await page.waitForTimeout(100);
+  expectEqual('after confirming', await page.evaluate(() => fridge.map(i => i.key)), ['tofu']);
+  expectEqual('drawer front empty', (await page.textContent('#rfCrisperLabel')).trim(), 'Crisper — past date');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
 }
 
 // A date set by hand (list Edit mode or the popover) is stored on the
@@ -1560,6 +1593,7 @@ async function ripenessScenario(browser) {
   await ripenessScenario(browser);
   await handAliasScenario(browser);
   await decayLineScenario(browser);
+  await goneTossScenario(browser);
 
   await browser.close();
   server.close();

@@ -178,9 +178,15 @@ every item through the same food-rendering and decay functions as the
 line-art view below it (foodShapeMarkupLine, natureColor, fridgeCatOf/
 fridgeShapeOf) rather than a second implementation, and keeps urgency
 colour to the same role it already has elsewhere: each item's label —
-here a small tag hung below the item (days left only; the three most
-urgent items also carry their name, every other name is a tap away),
-and the popover a tapped item shows — and nothing on the closed door itself.
+here a small name label hung below each of the three most urgent items
+only (no days: deli containers and trays look alike, and those are the
+ones to recognise at a glance), and the popover any tapped item shows —
+and nothing on the closed door itself. The fridge tells urgency by
+position, size and decay; dates live in the popover, the decay line and
+the list. Every item is a button (pointer, a slight lift on hover, a
+focus ring). Past-date items: Toss in the popover, and the crisper's
+drawer front reads "N past date · Toss all", which opens the list's
+confirmation.
 Which of the two fridges stays is an open decision, not a resolved one.
 
 ## Voice

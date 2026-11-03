@@ -203,7 +203,13 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-item{position:relative}
 .rf-fooditem{
   position:relative;display:block;cursor:pointer;background:none;border:none;padding:0;font:inherit;
+  transition:transform .15s ease-out;
 }
+/* Every item is a button: it lifts a little under the pointer and shows
+   a ring when reached by keyboard. */
+.rf-fooditem:hover{transform:translateY(-3px)}
+.rf-fooditem:focus{outline:none}
+.rf-fooditem:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .rf-foodshape{display:block;position:relative;z-index:1;filter:url(#rfWobblePx)}
 .rf-foodshape svg{display:block;width:100%;height:100%;overflow:visible}
 /* Container-level line weight, so food and cabinet share one hand: the
@@ -230,16 +236,14 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   white-space:normal;overflow-wrap:normal;word-break:keep-all;hyphens:none;
 }
 .rf-tag > span{max-width:14ch}
-.rf-tag .rf-tag-days{white-space:nowrap;display:flex;align-items:center;gap:4px}
 .rf-tag::before{
   content:'';position:absolute;left:50%;bottom:100%;width:1px;background:var(--ink-3);
   height:calc(var(--rf-string, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
 }
-.rf-tag .rf-tag-days{opacity:.85}
-.rf-tag{cursor:pointer}
-.rf-tag button{font-size:10px;padding:0 4px;letter-spacing:.02em;color:var(--ink-2)}
+.rf-tag{cursor:pointer;font-size:10px;padding:1px 5px 2px}
+.rf-crisper-label button{font-size:9px;padding:0 4px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .rf-crisper-label{
-  position:absolute;z-index:2;
+  position:absolute;z-index:4;display:flex;align-items:center;gap:6px;
   font-family:'tonos-mono-vf',ui-monospace,monospace;
   font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;
 }
@@ -3667,18 +3671,18 @@ function rfBuildFoodItem(it, day, u, z, named){
   const color = foodBodyColor(it, frac);
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
-  const dayLabel = gone ? 'gone' : shortLeft(it, d);
-  // The tag is this item's label in CLAUDE.md's sense: days left in the
-  // urgency bucket's colour, the same state()/COLOR lookup as the list,
-  // the decay line and the line-art fridge. Only the three most urgent
-  // carry their name too; every other name is a tap away (the popover).
+  // No days under items: the fridge tells urgency by position, size and
+  // decay, and dates live in the popover, the decay line and the list.
+  // Only the three most urgent carry a small name label -- deli containers
+  // and trays look alike -- in their urgency colour, the same
+  // state()/COLOR lookup as everywhere else.
   const c = COLOR[state(d)];
-  const toss = gone ? `<button type="button" class="ghost" data-rf-toss="${it.id}">Toss</button>` : '';
   return `<div class="rf-item"${z != null ? ` style="z-index:${z}"` : ''}>
     <button type="button" class="rf-fooditem" data-rf-item="${it.id}" aria-label="${f.en}">
       <span class="rf-foodshape" data-u="${u.toFixed(2)}" style="width:${cq};height:${cq}">${svg}</span>
     </button>
-    <div class="rf-under"><div class="rf-tag" data-rf-tag="${it.id}">${named ? `<span style="color:${c}">${f.en}</span>` : ''}<span class="rf-tag-days" style="color:${c}">${dayLabel}${toss}</span></div></div>
+${named ? `
+    <div class="rf-under"><div class="rf-tag" data-rf-tag="${it.id}" style="color:${c}">${f.en}</div></div>` : ''}
   </div>`;
 }
 
@@ -3706,6 +3710,7 @@ function renderRealFridge(){
 
   if (!fridge.length){
     [eyeShelf, upperShelf, crisperItems, ...bins].forEach(el => { el.innerHTML = ''; });
+    document.getElementById('rfCrisperLabel').textContent = 'Crisper — past date';
     emptyCavity.hidden = false;
     emptyCavity.innerHTML = 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
     unit.classList.remove('has-items');
@@ -3737,7 +3742,7 @@ function renderRealFridge(){
   const ordered = [...left.reverse(), ...right];
   const rank = new Map(eyeItems.map((it, i) => [it.id, i]));
 
-  // The three soonest (not yet gone) carry their name on the tag.
+  // The three soonest (not yet gone) carry a name label.
   const named = new Set(active.filter(it => !it.ripening).slice(0, 3).map(it => it.id));
 
   const o = RF.open;
@@ -3801,11 +3806,20 @@ function renderRealFridge(){
     b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
   });
   unit.querySelectorAll('[data-rf-tag]').forEach(t => {
-    t.onclick = e => { if (e.target.closest('[data-rf-toss]')) return; e.stopPropagation(); rfShowPopover(+t.dataset.rfTag, t); };
+    t.onclick = e => { e.stopPropagation(); rfShowPopover(+t.dataset.rfTag, t); };
   });
-  unit.querySelectorAll('[data-rf-toss]').forEach(b => {
-    b.onclick = e => { e.stopPropagation(); useItem(+b.dataset.rfToss, true); };
-  });
+  // The drawer front: how many are past date, and Toss all, which opens
+  // the same confirmation as the list's "Toss N expired".
+  const cl = document.getElementById('rfCrisperLabel');
+  cl.innerHTML = gone.length
+    ? `<span>${gone.length} past date</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`
+    : 'Crisper — past date';
+  if (gone.length) document.getElementById('rfTossAll').onclick = e => {
+    e.stopPropagation();
+    clearConfirmOpen = true;
+    render();
+    document.getElementById('clearConfirm').scrollIntoView({block: 'center', behavior: 'smooth'});
+  };
 }
 
 // Rows in order (upper shelf, eye level, crisper), each tag left to
@@ -3848,11 +3862,13 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}"></label>${it.ripening ? `
-    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}`;
+    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${d < 0 ? `
+    <button type="button" class="ghost rf-pop-toss">Toss</button>` : ''}`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
   pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
   if (it.ripening) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
+  if (d < 0) pop.querySelector('.rf-pop-toss').onclick = () => { rfHidePopover(); useItem(id, true); };
   const r = anchorEl.getBoundingClientRect();
   const popW = pop.offsetWidth || 220;
   let left = r.left + r.width / 2 - popW / 2;
@@ -3860,7 +3876,9 @@ function rfShowPopover(id, anchorEl){
   pop.style.left = left + 'px';
   const popH = pop.offsetHeight || 120;
   const above = r.top - popH - 10;
-  pop.style.top = (above > 10 ? above : r.bottom + 10) + 'px';
+  // kept inside the window, so its fields and buttons are always reachable
+  const top = above > 10 ? above : r.bottom + 10;
+  pop.style.top = Math.max(10, Math.min(top, window.innerHeight - popH - 10)) + 'px';
 }
 function rfHidePopover(){
   document.getElementById('rfPopover').hidden = true;
