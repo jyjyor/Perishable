@@ -73,8 +73,8 @@ consumer food app.
 
 Two colour roles, kept apart on purpose. Urgency — how soon something
 turns — is told only by the decay-sequence palette below, and it appears
-in exactly four places: the label on each fridge-view item (name and
-days-left), the inventory list, the decay line, and its legend. Do not
+in exactly four places: the fridge's item labels and popover, the
+inventory list, the decay line, and its legend. Do not
 add colours outside this set for urgency, and do not let urgency colour
 migrate anywhere else.
 
@@ -159,39 +159,41 @@ Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
 CDN — fallbacks are Georgia/serif for Caslonian and ui-monospace for
 Tonos Mono, so the page still holds together if that stops being served.
 
-Signature element: the fridge view, then the decay line. The decay line
+Signature element: the fridge, then the decay line. The decay line
 showed the dates but didn't make you feel what you were about to lose —
 the fridge is the answer to that, so it opens the page: closest-to-expiring
-sits large and lit at the front, safe things recede smaller and dimmer,
+sits large at eye level, front and centre, safe things recede smaller,
 the way looking into a real fridge does before you've read a single
-number. The decay line follows directly after, a 21-day horizon on a
-square-root scale, every item pinned at its expiry — it still carries the
-dates, now that the fridge carries the feeling. One baseline, no
-gridlines: Today, 72 h, 1 week, 3 weeks marked under it, past-date items
-on a short dashed stub left of Today, Today to 72 h drawn heavier in
-plum. One label per day up to a week ("2 days · Strawberries, salmon"),
-in that day's urgency colour, never crossing the line or each other;
-further out is a dot only. Both read from the same
-shelf-life math (leftAt, pos) and must never disagree with each other.
+number. The decay line follows, a 21-day horizon on a square-root scale,
+every item pinned at its expiry — it carries the dates, now that the
+fridge carries the feeling. One baseline, no gridlines: Today, 72 h,
+1 week, 3 weeks marked under it, past-date items on a short dashed stub
+left of Today, Today to 72 h drawn heavier in plum. One label per day up
+to a week ("2 days · Strawberries, salmon"), in that day's urgency
+colour, never crossing the line or each other; further out is a dot
+only. Both read from the same shelf-life math (leftAt, pos) and must
+never disagree with each other.
 
-A second, literal illustration of a fridge (door, shelves, crisper, the
-works) is merged into main and live on the page, directly above this
-one — both render the same fridge contents, one after the other. See
-REPORT.md for how it was first built and the decisions behind it. It draws
-every item through the same food-rendering and decay functions as the
-line-art view below it (foodShapeMarkupLine, natureColor, fridgeCatOf/
-fridgeShapeOf) rather than a second implementation, and keeps urgency
-colour to the same role it already has elsewhere: each item's label —
-here a small name label hung below each of the three most urgent items
-only (no days: deli containers and trays look alike, and those are the
-ones to recognise at a glance), and the popover any tapped item shows —
-and nothing on the closed door itself. The fridge tells urgency by
-position, size and decay; dates live in the popover, the decay line and
-the list. Every item is a button (pointer, a slight lift on hover, a
-focus ring). Past-date items: Toss in the popover, and the crisper's
-drawer front reads "N past date · Toss all", which opens the list's
-confirmation.
-Which of the two fridges stays is an open decision, not a resolved one.
+The fridge is the illustrated one: a literal drawing of a fridge (door,
+shelves, crisper, door bins). The line-art shelf view that used to sit
+below it is retired; its food drawings live on, because the fridge draws
+every item through them (foodShapeMarkupLine, natureColor, fridgeCatOf/
+fridgeShapeOf). See REPORT.md for how it was first built. Urgency colour
+keeps the role it has elsewhere: a small name label hung below each of
+the three most urgent items only (no days: deli containers and trays
+look alike, and those are the ones to recognise at a glance), and the
+popover any tapped item shows — nothing on the closed door itself. The
+fridge tells urgency by position, size and decay; dates live in the
+popover, the decay line and the list. Every item is a button (pointer, a
+slight lift on hover, a focus ring). The popover carries the dates and
+Used and Tossed, which run the list's own code (useItem); either one
+closes the popover and shows the toast with Undo, never a confirmation
+dialog. Past-date items sit in the crisper, whose drawer front reads "N
+past date · Toss all" and opens the list's confirmation.
+
+Below the fridge, the inventory list is collapsed under "All items (N)",
+closed by default: the fastest way to find an item by name and act on
+several at once, and the view for keyboard and screen-reader users.
 
 ## Voice
 
