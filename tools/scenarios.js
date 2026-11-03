@@ -1366,6 +1366,12 @@ async function mixedFridgeScenario(browser) {
     const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
     const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
     expectEqual('drawer front', crisper, `${goneN} past date · Toss all`);
+    const onHandle = await page.evaluate(() => {
+      const a = document.getElementById('rfCrisperLabel').getBoundingClientRect();
+      const b = document.querySelector('#rfCrisperFrontSvg rect.b3').getBoundingClientRect();
+      return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    });
+    if (onHandle) throw new Error(`${w}px: the drawer-front line runs into the crisper handle`);
     const look = await page.$eval('#rfUnit .rf-fooditem', b => getComputedStyle(b).cursor);
     expectEqual('items show a pointer', look, 'pointer');
     const quiet = await page.evaluate(ids => fridge.find(it => left(it) >= 0 && !ids.includes(it.id)).id, tags.map(t => t.id));

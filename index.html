@@ -241,6 +241,9 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   height:calc(var(--rf-string, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
 }
 .rf-tag{cursor:pointer;font-size:10px;padding:1px 5px 2px}
+/* On a phone the line is wider than the room left of the drawer's
+   handle, so it sits a little higher, clear of it. */
+@media (max-width:720px){ .rf-crisper-label{transform:translateY(-16px)} }
 .rf-crisper-label button{font-size:9px;padding:0 4px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .rf-crisper-label{
   position:absolute;z-index:4;display:flex;align-items:center;gap:6px;
