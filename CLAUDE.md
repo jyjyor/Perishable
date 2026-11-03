@@ -24,8 +24,9 @@ consumer food app.
   2. Foods usually kept out of the fridge use the pantry value instead
      (DOP_Pantry, else Pantry): bananas, potatoes, sweet potatoes, whole
      onions, garlic, tomatoes, winter squash, whole spaghetti squash,
-     pumpkins, avocados, bread and bagels (FoodKeeper ids 251, 297, 422,
-     294, 285, 306, 303, 596, 298, 250, 195, 460, 461, 574, 449). If the
+     pumpkins, avocados, bread and bagels, whole coconuts, cantaloupe and
+     honeydew (FoodKeeper ids 251, 297, 422, 294, 285, 306, 303, 596,
+     298, 250, 195, 460, 461, 574, 449, 258, 496, 497). If the
      pantry value is "When Ripe", use the refrigerator number.
   3. Ranges: the upper end. Do not go past it to be friendlier -- raw
      chicken is 2 days.

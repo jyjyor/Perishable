@@ -846,6 +846,29 @@ const FOODS = {
   // #495 counts from purchase (DOP), whole: pantry 1-2 days "or until
   // ripe", refrigerator 3-4. Not a cut value, and not on the pantry list.
   watermelon:    {en:'Watermelon',        aliases:['seedless watermelon'], shelf:4, fk:495, g:7000, usd:6.99, estPrice:true, cat:'soft', base:'#e2584a'},
+  // Fruit, second pass. Same rule; no dish in DISHES uses any of these.
+  // #263's 3-6 days is for ripe fruit, so kiwi ripens (see avocado).
+  kiwi:          {en:'Kiwi',              aliases:['kiwis','kiwifruit','kiwi fruit','green kiwi'], shelf:6, fk:263, ripens:true, g:1360, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#8a6646'},
+  // Kept on the counter whole: #258's pantry week, not its 3 refrigerator weeks.
+  coconut:       {en:'Coconut',           aliases:['coconuts','whole coconut','brown coconut','young coconut'], shelf:7, fk:258, store:'pantry', g:700, usd:2.49, estPrice:true, cat:'soft', base:'#7d5b3e'},
+  // #256 names tangerines and clementines; both are mandarins.
+  mandarin:      {en:'Mandarins',         aliases:['mandarin','clementine','clementines','cuties','cutie','tangerine','tangerines','mandarin orange','mandarin oranges'], shelf:21, fk:256, g:2268, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#ec7a26'},
+  lime:          {en:'Limes',             aliases:['lime','persian lime','persian limes'], shelf:21, fk:256, g:1360, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#4fae5a'},
+  // #483 Cherries (2-3 days), the entry for this food itself. #252
+  // "Berries (cherries, goose berries, lychee)" lists cherries at 7 days;
+  // the importer already gives "cherries" to #483.
+  cherries:      {en:'Cherries',          aliases:['cherry','sweet cherries','bing cherries','rainier cherries'], shelf:3, fk:483, g:1361, usd:12.99, estPrice:true, cat:'soft', plural:true, base:'#be2f2a'},
+  blackberry:    {en:'Blackberries',      aliases:['blackberry'], shelf:6, fk:253, g:510, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#3e3558'},
+  // Whole melons sit on the counter: the pantry figure (DOP_Pantry).
+  cantaloupe:    {en:'Cantaloupe',        aliases:['cantaloupes','muskmelon','cantaloupe melon'], shelf:4, fk:496, store:'pantry', g:1400, usd:3.49, estPrice:true, cat:'soft', base:'#c9cb9c'},
+  honeydew:      {en:'Honeydew',          aliases:['honeydew melon','honeydews','honeydew melons'], shelf:7, fk:497, store:'pantry', g:2300, usd:3.99, estPrice:true, cat:'soft', base:'#d3dea2'},
+  grapefruit:    {en:'Grapefruit',        aliases:['grapefruits','ruby red grapefruit','pink grapefruit','white grapefruit'], shelf:21, fk:256, g:2268, usd:6.99, estPrice:true, cat:'soft', base:'#ebd364'},
+  pomegranate:   {en:'Pomegranate',       aliases:['pomegranates'], shelf:90, fk:269, g:340, usd:2.49, estPrice:true, cat:'soft', base:'#c4402f'},
+  // #265 is one entry for papaya and mango (and three more), 1 week.
+  papaya:        {en:'Papaya',            aliases:['papayas','maradol papaya'], shelf:7, fk:265, g:1100, usd:4.49, estPrice:true, cat:'soft', base:'#d2c856'},
+  dragonfruit:   {en:'Dragon fruit',      aliases:['dragon fruits','dragonfruit','pitaya','pitahaya'], shelf:21, fk:480, g:450, usd:4.99, estPrice:true, cat:'soft', base:'#d6449f'},
+  // #252 "Berries (cherries, goose berries, lychee)": 7 days.
+  lychee:        {en:'Lychees',           aliases:['lychee','litchi','litchis','lichee'], shelf:7, fk:252, g:454, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#cf5848'},
   cherrytomato:  {en:'Cherry tomatoes',   aliases:['cherry tomato','grape tomatoes','grape tomato'], shelf:5, fk:600, g:907, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#d4482b'},
   sweetpotato:   {en:'Sweet potatoes',    aliases:['sweet potato','yams','yam'], shelf:21, fk:422, store:'pantry', g:1360, usd:3.99, estPrice:true, cat:'veg', plural:true, base:'#c9733d'},
   asparagus:     {en:'Asparagus',         shelf:4, fk:271, g:907, usd:5.99, estPrice:true, cat:'veg', base:'#6a9a4c'},
@@ -1154,7 +1177,7 @@ const FK_TABLE = [
 [254,"Blueberries","",14,"R",15],
 [255,"Cherimoya","",4,"ripe",15],
 [256,"Citrus fruit (lemon, lime, orange, grapefruit, tangerines, clementines)","lime|grapefruit|tangerine|clementine|mandarin",21,"R",15],
-[258,"Coconuts (fresh)","",21,"R",15],
+[258,"Coconuts (fresh)","",7,"P",15],
 [259,"Cranberries","",60,"R",15],
 [260,"Dates","",360,"R",15],
 [261,"Grapes","",7,"R",15],
@@ -1269,8 +1292,8 @@ const FK_TABLE = [
 [493,"Kimchi","",360,"R",16],
 [494,"Kohlrabi","",7,"R",16],
 [495,"Watermelon","",4,"R",15],
-[496,"Cantaloupe","",15,"R",15],
-[497,"Honeydew","",4,"R",15],
+[496,"Cantaloupe","",4,"P",15],
+[497,"Honeydew","",7,"P",15],
 [500,"Relish","",270,"R",19],
 [502,"Tapenade","",270,"R",20],
 [504,"Flaxseed (ground)","",360,"R",20],
