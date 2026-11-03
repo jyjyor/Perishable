@@ -62,6 +62,8 @@ body{
   text-transform:uppercase;
 }
 .bar .mono{color:var(--ink-2)}
+/* The Add jump lands with the Restocked heading clear of the sticky bar. */
+#restockHead{scroll-margin-top:64px}
 
 button{
   font-family:'tonos-mono-vf',ui-monospace,monospace;
@@ -555,6 +557,11 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 
 @media (max-width:720px){
   body{padding:0 16px 80px}
+  /* A thin sticky bar, so Add is always one tap away. */
+  .bar{position:sticky;top:0;z-index:30;background:var(--paper);padding:2px 0 1px;gap:10px;flex-wrap:nowrap}
+  .bar .logo{letter-spacing:.12em}
+  .bar #date{white-space:nowrap}
+  .bar .ghost{min-height:44px;padding:4px 6px}
   .tonight{grid-template-columns:1fr}
   .actions{flex-direction:row}
   .chart-legend{gap:12px;font-size:10.5px}
@@ -572,6 +579,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     <div class="logo">Perishable</div>
     <div class="mono" id="date">—</div>
     <span style="flex:1"></span>
+    <button class="ghost" id="addJumpBtn">Add</button>
     <button class="ghost" id="settingsBtn">Settings</button>
   </header>
 
@@ -660,7 +668,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 
   <section class="inv">
 
-    <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked <button class="ghost" id="restockEdit" style="margin-left:6px">Edit</button></div>
+    <div class="mono" id="restockHead" style="color:var(--ink-2);margin-bottom:10px">Restocked <button class="ghost" id="restockEdit" style="margin-left:6px">Edit</button></div>
     <div class="rescue" id="restock"></div>
 
 
@@ -5522,7 +5530,15 @@ function setApiKey(k){
   try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch(e){ /* unavailable */ }
 }
 
+// The top bar's Add: down to Restocked, cursor in the entry field.
+function jumpToAdd(){
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('restockHead').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+  document.getElementById('entry').focus({preventScroll: true});
+}
+
 function initSettings(){
+  document.getElementById('addJumpBtn').onclick = jumpToAdd;
   const panel = document.getElementById('settingsPanel');
   document.getElementById('settingsBtn').onclick = () => {
     panel.style.display = panel.style.display === 'none' ? '' : 'none';

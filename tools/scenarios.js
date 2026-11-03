@@ -1976,6 +1976,57 @@ async function ripenessScenario(browser) {
   await page.context().close();
 }
 
+// The top bar's Add: scrolls to Restocked and puts the cursor in the
+// entry field. On a phone the bar is a thin sticky strip, so Add stays
+// one tap away from anywhere on the page.
+async function addButtonScenario(browser) {
+  console.log('\n--- ADD BUTTON: top bar jumps to Restocked and focuses entry ---');
+  for (const [name, vp] of [['desktop', { width: 1200, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await browser.newContext({ viewport: vp, reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(`http://localhost:${PORT}/index.html`);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('#headline');
+    await page.fill('#entry', 'spinach, chicken 1d, onion, carrot 10d, potato, apple, yogurt, tofu 3d');
+    await page.click('#addbtn');
+    await answerPreview(page);
+    await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 0); });
+    const order = await page.$eval('.bar', b => [...b.querySelectorAll('button')].map(x => x.id));
+    expectEqual(`${name}: Add sits next to Settings`, order, ['addJumpBtn', 'settingsBtn']);
+    if (name === 'phone') {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(100);
+      const bar = await page.$eval('.bar', b => { const r = b.getBoundingClientRect(); return { top: Math.round(r.top), h: Math.round(r.height) }; });
+      console.log(`${name}: bar at the bottom of the page`, JSON.stringify(bar));
+      if (bar.top !== 0) throw new Error(`phone: the bar should stick to the top, got top ${bar.top}`);
+      if (bar.h > 64) throw new Error(`phone: the bar should be thin, got ${bar.h}px`);
+      const tap = await page.$eval('#addJumpBtn', b => b.getBoundingClientRect().height);
+      if (tap < 44) throw new Error(`phone: Add should be a 44px tap target, got ${tap}`);
+    }
+    await page.click('#addJumpBtn');
+    await page.waitForTimeout(200);
+    const st = await page.evaluate(() => ({
+      focused: document.activeElement && document.activeElement.id,
+      headTop: Math.round(document.getElementById('restockHead').getBoundingClientRect().top),
+      barBottom: Math.round(document.querySelector('.bar').getBoundingClientRect().bottom),
+      atEnd: Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 1,
+      entryVisible: (r => r.top >= 0 && r.bottom <= innerHeight)(document.getElementById('entry').getBoundingClientRect()),
+    }));
+    console.log(`${name}: after Add`, JSON.stringify(st));
+    expectEqual(`${name}: entry focused`, st.focused, 'entry');
+    // Restocked lands at the top, unless the page ends first.
+    if (st.headTop < 0 || (st.headTop > 120 && !st.atEnd)) throw new Error(`${name}: Restocked should be near the top of the view, got ${st.headTop}`);
+    if (!st.entryVisible) throw new Error(`${name}: the entry field should be on screen`);
+    if (name === 'phone' && st.headTop < st.barBottom) throw new Error('phone: Restocked hidden under the sticky bar');
+    await page.screenshot({ path: path.join(OUT, `add-button-${name}.png`) });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -2030,6 +2081,7 @@ async function ripenessScenario(browser) {
     () => allItemsScenario(browser),
     () => projectionHeadlineScenario(browser),
     () => phoneDataScenario(browser),
+    () => addButtonScenario(browser),
   ];
   let passed = 0;
   const failed = [];
