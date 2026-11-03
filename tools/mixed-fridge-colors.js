@@ -57,10 +57,10 @@ function serve() {
   await page.click('#addbtn');
   await page.waitForTimeout(150);
 
-  const fridgeCount = await page.textContent('#fridgeCount');
-  console.log('fridge count:', fridgeCount.trim());
+  await page.waitForTimeout(900);
+  console.log('items drawn:', await page.$$eval('#rfUnit .rf-item', els => els.length));
 
-  const el = await page.$('#fridgeview') || await page.$('body');
+  const el = await page.$('#rfUnit') || await page.$('body');
   await el.screenshot({ path: path.join(OUT, 'mixed-fridge-colors.png') });
 
   if (errors.length) console.log('console errors:', errors);
