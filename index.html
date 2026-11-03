@@ -303,6 +303,11 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 }
 .rf-popover .rf-pop-status{font-weight:500}
 .rf-popover .rf-pop-row span:last-child{text-align:right}
+.rf-popover input[type="date"],.row-edit input[type="date"]{
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;
+  background:transparent;border:1px solid var(--line);color:var(--ink);padding:2px 4px;
+}
+.row-edit{display:block}
 .rf-popover .rf-pop-close{
   position:absolute;top:6px;right:8px;border:none;background:none;color:var(--ink-3);
   cursor:pointer;font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:14px;line-height:1;padding:4px;
@@ -1570,8 +1575,8 @@ function boot(){
     fridge.forEach(it => {
       if (it.crossed) return;
       const f = food(it);
-      const leftAtVisit = shelfOf(it) - (prevVisit - it.bought);
-      const leftNow = shelfOf(it) - (now - it.bought);
+      const leftAtVisit = leftAt(it, prevVisit);
+      const leftNow = leftAt(it, now);
       if (leftAtVisit >= 0 && leftNow < 0) it.crossed = true;
     });
   } else {
@@ -1587,6 +1592,22 @@ const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : fo
 // date, or a value pinned by a migration. Otherwise the food's own.
 const shelfOf = it => it.shelf != null ? it.shelf : food(it).shelf;
 const leftAt = (it, day) => shelfOf(it) - (day - it.bought);
+// The day an item goes, as an epoch day, and as YYYY-MM-DD for a date input.
+const expiryOf = it => it.bought + shelfOf(it);
+const isoOfDay = day => new Date((day - DAY_OFFSET) * 86400000).toISOString().slice(0, 10);
+// A date the person sets is stored on the item (shelf counted from its
+// purchase) and never recomputed from FOODS -- the same as a package date
+// typed at entry.
+function setUseBy(id, iso){
+  const it = fridge.find(x => x.id === id);
+  const day = parseReceiptDate(iso);
+  if (!it || day == null) return;
+  it.shelf = day - it.bought;
+  it.shelfFrom = 'date';
+  it.crossed = false;
+  toast(food(it).en + ' now goes ' + fmtDate(day));
+  render();
+}
 const left = it => leftAt(it, today());
 
 function state(d){
@@ -3702,9 +3723,11 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Bought</span><span>${fmtDate(it.bought)}</span></div>
     <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
-    <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>`;
+    <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
+    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${isoOfDay(expiryOf(it))}"></label>`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
+  pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
   const r = anchorEl.getBoundingClientRect();
   const popW = pop.offsetWidth || 220;
   let left = r.left + r.width / 2 - popW / 2;
@@ -4217,7 +4240,7 @@ function renderRows(){
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${(f.estimated || (it.custom && it.shelf == null)) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}${editingRows ? `<small class="mono" style="cursor:pointer;text-decoration:underline" data-remove="${it.id}">remove</small>` : ''}</div>
+      <div class="name">${f.en}${(f.estimated || (it.custom && it.shelf == null)) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}${editingRows ? `<small class="mono row-edit"><label>use by <input type="date" class="row-date" data-date="${it.id}" value="${isoOfDay(expiryOf(it))}"></label> <span style="cursor:pointer;text-decoration:underline" data-remove="${it.id}">remove</span></small>` : ''}</div>
       <div class="meta">${f.estWeight ? '≈' : ''}${Math.round(f.g)} g</div>
       <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
       <div class="btns">
@@ -4230,6 +4253,7 @@ function renderRows(){
   box.querySelectorAll('[data-used]').forEach(b => b.onclick = () => useItem(+b.dataset.used, false));
   box.querySelectorAll('[data-toss]').forEach(b => b.onclick = () => useItem(+b.dataset.toss, true));
   box.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeFridgeItem(+b.dataset.remove));
+  box.querySelectorAll('.row-date').forEach(inp => inp.onchange = () => setUseBy(+inp.dataset.date, inp.value));
 }
 
 /* ---------- actions ---------- */

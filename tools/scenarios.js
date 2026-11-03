@@ -1342,6 +1342,49 @@ async function mixedFridgeScenario(browser) {
   }
 }
 
+// A date set by hand (list Edit mode or the popover) is stored on the
+// item: changing the FOODS value and reloading leaves it alone, while an
+// unedited item follows the new value.
+async function editDateScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- EDIT DATES: a date I set survives a FOODS change ---');
+  await typeEntry(page, 'spinach, yogurt, tofu');
+  await page.click('#rowsEdit');
+  await page.fill('.row-date[data-date="1"]', await isoIn(page, 10));
+  await page.waitForTimeout(100);
+  await page.click('#rowsEdit');
+  await page.waitForTimeout(900);
+  const id = await page.evaluate(() => fridge.find(i => i.key === 'yogurt').id);
+  await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
+  await page.fill('#rfPopover .rf-pop-date', await isoIn(page, 3));
+  await page.waitForTimeout(100);
+  let rows = await readInventory(page);
+  console.log('after editing:', JSON.stringify(rows.map(r => r.name + ' ' + r.left)));
+  expectRow(rows, 'Spinach', '10 days');
+  expectRow(rows, 'Yogurt', '3 days');
+  expectRow(rows, 'Tofu', '7 days');
+
+  // Reload with different FOODS values for all three.
+  await page.route('**/index.html', async route => {
+    const res = await route.fetch();
+    const body = (await res.text())
+      .replace("spinach:    {en:'Spinach',        shelf:7,", "spinach:    {en:'Spinach',        shelf:3,")
+      .replace("yogurt:     {en:'Yogurt',         shelf:14,", "yogurt:     {en:'Yogurt',         shelf:30,")
+      .replace("tofu:       {en:'Tofu',           shelf:7,", "tofu:       {en:'Tofu',           shelf:2,");
+    await route.fulfill({ response: res, body });
+  });
+  await page.reload();
+  await page.waitForSelector('#headline');
+  expectEqual('FOODS values changed', await page.evaluate(() => [FOODS.spinach.shelf, FOODS.yogurt.shelf, FOODS.tofu.shelf]), [3, 30, 2]);
+  rows = await readInventory(page);
+  console.log('after FOODS change and reload:', JSON.stringify(rows.map(r => r.name + ' ' + r.left)));
+  expectRow(rows, 'Spinach', '10 days');
+  expectRow(rows, 'Yogurt', '3 days');
+  expectRow(rows, 'Tofu', '2 days');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -1377,6 +1420,7 @@ async function mixedFridgeScenario(browser) {
   await restockNoWasteScenario(browser);
   await mixedFridgeScenario(browser);
   await dishFixtureScenario(browser);
+  await editDateScenario(browser);
 
   await browser.close();
   server.close();
