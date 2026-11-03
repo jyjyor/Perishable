@@ -43,7 +43,7 @@ async function seedFridge(page, n){
   await page.evaluate(n => {
     const KEYS = ['spinach', 'milk', 'chicken', 'tofu', 'onion', 'tomato', 'carrot',
       'pepper', 'broccoli', 'mushroom', 'potato', 'lemon', 'mango', 'apple', 'banana',
-      'cheese', 'cookedrice', 'bokchoy', 'cucumber', 'zucchini', 'cauliflower', 'corn',
+      'hardcheese', 'cookedrice', 'bokchoy', 'cucumber', 'zucchini', 'cauliflower', 'corn',
       'beef', 'bacon', 'egg', 'yogurt', 'garlic', 'ginger'];
     const day = today();
     fridge = [];
@@ -136,9 +136,10 @@ async function shoot(page, name){
     await page.click('.rf-fooditem[data-rf-item]');
     await page.waitForTimeout(150);
     await shoot(page, '7item-desktop-popover');
-    await page.click('#rfHandle'); // close
+    await page.keyboard.press('Escape'); // dismiss the popover
+    await page.click('.rf-door-inside'); // the open door closes by its inside face
     await page.waitForTimeout(1200);
-    await shoot(page, '7item-desktop-closed-by-handle');
+    await shoot(page, '7item-desktop-closed-by-door');
     if (errors.length) console.log('  console errors:', errors);
     await page.context().close();
   }

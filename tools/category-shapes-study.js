@@ -74,8 +74,11 @@ function serve() {
     const head = `<div class="mono" style="display:flex;gap:14px;color:var(--ink-3);padding-bottom:6px">
       <div style="width:120px"></div>${fracs.map(f => `<div style="width:120px;text-align:center">${Math.round(f * 100)}%</div>`).join('')}
       <div style="width:120px;text-align:center">fallback base</div><div style="width:136px;text-align:center">44px: 0% / 85%</div></div>`;
-    document.body.innerHTML = `<div id="study" style="padding:20px;background:var(--paper);width:max-content">
-      <div style="margin-bottom:12px">Category silhouettes: one per decay category, five decay fractions</div>${head}${html}</div>`;
+    // Hide the app rather than replacing body: its own handlers still look
+    // up their elements after this runs.
+    for (const el of document.body.children) el.style.display = 'none';
+    document.body.insertAdjacentHTML('beforeend', `<div id="study" style="padding:20px;background:var(--paper);width:max-content">
+      <div style="margin-bottom:12px">Category silhouettes: one per decay category, five decay fractions</div>${head}${html}</div>`);
   });
   await (await page.$('#study')).screenshot({ path: path.join(OUT, 'category-shapes-study.png') });
   if (errors.length) console.log('console errors:', errors);

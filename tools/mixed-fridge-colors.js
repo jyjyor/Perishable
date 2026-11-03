@@ -52,9 +52,13 @@ function serve() {
   // 10 items spanning categories (soft/veg/leafy/dairy/protein) and decay
   // stages, including all four of the newly-shaped/colored produce items.
   await page.fill('#entry',
-    'potato, apple 14d, banana 2d, tomato 1d, mushroom 1d, ' +
-    'spinach 1d, carrot 10d, egg 20d, cheese 30d, chicken 1d');
+    'potato, apple 14d, tomato 1d, mushroom 1d, ' +
+    'spinach 1d, carrot 10d, egg 20d, cheddar 30d, chicken 1d, banana 2d');
   await page.click('#addbtn');
+  await page.waitForTimeout(150);
+  // Banana asks Ripe / Not ripe yet; the default (Ripe) is what we want.
+  if (await page.$('#voicePreview .receipt-row')) { await page.click('#voiceAdd'); await page.waitForTimeout(150); }
+  await page.$eval('#allItems', d => { d.open = true; });
   await page.waitForTimeout(150);
 
   const fridgeCount = await page.textContent('#fridgeCount');

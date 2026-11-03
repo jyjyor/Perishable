@@ -58,7 +58,7 @@ function serve() {
     const STUDY = 220;
     // The real fridge's eye-level size for a today item.
     const FRONT_ROW = rfUrgencyPx({key: 'tofu', bought: day - FOODS.tofu.shelf}, day);
-    const KEYS = ['chicken', 'tofu', 'milk', 'spinach', 'carrot', 'onion', 'egg', 'cheese', 'garlic'];
+    const KEYS = ['chicken', 'tofu', 'milk', 'spinach', 'carrot', 'onion', 'egg', 'hardcheese', 'garlic'];
     let uid = 20000;
 
     function cellAt(key, targetFraction, baseSize, isFrontRowCheck){

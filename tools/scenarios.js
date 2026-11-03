@@ -1986,49 +1986,59 @@ async function ripenessScenario(browser) {
     return;
   }
 
-  await scenario(browser, 'ALL FRESH', 'spinach, milk, chicken, onion', 'scn-fresh.png');
-  await scenario(browser, 'ALL PAST DATE', 'spinach 10d, milk 12d, chicken 10d', 'scn-gone.png');
-  await scenario(browser, 'MIXED', 'chicken 10d, spinach, milk, onion', 'scn-mixed.png');
-  await receiptScenario(browser);
-  await recommendationScenario(browser);
-  await noRiskScenario(browser);
-  await fridgeGradientScenario(browser);
-  await fridgeHaulScenario(browser);
-  await fridgeFactBugScenario(browser);
-  await pluralAgreementScenario(browser);
-  await dishRepeatScenario(browser);
-  await migrationScenario(browser);
-  await legacyMapScenario(browser);
-  await legacyLinkScenario(browser);
-  await legacyOnceScenario(browser);
-  await legacyUnmappedScenario(browser);
-  await splitEntriesScenario(browser);
-  await realFridgeDoorLoadScenario(browser);
-  await realFridgeHandleToggleScenario(browser);
-  await realFridgeReducedMotionScenario(browser);
-  await realFridgeClosedCountScenario(browser);
-  await realFridgeItemTapScenario(browser);
-  await fkOnlyScenario(browser);
-  await aliasScenario(browser);
-  await noFalseMatchScenario(browser);
-  await ambiguousScenario(browser);
-  await noMatchScenario(browser);
-  await receiptNewItemsScenario(browser);
-  await restockNoWasteScenario(browser);
-  await mixedFridgeScenario(browser);
-  await rowFixtureScenario(browser);
-  await dishFixtureScenario(browser);
-  await editDateScenario(browser);
-  await ripenessScenario(browser);
-  await handAliasScenario(browser);
-  await decayLineScenario(browser);
-  await editBoughtScenario(browser);
-  await goneTossScenario(browser);
-  await popoverUseScenario(browser);
-  await popoverDetailsScenario(browser);
-  await allItemsScenario(browser);
-  await projectionHeadlineScenario(browser);
-  await phoneDataScenario(browser);
+  const RUNS = [
+    () => scenario(browser, 'ALL FRESH', 'spinach, milk, chicken, onion', 'scn-fresh.png'),
+    () => scenario(browser, 'ALL PAST DATE', 'spinach 10d, milk 12d, chicken 10d', 'scn-gone.png'),
+    () => scenario(browser, 'MIXED', 'chicken 10d, spinach, milk, onion', 'scn-mixed.png'),
+    () => receiptScenario(browser),
+    () => recommendationScenario(browser),
+    () => noRiskScenario(browser),
+    () => fridgeGradientScenario(browser),
+    () => fridgeHaulScenario(browser),
+    () => fridgeFactBugScenario(browser),
+    () => pluralAgreementScenario(browser),
+    () => dishRepeatScenario(browser),
+    () => migrationScenario(browser),
+    () => legacyMapScenario(browser),
+    () => legacyLinkScenario(browser),
+    () => legacyOnceScenario(browser),
+    () => legacyUnmappedScenario(browser),
+    () => splitEntriesScenario(browser),
+    () => realFridgeDoorLoadScenario(browser),
+    () => realFridgeHandleToggleScenario(browser),
+    () => realFridgeReducedMotionScenario(browser),
+    () => realFridgeClosedCountScenario(browser),
+    () => realFridgeItemTapScenario(browser),
+    () => fkOnlyScenario(browser),
+    () => aliasScenario(browser),
+    () => noFalseMatchScenario(browser),
+    () => ambiguousScenario(browser),
+    () => noMatchScenario(browser),
+    () => receiptNewItemsScenario(browser),
+    () => restockNoWasteScenario(browser),
+    () => mixedFridgeScenario(browser),
+    () => rowFixtureScenario(browser),
+    () => dishFixtureScenario(browser),
+    () => editDateScenario(browser),
+    () => ripenessScenario(browser),
+    () => handAliasScenario(browser),
+    () => decayLineScenario(browser),
+    () => editBoughtScenario(browser),
+    () => goneTossScenario(browser),
+    () => popoverUseScenario(browser),
+    () => popoverDetailsScenario(browser),
+    () => allItemsScenario(browser),
+    () => projectionHeadlineScenario(browser),
+    () => phoneDataScenario(browser),
+  ];
+  let passed = 0;
+  const failed = [];
+  for (const run of RUNS) {
+    try { await run(); passed++; }
+    catch (e) { failed.push(run.toString().replace(/^\(\) => /, '')); console.log('\nFAILED:', e.message); }
+  }
+  console.log(`\n${passed} of ${RUNS.length} scenarios passed`);
+  if (failed.length) { console.log('Failed:\n  ' + failed.join('\n  ')); process.exitCode = 1; }
 
   await browser.close();
   server.close();

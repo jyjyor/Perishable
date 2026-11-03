@@ -238,6 +238,21 @@ exactly what happens: "Cook this," not "Get started."
 If a request seems to call for one of these, say so and propose something
 that carries the same function without the vocabulary.
 
+## Testing
+
+The scenario suite is tools/scenarios.js (setup once: cd tools && npm
+install). The full suite always runs with the standard command, from the
+repo root:
+
+  node tools/scenarios.js
+
+never as a loop over ONLY= (ONLY=someScenario is for debugging one
+scenario while working, not for reporting). Every summary of a test run
+states that exact command and the runner's own count line, "N of N
+scenarios passed" -- if it says fewer than all, say which failed. Every
+script in tools/ must run; a study that breaks when the app changes gets
+fixed or deleted in the same change.
+
 ## Working agreement
 
 - Change one thing at a time. Do not refactor unrelated code.

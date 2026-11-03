@@ -37,7 +37,7 @@ async function seedFridge(page, n){
   await page.evaluate(n => {
     const KEYS = ['spinach', 'milk', 'chicken', 'tofu', 'onion', 'tomato', 'carrot',
       'pepper', 'broccoli', 'mushroom', 'potato', 'lemon', 'mango', 'apple', 'banana',
-      'cheese', 'cookedrice', 'bokchoy', 'cucumber', 'zucchini', 'cauliflower', 'corn',
+      'hardcheese', 'cookedrice', 'bokchoy', 'cucumber', 'zucchini', 'cauliflower', 'corn',
       'beef', 'bacon', 'egg', 'yogurt', 'garlic', 'ginger'];
     const day = today();
     fridge = [];
