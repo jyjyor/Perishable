@@ -124,9 +124,8 @@ async function receiptScenario(browser) {
   await page.click('#receiptConfirm');
   await page.waitForTimeout(150);
 
-  const fridgeRows = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
-    name: e.querySelector('.name').childNodes[0].textContent.trim(), left: e.querySelector('.left').textContent.trim()
-  })));
+  await page.waitForTimeout(300);
+  const fridgeRows = await readInventory(page);
   console.log('fridge rows after confirm:', JSON.stringify(fridgeRows));
   const rowNames = fridgeRows.map(r => r.name);
   if (rowNames.length !== 4) throw new Error(`expected 4 fridge rows (2 dragonfruit + milk + chips), got ${rowNames.length}`);
@@ -337,7 +336,15 @@ async function assertFridgeLayout(page, where) {
     const box = el => { const r = el.getBoundingClientRect(); return {left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: el.textContent.trim().slice(0, 30)}; };
     const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
     const pairs = list => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return [list[i], list[j]]; return null; };
+    // a label's box holds its buttons; the buttons are checked on their own
+    // too, against every other label and button, so a 44px tap area can't
+    // reach into a neighbour
     const labels = [...document.querySelectorAll('#fridgeShelf .fridge-label')].map(box);
+    const actBoxes = [...document.querySelectorAll('#fridgeShelf .fridge-act')].map(b => ({...box(b), owner: b.closest('.fridge-label')}));
+    const labelEls = [...document.querySelectorAll('#fridgeShelf .fridge-label')];
+    const nm = el => el.closest('.fridge-label').childNodes[0].textContent;
+    const actHit = actBoxes.flatMap(a => actBoxes.filter(b => b !== a && b.owner !== a.owner && hit(a, b)).map(b => [nm(a.owner) + ' ' + a.text, [a.left, a.top, a.right, a.bottom].map(Math.round), nm(b.owner) + ' ' + b.text, [b.left, b.top, b.right, b.bottom].map(Math.round), box(a.owner), box(b.owner)])
+      .concat(labelEls.filter(l => l !== a.owner).map(l => [l, box(l)]).filter(([, lb]) => hit(a, lb)).map(([, lb]) => [a.text, lb.text])))[0] || null;
     const shapes = [...document.querySelectorAll('#fridgeShelf .fridge-shape svg > path:first-of-type')].map(box);
     const tags = [...document.querySelectorAll('#rfUnit .rf-tag')].filter(t => t.offsetParent).map(box);
     const head = document.querySelector('.fridgeview-head').getBoundingClientRect().bottom;
@@ -346,11 +353,12 @@ async function assertFridgeLayout(page, where) {
     const tagOnHeading = tags.find(t => hit(t, headBox)) || null;
     return {
       labels: labels.length, tags: tags.length, rows: document.querySelectorAll('#fridgeShelf .fridge-row').length,
-      lineArtLabels: pairs(labels), labelOnFood: labels.flatMap(l => shapes.filter(s => hit(l, s)).map(s => [l, s]))[0] || null,
+      lineArtLabels: pairs(labels), actHit, acts: actBoxes.length, labelOnFood: labels.flatMap(l => shapes.filter(s => hit(l, s)).map(s => [l, s]))[0] || null,
       illustratedTags: pairs(tags), aboveHeading: items.filter(i => i.top < head - 0.5)[0] || tagOnHeading
     };
   });
   console.log(`${where}: line-art ${res.labels} labels on ${res.rows} shelves, illustrated ${res.tags} tags`);
+  if (res.actHit) throw new Error(`${where}: a Used/Tossed button runs into another label: ${JSON.stringify(res.actHit)}`);
   if (res.lineArtLabels) throw new Error(`${where}: line-art labels overlap: ${JSON.stringify(res.lineArtLabels)}`);
   if (res.labelOnFood) throw new Error(`${where}: a line-art label sits on a food: ${JSON.stringify(res.labelOnFood)}`);
   if (res.illustratedTags) throw new Error(`${where}: illustrated tags overlap: ${JSON.stringify(res.illustratedTags)}`);
@@ -568,7 +576,6 @@ async function migrationScenario(browser) {
   await livePage.fill('#entry', 'spinach, milk, chicken, onion, dragonfruit, garlic 5d');
   await livePage.click('#addbtn');
   await livePage.waitForTimeout(150);
-  await openList(livePage);
   const tossBtn = await livePage.$('[data-toss]');
   if (tossBtn) await tossBtn.click();
   await livePage.waitForTimeout(100);
@@ -597,7 +604,7 @@ async function migrationScenario(browser) {
   await page.waitForSelector('#headline');
   await page.waitForTimeout(250);
 
-  const newCount = await page.textContent('#count');
+  const newCount = await page.textContent('#fridgeCount');
   console.log('current code item count:', newCount.trim());
   if (parseInt(newCount, 10) !== expectedCount) throw new Error(`expected ${expectedCount} items to survive migration, current code shows "${newCount.trim()}"`);
 
@@ -996,7 +1003,7 @@ async function splitEntriesScenario(browser) {
   expectEqual('standing', Object.keys(after.standing).sort(), ['hardcheese', 'leaflettuce', 'onion']);
   expectEqual('merged cheese standing', [after.standing.hardcheese.count, after.standing.hardcheese.lastBought - day], [2, -30]);
   // Days left on screen are the ones the old values gave: 5, 12, 8, 6, 4.
-  const shown = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  const shown = (await readInventory(page)).map(r => r.name + ' ' + r.left);
   console.log('inventory rows:', JSON.stringify(shown));
   for (const [name, days] of [['Leaf lettuce', 5], ['Hard cheese', 12], ['Carrots', 8], ['Onion', 6], ['Milk', 4]]) {
     if (!shown.some(t => t.includes(name) && new RegExp(`\\b${days}\\b`).test(t))) throw new Error(`${name} does not show ${days} days left`);
@@ -1037,14 +1044,19 @@ function readReview(page, box) {
     options: [...el.querySelectorAll('.entry-pick option')].slice(1).map(o => o.textContent)
   })));
 }
-// The list sits collapsed under "All items (N)"; open it before clicking in it.
-const openList = page => page.evaluate(() => { const d = document.getElementById('allItems'); if (d) d.open = true; });
+// Every item as the line-art row shows it -- the row does the list's job
+// now -- with days left written out the way the old list wrote them
+// ("10d" -> "10 days", "1d" -> "1 day", "3d gone" -> "3d past") so the
+// expectations read as before; weight is the popover's Est. weight.
 function readInventory(page) {
-  return page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
-    name: e.querySelector('.name').childNodes[0].textContent.trim(),
-    left: e.querySelector('.left').textContent.trim(),
-    g: e.querySelector('.meta').textContent.trim()
-  })));
+  return page.$$eval('#fridgeShelf .fridge-label, #fridgeDrawerItems .fridge-label', els => els.map(e => {
+    const name = e.childNodes[0].textContent.trim();
+    const days = e.querySelector('.fridge-days').textContent.trim();
+    const m = days.match(/^(\d+)d( gone)?$/);
+    const left = !m ? days : m[2] ? m[1] + 'd past' : m[1] + (m[1] === '1' ? ' day' : ' days');
+    const it = fridge.find(i => food(i).en === name);
+    return { name, left, g: it ? estWeightOf(it) : '' };
+  }));
 }
 const isoIn = (page, n) => page.evaluate(n => new Date((today() + n - DAY_OFFSET) * 86400000).toISOString().slice(0, 10), n);
 async function popoverText(page, key) {
@@ -1359,8 +1371,16 @@ async function mixedFridgeScenario(browser) {
     if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
     await assertFridgeLayout(page, `mixed 18 at ${w}px`);
     // Illustrated fridge: nothing hangs under its items; the line-art row
-    // below names every item.
+    // names every item and carries Used and Tossed under each.
     expectEqual(`no tags in the illustrated fridge at ${w}px`, await page.$$eval('#rfUnit .rf-tag, #rfUnit .rf-under', e => e.length), 0);
+    const acts = await page.evaluate(() => [...document.querySelectorAll('.fridge-label')].map(l =>
+      [...l.querySelectorAll('.fridge-act')].map(b => { const r = b.getBoundingClientRect(); return [b.textContent, Math.round(r.width), Math.round(r.height)]; })));
+    expectEqual(`Used and Tossed under all 18 at ${w}px`, acts.filter(a => a.map(b => b[0]).join() === 'Used,Tossed').length, 18);
+    if (w < 720 && acts.flat().some(([, bw, bh]) => bw < 44 || bh < 44)) throw new Error(`a button under 44px on phone: ${JSON.stringify(acts.flat())}`);
+    // tapping a drawing in the row opens the same popover
+    await page.$eval('[data-fridge-item]', el => { el.scrollIntoView({block: 'center'}); el.click(); });
+    if (await page.$eval('#rfPopover', p => p.hidden)) throw new Error('tapping a line-art drawing should open the popover');
+    await page.mouse.click(2, 2);
     const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
     const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
     expectEqual('drawer front', crisper, `${goneN} past date · Toss all`);
@@ -1373,7 +1393,7 @@ async function mixedFridgeScenario(browser) {
     const look = await page.$eval('#rfUnit .rf-fooditem', b => getComputedStyle(b).cursor);
     expectEqual('items show a pointer', look, 'pointer');
     const quiet = await page.evaluate(() => fridge.find(it => left(it) >= 0).id);
-    await page.$eval(`[data-rf-item="${quiet}"]`, el => el.click());
+    await page.$eval(`[data-rf-item="${quiet}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
     const popName = await page.textContent('#rfPopover .rf-pop-name');
     expectEqual('tap shows the name', popName.trim(), await page.evaluate(id => food(fridge.find(i => i.id === id)).en, quiet));
     await page.mouse.click(2, 2);
@@ -1496,76 +1516,46 @@ async function editBoughtScenario(browser) {
   await page.context().close();
 }
 
-// The list: below the fridge, collapsed under "All items (N)" by default,
-// with Used, Tossed and Edit unchanged once open; the summary is a real
-// <details> toggle, so a keyboard opens it.
-async function allItemsScenario(browser) {
-  const { page, errors } = await freshPage(browser);
-  console.log('\n--- ALL ITEMS: collapsed below the fridge, closed by default ---');
-  await typeEntry(page, 'spinach, chicken breast, salmon');
-  await page.waitForTimeout(300);
-  const info = await page.evaluate(() => {
-    const d = document.getElementById('allItems');
-    const rf = document.getElementById('rf');
-    return { open: d.open, summary: d.querySelector('summary').textContent.trim(),
-             below: rf.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false,
-             next: rf.nextElementSibling === d };
-  });
-  info.rowsVisible = await page.isVisible('#rows .row:not(.row-head)');
-  expectEqual('closed by default', info.open, false);
-  expectEqual('summary', info.summary, 'All items (3)');
-  expectEqual('directly below the fridge', info.next, true);
-  expectEqual('rows hidden while closed', info.rowsVisible, false);
-  await page.focus('#allItems summary');
-  await page.keyboard.press('Enter');
-  expectEqual('opens from the keyboard', await page.$eval('#allItems', d => d.open), true);
-  for (const sel of ['#rowsEdit', '[data-used]', '[data-toss]']) if (!(await page.isVisible(sel))) throw new Error(sel + ' should show in the open list');
-  await page.click('[data-used]');
-  await page.waitForTimeout(100);
-  expectEqual('summary counts down', (await page.textContent('#allItems summary')).trim(), 'All items (2)');
-  // stays closed across a reload
-  await page.reload(); await page.waitForSelector('#headline');
-  expectEqual('closed after reload', await page.$eval('#allItems', d => d.open), false);
-  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
-  await page.context().close();
-}
-
-// The list's columns: "Est. weight" and "Time left" headers; bars on the
-// decay line's absolute scale, so the same days left means the same bars
-// whatever the shelf life; "1 day", never "1 days".
-async function listFixesScenario(browser) {
+// The popover carries what the list used to: Est. weight, and a quiet
+// Remove for an item logged by mistake -- out of the fridge, no waste, its
+// restock count undone. Days are "1 day", never "1 days", anywhere.
+async function popoverDetailsScenario(browser) {
   const page = await (await browser.newContext()).newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  console.log('\n--- LIST: headers, absolute bars, 1 day ---');
+  console.log('\n--- POPOVER: Est. weight, Remove, 1 day ---');
   await seedMixed18(page);
   await page.waitForSelector('#headline');
-  await openList(page);
-  const head = await page.$eval('#rows .row-head', r => [r.querySelector('.meta').textContent, r.querySelector('.left').textContent]);
-  expectEqual('headers', head, ['Est. weight', 'Time left']);
-  const rows = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
-    name: e.querySelector('.name').childNodes[0].textContent.trim(),
-    left: e.querySelector('.left').textContent.trim(),
-    bars: e.querySelectorAll('.bars i:not(.off)').length })));
-  const one = rows.filter(r => r.left === '1 day');
-  console.log('1 day:', JSON.stringify(one));
-  if (one.length < 2) throw new Error('the fixture has two items with 1 day left');
-  if (rows.some(r => /^1 days$/.test(r.left))) throw new Error('"1 days" in the list');
-  expectEqual('same days left, same bars', new Set(one.map(r => r.bars)).size, 1);
-  const expected = await page.evaluate(() => fridge.map(it => { const d = left(it); return [food(it).en, d < 0 ? 0 : Math.max(1, Math.ceil(pos(d) / 10))]; }));
-  for (const [name, bars] of expected) expectEqual(`${name} bars`, rows.find(r => r.name === name).bars, bars);
-  // nothing on the page writes "1 days"
+  await page.waitForTimeout(900);
+  const chips = await page.evaluate(() => fridge.find(i => i.key === '_c_potatochips').id);
+  await page.$eval(`[data-rf-item="${chips}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  const row = await page.$eval('#rfPopover .rf-pop-weight', w => [w.previousElementSibling.textContent, w.textContent]);
+  expectEqual('Est. weight (estimated: ≈)', row, ['Est. weight', '≈450 g']);
+  const before = await page.evaluate(() => ({ ledger: {...ledger}, n: fridge.length, count: standing._c_potatochips.count }));
+  await page.click('#rfPopover .rf-pop-remove');
+  await page.waitForTimeout(100);
+  const after = await page.evaluate(() => ({ ledger: {...ledger}, n: fridge.length, chips: fridge.some(i => i.key === '_c_potatochips'), standing: standing._c_potatochips || null }));
+  expectEqual('Remove takes it out', [after.n, after.chips], [before.n - 1, false]);
+  expectEqual('Remove is not waste', after.ledger, before.ledger);
+  expectEqual('restock count undone', after.standing, null);
+  // salmon: FOODS weight, no "≈"; and one day left reads "1 day" in the row
+  const salmon = await page.evaluate(() => fridge.find(i => i.key === 'salmon').id);
+  await page.$eval(`[data-rf-item="${salmon}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  const w = await page.textContent('#rfPopover .rf-pop-weight');
+  if (!/^\d+ g$/.test(w.trim())) throw new Error('salmon weight: ' + w);
+  const inv = await readInventory(page);
+  if (!inv.some(r => r.left === '1 day')) throw new Error('the fixture has items with 1 day left: ' + JSON.stringify(inv));
   const text = await page.evaluate(() => document.body.innerText);
   if (/\b1 days\b/i.test(text)) throw new Error('"1 days" on the page');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
 
-// Used and Tossed from the fridge's popover run the list's own code: the
-// same ledger change, item for item. Undo puts back the same record and
+// Used and Tossed from the fridge's popover and from the line-art row run
+// the same code (useItem): the same ledger change, item for item. Undo puts back the same record and
 // takes the same amounts off the ledger.
 async function popoverUseScenario(browser) {
-  console.log('\n--- POPOVER: Used and Tossed match the list; Undo restores ---');
+  console.log('\n--- USED / TOSSED: popover and line-art row match; Undo restores ---');
   const run = async via => {
     const { page, errors } = await freshPage(browser);
     await typeEntry(page, 'spinach, chicken breast, salmon');
@@ -1574,8 +1564,7 @@ async function popoverUseScenario(browser) {
     const ledgers = [await page.evaluate(() => ({...ledger}))];
     for (const [key, tossed] of [['spinach', false], ['chicken', true]]) {
       if (via === 'list'){
-        await openList(page);
-        await page.click(`[data-${tossed ? 'toss' : 'used'}="${ids[key]}"]`);
+        await page.click(`[data-fridge-${tossed ? 'tossed' : 'used'}="${ids[key]}"]`);
       } else {
         await page.$eval(`[data-rf-item="${ids[key]}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
         await page.click(`#rfPopover .rf-pop-${tossed ? 'tossed' : 'used'}`);
@@ -1589,8 +1578,8 @@ async function popoverUseScenario(browser) {
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     return { page, ids, ledgers, toastText, left };
   };
-  const list = await run('list'), pop = await run('popover');
-  console.log('list:', JSON.stringify(list.ledgers.slice(1)), ' popover:', JSON.stringify(pop.ledgers.slice(1)));
+  const list = await run('list'), pop = await run('popover');   // 'list' is the line-art row now
+  console.log('row:', JSON.stringify(list.ledgers.slice(1)), ' popover:', JSON.stringify(pop.ledgers.slice(1)));
   expectEqual('same ledger after Used and Tossed', pop.ledgers, list.ledgers);
   if (!(pop.ledgers[1].savedG > 0 && pop.ledgers[2].wasteG > 0)) throw new Error('Used should count saved, Tossed waste');
   expectEqual('items gone from the fridge', pop.left, ['salmon']);
@@ -1619,8 +1608,8 @@ async function popoverUseScenario(browser) {
   await list.page.context().close(); await page.context().close();
 }
 
-// A gone item: no tag under it; Tossed is in its popover and counts as
-// waste; the drawer front's Toss all opens the list's confirmation.
+// A gone item: Tossed is in its popover and counts as waste; the drawer
+// front's Toss all asks right there ("Toss N past date? Toss N · Cancel").
 async function goneTossScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- GONE: Tossed in the popover, Toss all on the drawer front ---');
@@ -1636,12 +1625,18 @@ async function goneTossScenario(browser) {
   expectEqual('spinach tossed', s.n, 2);
   if (!(s.waste > 0)) throw new Error('a toss from the popover should count as waste');
   expectEqual('drawer front after', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '1 past date · Toss all');
+  const front = async () => (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
+  // Toss all asks on the drawer front; Cancel goes back, nothing tossed.
   await page.click('#rfTossAll');
+  expectEqual('asks first', await front(), 'Toss 1 past date? Toss 1 · Cancel');
+  expectEqual('nothing tossed while asking', await page.evaluate(() => [fridge.length, ledger.wasteG]), [2, s.waste]);
+  await page.click('#rfTossNo');
+  expectEqual('cancel', await front(), '1 past date · Toss all');
+  expectEqual('nothing tossed on cancel', await page.evaluate(() => fridge.length), 2);
+  await page.click('#rfTossAll');
+  await page.click('#rfTossYes');
   await page.waitForTimeout(100);
-  if (!(await page.isVisible('#clearConfirm'))) throw new Error('Toss all should open the confirmation');
-  expectEqual('nothing tossed before confirming', await page.evaluate(() => fridge.length), 2);
-  await page.click('#clearConfirmBtn');
-  await page.waitForTimeout(100);
+  if (!(await page.evaluate(w => ledger.wasteG > w, s.waste))) throw new Error('Toss all should count as waste');
   expectEqual('after confirming', await page.evaluate(() => fridge.map(i => i.key)), ['tofu']);
   expectEqual('drawer front empty', (await page.textContent('#rfCrisperLabel')).trim(), 'Crisper — past date');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
@@ -1655,12 +1650,11 @@ async function editDateScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- EDIT DATES: a date I set survives a FOODS change ---');
   await typeEntry(page, 'spinach, yogurt, tofu');
-  await openList(page);
-  await page.click('#rowsEdit');
-  await page.fill('.row-date[data-date="1"]', await isoIn(page, 10));
-  await page.waitForTimeout(100);
-  await page.click('#rowsEdit');
   await page.waitForTimeout(900);
+  // Spinach from the line-art row's drawing, yogurt from the illustrated fridge.
+  await page.$eval('[data-fridge-item="1"]', el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  await page.fill('#rfPopover .rf-pop-date', await isoIn(page, 10));
+  await page.waitForTimeout(100);
   const id = await page.evaluate(() => fridge.find(i => i.key === 'yogurt').id);
   await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
   await page.fill('#rfPopover .rf-pop-date', await isoIn(page, 3));
@@ -1720,8 +1714,9 @@ async function ripenessScenario(browser) {
   await page.waitForTimeout(100);
   expectEqual('restock uses the remembered choice', await page.evaluate(() => fridge.find(i => i.key === 'banana').ripening), true);
 
-  await openList(page);
-  await page.click('[data-ripe]');
+  const banana = await page.evaluate(() => fridge.find(i => i.key === 'banana').id);
+  await page.$eval(`[data-fridge-item="${banana}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  await page.click('#rfPopover .rf-pop-ripe');
   await page.waitForTimeout(100);
   inv = await readInventory(page);
   console.log('after It\'s ripe:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
@@ -1778,8 +1773,7 @@ async function ripenessScenario(browser) {
   await editBoughtScenario(browser);
   await goneTossScenario(browser);
   await popoverUseScenario(browser);
-  await allItemsScenario(browser);
-  await listFixesScenario(browser);
+  await popoverDetailsScenario(browser);
 
   await browser.close();
   server.close();

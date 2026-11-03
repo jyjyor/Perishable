@@ -99,7 +99,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .fridge-row{position:relative;border-bottom:2px solid var(--ink)}
 .fridge-shelf .fridge-item{position:absolute;bottom:0}
 .fridge-shelf .fridge-label{
-  position:absolute;left:50%;width:max-content;max-width:92px;
+  position:absolute;left:50%;width:max-content;max-width:96px;
   top:calc(100% + 8px + var(--tier, 0) * var(--tier-h, 30px));
   transform:translateX(calc(-50% + var(--dx, 0px)));
 }
@@ -110,6 +110,22 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .fridge-item{display:flex;flex-direction:column;align-items:center;gap:4px;max-width:92px}
 .fridge-shelf .fridge-item{max-width:none}
 .fridge-shape{display:flex;align-items:flex-end;justify-content:center}
+/* The drawing is a button: it opens the same popover as the illustrated
+   fridge. */
+button.fridge-shape{background:none;border:none;padding:0;font:inherit;cursor:pointer;transition:transform .15s ease-out}
+button.fridge-shape:hover{background:none;transform:translateY(-3px)}
+button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.fridge-acts{display:flex;gap:2px;justify-content:center;margin-top:1px}
+.fridge-act{
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;letter-spacing:.04em;
+  color:var(--ink-2);background:none;border:none;padding:2px 4px;text-decoration:underline;text-underline-offset:2px;
+}
+.fridge-act:hover{color:var(--ink);background:var(--panel-2)}
+/* On a phone each button is a full 44px tap target; the label grows to
+   hold them and staggerFridgeLabels keeps labels apart. */
+@media (max-width:720px){
+  .fridge-act{min-width:44px;min-height:44px;padding:0 4px}
+}
 .fridge-shape svg{display:block}
 .fridge-label{
   /* color is always set inline per item now (the urgency bucket, state()/
@@ -274,7 +290,13 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-unit.open .rf-door-inside,.rf-unit.open .rf-door-edge{cursor:pointer}
 .rf-unit.open:has(.rf-handle:focus-visible) .rf-door-inside{outline:2px solid var(--ink);outline-offset:-4px}
 
-.rf-pop-acts{display:flex;gap:6px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.rf-pop-acts{display:flex;gap:6px;align-items:center;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.rf-pop-acts .spacer{flex:1}
+.rf-pop-remove{
+  background:none;border:none;padding:4px 2px;font-family:'tonos-mono-vf',ui-monospace,monospace;
+  font-size:10px;letter-spacing:.04em;color:var(--ink-3);text-decoration:underline;text-underline-offset:2px;
+}
+.rf-pop-remove:hover{background:none;color:var(--ink-2)}
 .rf-popover{
   position:fixed;z-index:40;background:var(--paper);border:1px solid var(--ink);
   padding:12px 14px;width:220px;color:var(--ink-2);
@@ -289,11 +311,10 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 }
 .rf-popover .rf-pop-status{font-weight:500}
 .rf-popover .rf-pop-row span:last-child{text-align:right}
-.rf-popover input[type="date"],.row-edit input[type="date"]{
+.rf-popover input[type="date"]{
   font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;
   background:transparent;border:1px solid var(--line);color:var(--ink);padding:2px 4px;
 }
-.row-edit{display:block}
 .rf-popover .rf-pop-close{
   position:absolute;top:6px;right:8px;border:none;background:none;color:var(--ink-3);
   cursor:pointer;font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:14px;line-height:1;padding:4px;
@@ -464,43 +485,10 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 
 /* ---------- inventory ---------- */
 
-.allitems{margin-top:8px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
-.allitems > summary{
-  cursor:pointer;padding:12px 4px;color:var(--ink-2);list-style:none;display:flex;align-items:center;gap:8px;
-}
-.allitems > summary::-webkit-details-marker{display:none}
-.allitems > summary::before{content:'+';width:1ch;color:var(--ink-3)}
-.allitems[open] > summary::before{content:'−'}
-.allitems > summary:hover{color:var(--ink)}
-.allitems > summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.allitems .inv-head{margin:0 0 6px}
-.allitems #rows{padding-bottom:12px}
 .inv{margin-top:64px;border-top:1px solid var(--ink);padding-top:20px}
 .inv-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:14px}
 .inv-head .spacer{flex:1}
 
-.row{
-  display:grid;
-  grid-template-columns:132px 1fr 92px 108px auto;
-  align-items:center;
-  gap:16px;
-  padding:11px 4px;
-  border-bottom:1px solid var(--line);
-}
-.row:hover{background:var(--panel)}
-.row.row-head{padding:4px 4px 6px;color:var(--ink-3);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
-.row.row-head:hover{background:none}
-.row.row-head .meta,.row.row-head .left{font-size:inherit;color:inherit}
-.bars{display:flex;gap:2px}
-.bars i{width:9px;height:16px;display:block;background:currentColor}
-.bars i.off{background:transparent;box-shadow:inset 0 0 0 1px currentColor;opacity:.28}
-.name{font-size:15px}
-.name small{color:var(--ink-3);margin-left:7px;font-size:12px}
-.row .meta{font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.04em}
-.row .left{font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
-.row .btns{display:flex;gap:4px;opacity:.35;transition:opacity .12s ease}
-.row:hover .btns,.row:focus-within .btns{opacity:1}
-.row.dead .name{color:var(--ink-3);text-decoration:line-through}
 
 .empty{padding:40px 4px;color:var(--ink-3);max-width:40ch}
 
@@ -562,10 +550,6 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 
 @media (max-width:720px){
   body{padding:0 16px 80px}
-  .row{grid-template-columns:104px 1fr auto;gap:10px;row-gap:6px}
-  .row .meta{display:none}
-  .row .left{grid-column:3}
-  .row .btns{grid-column:2 / -1;justify-self:start;opacity:1}
   .tonight{grid-template-columns:1fr}
   .actions{flex-direction:row}
   .chart-legend{gap:12px;font-size:10.5px}
@@ -638,28 +622,6 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     </div>
     <div class="rf-popover" id="rfPopover" hidden></div>
   </section>
-
-  <!-- The list: every item by name, for finding one fast, acting on
-       several at once, and for keyboard and screen-reader use. Closed by
-       default; the fridge above is the main view. -->
-  <details class="allitems" id="allItems">
-    <summary class="mono"><span>All items (<span id="count">0</span>)</span></summary>
-    <div class="inv-head mono">
-      <span class="spacer"></span>
-      <button class="ghost" id="rowsEdit">Edit</button>
-      <button class="ghost" id="clearGone" style="display:none"></button>
-    </div>
-
-    <div class="missing" id="clearConfirm" style="display:none;border-left-color:var(--crit);margin-bottom:20px">
-      <div id="clearSummary"></div>
-      <div class="sub" style="margin-top:10px">
-        <button class="solid" id="clearConfirmBtn">Toss all</button>
-        <button id="clearCancelBtn">Cancel</button>
-      </div>
-    </div>
-
-    <div id="rows"></div>
-  </details>
 
   <section class="fridgeview" id="fridgeview">
     <div class="fridgeview-head mono">
@@ -1421,8 +1383,7 @@ let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
 let skippedTomorrow = new Set();
 let skippedDayAfter = new Set();
-let clearConfirmOpen = false;
-let editingRows = false;
+let rfTossConfirm = false; // the crisper's "Toss all" is asking
 let editingRestock = false;
 
 function loadState(){
@@ -1661,6 +1622,8 @@ function setBought(id, iso){
   render();
 }
 const left = it => leftAt(it, today());
+// What an item weighs, as the popover writes it: "≈" when estimated.
+const estWeightOf = it => { const f = food(it); return (f.estWeight ? '≈' : '') + Math.round(f.g) + ' g'; };
 // "1 day", "3 days" -- everywhere a count of days is written out.
 const dayCount = n => n + (n === 1 ? ' day' : ' days');
 
@@ -1854,7 +1817,6 @@ function buildDayProjections(){
 function render(){
   document.getElementById('date').textContent = fmtDate(today());
   document.getElementById('dayCount').textContent = 'Day ' + (today() - startedAt + 1);
-  document.getElementById('count').textContent = fridge.length;
   document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
   document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
@@ -1864,9 +1826,7 @@ function render(){
   renderHeadline();
   renderChart();
   renderTonight();
-  renderClear();
   renderRestock();
-  renderRows();
   saveState();
 }
 
@@ -3324,18 +3284,23 @@ function packagedMarkupLine(shape, color, fraction, size, seed){
 // overlaps by at most 40% of its average size when there isn't, and a new
 // shelf starts when the next item would need more overlap than that. Every
 // item stands on a shelf line with its own label showing; nothing sits in
-// a hidden row behind another.
-function layoutShelves(items, day, width){
+// a hidden row behind another. minSlot (phone): every item gets at least
+// that much width -- its label with Used and Tossed as 44px buttons -- and
+// slots never overlap, so a row wraps to a new shelf rather than piling
+// its labels into tiers.
+function layoutShelves(items, day, width, minSlot = 0){
   const W = width * 0.96, x0 = width * 0.02;
   const place = it => {
     const d = leftAt(it, day);
     const frontness = 1 - pos(Math.max(0, d)) / 100;
     // 44-174px: the front row reads at a glance, bigger than the headline
     // numerals beside it.
-    return {it, d, frontness, size: Math.round(44 + frontness * 130)};
+    const size = Math.round(44 + frontness * 130);
+    return {it, d, frontness, size, slot: Math.max(size, minSlot)};
   };
   const fits = row => {
-    const sum = row.reduce((a, p) => a + p.size, 0);
+    const sum = row.reduce((a, p) => a + p.slot, 0);
+    if (minSlot) return row.length < 2 || sum + 4 * (row.length - 1) <= W;
     return row.length < 2 || sum - (sum / row.length) * 0.4 * (row.length - 1) <= W;
   };
   const rows = [];
@@ -3346,16 +3311,17 @@ function layoutShelves(items, day, width){
   });
   if (cur.length) rows.push(cur);
   rows.forEach(row => {
-    const n = row.length, sum = row.reduce((a, p) => a + p.size, 0), avg = sum / n;
+    const n = row.length, sum = row.reduce((a, p) => a + p.slot, 0), avg = sum / n;
     let gap = n > 1 ? Math.min(avg * 0.25, (W - sum) / (n - 1)) : 0, k = 1;
     if (n === 1 && sum > W) k = W / sum;
     if (gap < -avg * 0.4){ gap = -avg * 0.4; k = W / (sum + gap * (n - 1)); gap *= k; }
     let x = x0;
     row.forEach((p, i) => {
+      const slot = p.slot * k;
       p.size = Math.round(p.size * k);
-      p.x = Math.round(x);
+      p.x = Math.round(x + (slot - p.size) / 2);   // the drawing centred in its slot
       p.z = n - i; // more urgent paints over less urgent
-      x += p.size + gap;
+      x += slot + gap;
     });
   });
   return rows;
@@ -3379,10 +3345,18 @@ function buildShelfItem(p, day){
   const itemStyle = `left:${x}px;z-index:${p.z}`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
   return `<div class="fridge-item" style="${itemStyle}">
-    <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
-    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${dayLabel}</span></div>
+    <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
+    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${dayLabel}</span>${fridgeActs(it, f)}</div>
   </div>`;
 }
+
+// Used and Tossed under every item's name and days: the row does the
+// list's job, so these call useItem like the list's buttons did (same
+// ledger, same Undo toast). Plain ink, not urgency colour -- they're
+// controls, not a label.
+const fridgeActs = (it, f) => `<span class="fridge-acts">` +
+  `<button type="button" class="fridge-act" data-fridge-used="${it.id}" aria-label="Used: ${f.en}">Used</button>` +
+  `<button type="button" class="fridge-act" data-fridge-tossed="${it.id}" aria-label="Tossed: ${f.en}">Tossed</button></span>`;
 
 // Gone items skip the shelf's urgency scale entirely -- fixed size, always
 // fully decayed (fraction capped at 1 regardless of how long ago it
@@ -3399,9 +3373,8 @@ function buildDrawerItem(it, day){
   const shapeStyle = `width:${size}px;height:${size}px`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
   return `<div class="fridge-item">
-    <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
-    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span></div>
-    <button class="ghost" data-fridge-toss="${it.id}">Toss</button>
+    <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
+    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span>${fridgeActs(it, f)}</div>
   </div>`;
 }
 
@@ -3820,17 +3793,19 @@ function renderRealFridge(){
   });
   // The drawer front: how many are past date, and Toss all, which opens
   // the same confirmation as the list's "Toss N expired".
+  // The drawer front: how many are past date, and Toss all, which asks
+  // once, right there ("Toss 2 past date? Toss 2 · Cancel"), before
+  // anything counts as waste.
   const cl = document.getElementById('rfCrisperLabel');
-  cl.innerHTML = gone.length
-    ? `<span>${gone.length} past date</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`
-    : 'Crisper — past date';
-  if (gone.length) document.getElementById('rfTossAll').onclick = e => {
-    e.stopPropagation();
-    clearConfirmOpen = true;
-    document.getElementById('allItems').open = true;
-    render();
-    document.getElementById('clearConfirm').scrollIntoView({block: 'center', behavior: 'smooth'});
-  };
+  if (!gone.length) rfTossConfirm = false;
+  cl.innerHTML = !gone.length ? 'Crisper — past date'
+    : rfTossConfirm
+      ? `<span>Toss ${gone.length} past date?</span> <button type="button" class="ghost" id="rfTossYes">Toss ${gone.length}</button> · <button type="button" class="ghost" id="rfTossNo">Cancel</button>`
+      : `<span>${gone.length} past date</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`;
+  const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = e => { e.stopPropagation(); fn(); }; };
+  on('rfTossAll', () => { rfTossConfirm = true; renderRealFridge(); });
+  on('rfTossNo', () => { rfTossConfirm = false; renderRealFridge(); });
+  on('rfTossYes', () => { rfTossConfirm = false; clearGone(); });
 }
 
 function rfShowPopover(id, anchorEl){
@@ -3849,11 +3824,14 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
+    <div class="rf-pop-row"><span>Est. weight</span><span class="rf-pop-weight">${estWeightOf(it)}</span></div>
     <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
       <button type="button" class="ghost rf-pop-tossed">Tossed</button>
+      <span class="spacer"></span>
+      <button type="button" class="rf-pop-remove" title="Logged by mistake: take it out without counting it as waste">Remove</button>
     </div>`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
@@ -3863,6 +3841,8 @@ function rfShowPopover(id, anchorEl){
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
   pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
+  // a correction (logged by mistake), not waste: removeFridgeItem
+  pop.querySelector('.rf-pop-remove').onclick = () => { rfHidePopover(); removeFridgeItem(id); };
   const r = anchorEl.getBoundingClientRect();
   const popW = pop.offsetWidth || 220;
   let left = r.left + r.width / 2 - popW / 2;
@@ -3943,7 +3923,8 @@ function renderFridgeView(){
   if (savable.length){
     const width = (shelf.clientWidth || shelf.parentElement.clientWidth || 900) - 8;
     shelf.style.height = '';
-    shelf.innerHTML = layoutShelves(savable, day, width).map(row =>
+    // on a phone each slot holds a label with two 44px buttons
+    shelf.innerHTML = layoutShelves(savable, day, width, RF_PHONE.matches ? 100 : 0).map(row =>
       `<div class="fridge-row" style="height:${Math.max(...row.map(p => p.size))}px">${row.map(p => buildShelfItem(p, day)).join('')}</div>`
     ).join('');
     staggerFridgeLabels(shelf);
@@ -3955,13 +3936,14 @@ function renderFridgeView(){
   if (gone.length){
     drawer.style.display = '';
     drawerItems.innerHTML = gone.map(it => buildDrawerItem(it, day)).join('');
-    drawerItems.querySelectorAll('[data-fridge-toss]').forEach(b => {
-      b.onclick = () => useItem(+b.dataset.fridgeToss, true);
-    });
   } else {
     drawer.style.display = 'none';
     drawerItems.innerHTML = '';
   }
+  const view = document.getElementById('fridgeview').parentElement;
+  view.querySelectorAll('[data-fridge-used]').forEach(b => b.onclick = () => useItem(+b.dataset.fridgeUsed, false));
+  view.querySelectorAll('[data-fridge-tossed]').forEach(b => b.onclick = () => useItem(+b.dataset.fridgeTossed, true));
+  view.querySelectorAll('[data-fridge-item]').forEach(b => b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.fridgeItem, b); });
 }
 
 // The decay line. x: a short "past" stub left of Today, then pos() from
@@ -4337,34 +4319,6 @@ function renderTonight(){
   }
 }
 
-function renderClear(){
-  const btn = document.getElementById('clearGone');
-  const panel = document.getElementById('clearConfirm');
-  const gone = fridge.filter(it => left(it) < 0);
-
-  if (!gone.length){
-    btn.style.display = 'none';
-    panel.style.display = 'none';
-    clearConfirmOpen = false;
-    return;
-  }
-
-  btn.style.display = '';
-  btn.textContent = 'Toss ' + gone.length + ' expired';
-
-  if (!clearConfirmOpen){
-    panel.style.display = 'none';
-    return;
-  }
-  panel.style.display = '';
-  const g = gone.reduce((s,it) => s + food(it).g, 0);
-  const usd = gone.reduce((s,it) => s + food(it).usd, 0);
-  const chips = gone.map(it => `<span class="chip" style="border-color:var(--crit);color:var(--crit)">${food(it).en}</span>`).join('');
-  document.getElementById('clearSummary').innerHTML = `
-    <div>About to toss ${gone.length} ${gone.length===1?'item':'items'} — ${Math.round(g)} g, $${usd.toFixed(2)}.</div>
-    <div class="rescue" style="margin-top:8px">${chips}</div>`;
-}
-
 // Shared ranking: how often this household buys it, then how recently.
 // Used by the restock chips and by autocomplete, so the two never disagree
 // about what "most-bought" means.
@@ -4403,47 +4357,6 @@ function renderRestock(){
     return `<button class="chip${cls}" data-restock="${key}"${style}>${label}</button>`;
   }).join('');
   box.querySelectorAll('[data-restock]').forEach(b => b.onclick = () => restock(b.dataset.restock));
-}
-
-function renderRows(){
-  const box = document.getElementById('rows');
-  document.getElementById('rowsEdit').textContent = editingRows ? 'Done' : 'Edit';
-  if (!fridge.length){
-    const firstRun = !Object.keys(standing).length;
-    box.innerHTML = firstRun
-      ? `<div class="mono" style="color:var(--ink-3)">—</div>`
-      : `<div class="empty">Nothing in here yet. Add what you bought below — you can paste a whole receipt line.</div>`;
-    return;
-  }
-  const items = fridge.slice().sort((a,b) => left(a) - left(b));
-  const head = `<div class="row row-head mono"><div></div><div></div><div class="meta">Est. weight</div><div class="left">Time left</div><div></div></div>`;
-  box.innerHTML = head + items.map(it => {
-    const d = left(it);
-    const st = state(d);
-    const f = food(it);
-    // Bars are absolute, on the decay line's own scale (pos: sqrt over
-    // 3 weeks), so two items with the same days left show the same bars
-    // whatever their shelf life; a day or less still shows one.
-    const on = d < 0 ? 0 : Math.max(1, Math.ceil(pos(d) / 10));
-    const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
-    return `<div class="row ${d<0?'dead':''}">
-      <div class="bars" style="color:${COLOR[st]}">${bars}</div>
-      <div class="name">${f.en}${(f.estimated || (it.custom && it.shelf == null)) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}${editingRows ? `<small class="mono row-edit"><label>use by <input type="date" class="row-date" data-date="${it.id}" value="${isoOfDay(expiryOf(it))}"></label> <span style="cursor:pointer;text-decoration:underline" data-remove="${it.id}">remove</span></small>` : ''}</div>
-      <div class="meta">${f.estWeight ? '≈' : ''}${Math.round(f.g)} g</div>
-      <div class="left" style="color:${COLOR[st]}">${it.ripening ? 'ripening' : d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : dayCount(d)}</div>
-      <div class="btns">${it.ripening ? `
-        <button class="ghost" data-ripe="${it.id}">It's ripe</button>` : ''}
-        <button class="ghost" data-used="${it.id}">Used</button>
-        <button class="ghost" data-toss="${it.id}">Tossed</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  box.querySelectorAll('[data-used]').forEach(b => b.onclick = () => useItem(+b.dataset.used, false));
-  box.querySelectorAll('[data-toss]').forEach(b => b.onclick = () => useItem(+b.dataset.toss, true));
-  box.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeFridgeItem(+b.dataset.remove));
-  box.querySelectorAll('.row-date').forEach(inp => inp.onchange = () => setUseBy(+inp.dataset.date, inp.value));
-  box.querySelectorAll('[data-ripe]').forEach(b => b.onclick = () => markRipe(+b.dataset.ripe));
 }
 
 /* ---------- actions ---------- */
@@ -4536,13 +4449,7 @@ function clearGone(){
     usd += f.usd;
   });
   fridge = fridge.filter(it => left(it) >= 0);
-  clearConfirmOpen = false;
   toast('Tossed ' + gone.length + ' · $' + usd.toFixed(2) + ' gone');
-  render();
-}
-
-function cancelClear(){
-  clearConfirmOpen = false;
   render();
 }
 
@@ -5554,10 +5461,6 @@ function toast(msg, undo){
 
 /* ---------- wire up ---------- */
 
-document.getElementById('clearGone').onclick = () => { clearConfirmOpen = true; render(); };
-document.getElementById('clearConfirmBtn').onclick = clearGone;
-document.getElementById('clearCancelBtn').onclick = cancelClear;
-document.getElementById('rowsEdit').onclick = () => { editingRows = !editingRows; renderRows(); };
 document.getElementById('restockEdit').onclick = () => { editingRestock = !editingRestock; renderRestock(); };
 document.getElementById('addbtn').onclick = () => {
   // A pending preview always wins: this button and the preview's own Add N
