@@ -1626,11 +1626,31 @@ function setUseBy(id, iso){
   const it = fridge.find(x => x.id === id);
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
+  if (day < it.bought){ toast('Use by can\'t be before the day it was bought'); render(); return; }
   if (it.ripening){ delete it.ripening; it.ripeOn = today(); }
   it.shelf = day - clockStart(it);
   it.shelfFrom = 'date';
   it.crossed = false;
   toast(food(it).en + ' now goes ' + fmtDate(day));
+  render();
+}
+// Correcting the purchase day. A use-by the person set (or a package
+// date) stays where it is; otherwise the item keeps its shelf life and its
+// use-by moves with the purchase day. A correction, not an event: the
+// ledger and the restock count are left alone.
+function setBought(id, iso){
+  const it = fridge.find(x => x.id === id);
+  const day = parseReceiptDate(iso);
+  if (!it || day == null) return;
+  if (day > today()){ toast('Bought can\'t be in the future'); render(); return; }
+  const fixed = it.shelfFrom === 'date' && !it.ripening;
+  const useBy = fixed ? expiryOf(it) : null;
+  if (fixed && day > useBy){ toast('Bought can\'t be after use by'); render(); return; }
+  it.bought = day;
+  if (it.ripeOn != null && it.ripeOn < day) it.ripeOn = day;
+  if (fixed) it.shelf = useBy - clockStart(it);
+  it.crossed = false;
+  toast(food(it).en + ' bought ' + fmtDate(day) + (it.ripening ? '' : ', goes ' + fmtDate(expiryOf(it))));
   render();
 }
 const left = it => leftAt(it, today());
@@ -3857,16 +3877,17 @@ function rfShowPopover(id, anchorEl){
   const pop = document.getElementById('rfPopover');
   pop.innerHTML = `<button type="button" class="rf-pop-close" aria-label="Close">×</button>
     <span class="rf-pop-name">${f.en}</span>
-    <div class="rf-pop-row"><span>Bought</span><span>${fmtDate(it.bought)}</span></div>
+    <label class="rf-pop-row"><span>Bought</span><input type="date" class="rf-pop-bought" value="${isoOfDay(it.bought)}" max="${isoOfDay(it.shelfFrom === 'date' && !it.ripening ? Math.min(day, expiryOf(it)) : day)}"></label>
     <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
-    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}"></label>${it.ripening ? `
+    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${d < 0 ? `
     <button type="button" class="ghost rf-pop-toss">Toss</button>` : ''}`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
   pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
+  pop.querySelector('.rf-pop-bought').onchange = e => { rfHidePopover(); setBought(id, e.target.value); };
   if (it.ripening) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
   if (d < 0) pop.querySelector('.rf-pop-toss').onclick = () => { rfHidePopover(); useItem(id, true); };
   const r = anchorEl.getBoundingClientRect();

@@ -49,7 +49,11 @@ consumer food app.
   Changing a FOODS number moves the expiry of items already saved under
   it (records store the purchase day). A date the person gives -- a
   package date at entry, or one set later in the list's Edit mode or
-  the popover -- is stored on the record and never recomputed. Nothing counts as waste unless the person tosses
+  the popover -- is stored on the record and never recomputed. Bought
+  can be corrected in the popover too: Use by moves with it by the
+  item's shelf life unless the person set Use by. Bought can't be in the
+  future or after Use by. Editing either date is a correction: it never
+  touches the waste ledger or the restock count. Nothing counts as waste unless the person tosses
   it: a past-date item stays in the drawer until they act on it.
   6. Matches: the same food, or the same species under a generic
      FoodKeeper entry. A different species or variety is not a match.

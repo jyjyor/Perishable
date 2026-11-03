@@ -1439,6 +1439,59 @@ async function decayLineScenario(browser) {
   }
 }
 
+// Bought, edited in the popover: an item on its FOODS number keeps its
+// shelf life, so Use by moves with it; a Use by the person set stays put.
+// Bought can't be in the future or after Use by, and Use by can't be
+// before Bought. None of it touches the waste ledger or the restock count.
+async function editBoughtScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- EDIT BOUGHT: Use by follows unless I set it ---');
+  await typeEntry(page, 'spinach, yogurt');
+  await page.waitForTimeout(900);
+  const ids = await page.evaluate(() => Object.fromEntries(fridge.map(i => [i.key, i.id])));
+  const before = await page.evaluate(() => ({ ledger: {...ledger}, standing: JSON.parse(JSON.stringify(standing)) }));
+  const pop = async key => { await page.$eval(`[data-rf-item="${ids[key]}"]`, el => el.click()); await page.waitForSelector('#rfPopover:not([hidden])'); };
+  const setField = async (cls, iso) => { await page.fill(`#rfPopover ${cls}`, iso); await page.waitForTimeout(100); };
+
+  // Spinach (FOODS 7 days): bought 2 days ago -> 5 days left.
+  await pop('spinach'); await setField('.rf-pop-bought', await isoIn(page, -2));
+  let rows = await readInventory(page);
+  expectRow(rows, 'Spinach', '5 days');
+  // Yogurt: set Use by to 10 days out, then move Bought back 4 days: still 10.
+  await pop('yogurt'); await setField('.rf-pop-date', await isoIn(page, 10));
+  await pop('yogurt'); await setField('.rf-pop-bought', await isoIn(page, -4));
+  rows = await readInventory(page);
+  console.log('after editing:', JSON.stringify(rows.map(r => r.name + ' ' + r.left)));
+  expectRow(rows, 'Yogurt', '10 days');
+  expectEqual('yogurt bought moved', await page.evaluate(id => today() - fridge.find(i => i.id === id).bought, ids.yogurt), 4);
+
+  // Refused: Bought in the future; Bought after a Use by I set; Use by before Bought.
+  await pop('spinach'); await setField('.rf-pop-bought', await isoIn(page, 2));
+  await pop('yogurt'); await setField('.rf-pop-bought', await isoIn(page, 0));
+  await pop('yogurt'); await setField('.rf-pop-date', await isoIn(page, 12));
+  await pop('yogurt'); await setField('.rf-pop-bought', await isoIn(page, 0));   // fine: today, before use by
+  await pop('yogurt'); await setField('.rf-pop-date', await isoIn(page, -1));    // before bought: refused
+  rows = await readInventory(page);
+  console.log('after refused edits:', JSON.stringify(rows.map(r => r.name + ' ' + r.left)));
+  expectRow(rows, 'Spinach', '5 days');
+  expectRow(rows, 'Yogurt', '12 days');
+  const limits = await page.evaluate(id => { rfShowPopover(id, document.querySelector(`[data-rf-item="${id}"]`));
+    return [document.querySelector('.rf-pop-bought').max, document.querySelector('.rf-pop-date').min, isoOfDay(today())]; }, ids.spinach);
+  expectEqual('Bought max is today', limits[0], limits[2]);
+  // A future-dated Bought set directly is refused too, not only by the picker.
+  await page.evaluate(([id, iso]) => setBought(id, iso), [ids.yogurt, await isoIn(page, 30)]);
+  expectEqual('yogurt still bought today', await page.evaluate(id => today() - fridge.find(i => i.id === id).bought, ids.yogurt), 0);
+
+  // Corrections only: no waste, no restock count.
+  const after = await page.evaluate(() => ({ ledger: {...ledger}, standing: JSON.parse(JSON.stringify(standing)) }));
+  expectEqual('ledger untouched', after.ledger, before.ledger);
+  expectEqual('restock counts untouched', Object.fromEntries(Object.entries(after.standing).map(([k, v]) => [k, v.count])),
+    Object.fromEntries(Object.entries(before.standing).map(([k, v]) => [k, v.count])));
+
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // A gone item: no tag under it; Toss is in its popover and counts as
 // waste; the drawer front's Toss all opens the list's confirmation.
 async function goneTossScenario(browser) {
@@ -1593,6 +1646,7 @@ async function ripenessScenario(browser) {
   await ripenessScenario(browser);
   await handAliasScenario(browser);
   await decayLineScenario(browser);
+  await editBoughtScenario(browser);
   await goneTossScenario(browser);
 
   await browser.close();
