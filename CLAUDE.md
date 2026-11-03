@@ -17,6 +17,12 @@ consumer food app.
 - No backend, no accounts, no database.
 - Shelf-life values follow USDA FoodKeeper refrigerator guidance. Do not
   round them up to be friendlier. Raw chicken is 2 days.
+- English only. Typed entry, voice (en-US), autocomplete, receipt
+  scanning and every hint and placeholder work in English; FOODS carries
+  no other-language synonyms. The single exception is LEGACY_ZH in
+  index.html, a frozen table that migrateLegacyNames() uses once to move
+  saved Chinese-named custom items onto their English FOODS keys (schema
+  2). Nothing else reads it; do not extend it or use it for lookup.
 
 ## Visual system — derived, not decorative
 

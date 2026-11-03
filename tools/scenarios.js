@@ -745,6 +745,162 @@ async function realFridgeItemTapScenario(browser) {
   await page.context().close();
 }
 
+// Schema-1 saved state (before the app went English-only) can carry
+// Chinese names, but only on custom records: a '_c_' + raw-text key on a
+// fridge item and on its standing entry. These four scenarios seed such a
+// state directly, load the current code, and read back what it saved.
+async function seedLegacy(browser, build) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  const day = await page.evaluate(() => {
+    const d = new Date();
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+  });
+  const state = build(day);
+  await page.evaluate(st => { localStorage.clear(); localStorage.setItem('perishable.v1', JSON.stringify(st)); }, state);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  const read = async () => JSON.parse(await page.evaluate(() => localStorage.getItem('perishable.v1')));
+  return { page, errors, day, state, read };
+}
+
+function legacyCustom(name) {
+  return { en: name, zh: [], shelf: 7, g: 250, usd: 2.5 };
+}
+
+function expectEqual(label, actual, expected) {
+  const a = JSON.stringify(actual), e = JSON.stringify(expected);
+  if (a !== e) throw new Error(`${label}: expected ${e}, got ${a}`);
+}
+
+async function legacyMapScenario(browser) {
+  console.log('\n--- LEGACY NAMES: known Chinese names move to their English FOODS entry ---');
+  const { page, errors, day, read } = await seedLegacy(browser, day => ({
+    fridge: [
+      { id: 5, key: '_c_菠菜', bought: day - 2, custom: legacyCustom('菠菜') },
+      { id: 6, key: 'milk', bought: day - 1, custom: null },
+      { id: 7, key: '_c_番茄', bought: day - 9, custom: legacyCustom('番茄'), crossed: true },
+    ],
+    standing: {
+      '_c_菠菜': { count: 2, lastBought: day - 2, custom: legacyCustom('菠菜') },
+      milk: { count: 1, lastBought: day - 1, custom: null },
+      '_c_番茄': { count: 1, lastBought: day - 9, custom: legacyCustom('番茄') },
+    },
+    ledger: { wasteG: 300, wasteUSD: 2.5, savedG: 400 },
+    uid: 7, startedAt: day - 20, lastVisit: day,
+  }));
+  const after = await read();
+  const byId = Object.fromEntries(after.fridge.map(it => [it.id, it]));
+  console.log('fridge after load:', after.fridge.map(it => `${it.id}:${it.key}`).join(', '));
+  console.log('standing keys after load:', Object.keys(after.standing).join(', '));
+  expectEqual('spinach record', byId[5], { id: 5, key: 'spinach', bought: day - 2, custom: null });
+  expectEqual('tomato record keeps date and crossed', [byId[7].key, byId[7].bought - day, byId[7].crossed, byId[7].custom], ['tomato', -9, true, null]);
+  expectEqual('untouched milk record', [byId[6].key, byId[6].custom], ['milk', null]);
+  expectEqual('standing spinach', after.standing.spinach, { count: 2, lastBought: day - 2, custom: null });
+  if ('_c_菠菜' in after.standing || '_c_番茄' in after.standing) throw new Error('old Chinese standing keys survived the migration');
+  expectEqual('ledger unchanged', after.ledger, { wasteG: 300, wasteUSD: 2.5, savedG: 400 });
+  expectEqual('uid unchanged', after.uid, 7);
+  expectEqual('schema stamped', after.schema, 2);
+  const label = await page.$$eval('.row, [data-id]', els => els.map(e => e.textContent).join(' '));
+  if (/[一-鿿]/.test(label)) throw new Error('Chinese text still rendered after migration');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  console.log('ids, dates, crossed status and ledger kept; keys now English: ok');
+  await page.context().close();
+}
+
+async function legacyLinkScenario(browser) {
+  console.log('\n--- LEGACY NAMES: restock entries stay linked to their fridge records ---');
+  const { page, errors, day, read } = await seedLegacy(browser, day => ({
+    fridge: [
+      { id: 1, key: 'spinach', bought: day - 4, custom: null },
+      { id: 2, key: '_c_菠菜', bought: day - 1, custom: legacyCustom('菠菜') },
+      { id: 3, key: '_c_菠菜', bought: day, custom: legacyCustom('菠菜') },
+    ],
+    standing: {
+      spinach: { count: 3, lastBought: day - 4, custom: null },
+      '_c_菠菜': { count: 2, lastBought: day, custom: legacyCustom('菠菜') },
+    },
+    ledger: { wasteG: 0, wasteUSD: 0, savedG: 0 },
+    uid: 3, startedAt: day - 10, lastVisit: day,
+  }));
+  const after = await read();
+  console.log('fridge after load:', after.fridge.map(it => `${it.id}:${it.key}@${it.bought - day}`).join(', '));
+  console.log('standing after load:', JSON.stringify(after.standing));
+  expectEqual('fridge keys', after.fridge.map(it => [it.id, it.key]), [[1, 'spinach'], [2, 'spinach'], [3, 'spinach']]);
+  expectEqual('fridge dates', after.fridge.map(it => it.bought - day), [-4, -1, 0]);
+  expectEqual('one merged standing entry', Object.keys(after.standing), ['spinach']);
+  expectEqual('merged count and latest purchase', [after.standing.spinach.count, after.standing.spinach.lastBought - day], [5, 0]);
+  // Every fridge record's key resolves to a live standing entry: the
+  // restock chip and the records it restocks still point at each other.
+  for (const it of after.fridge) if (!after.standing[it.key]) throw new Error(`fridge record ${it.id} lost its standing entry`);
+  const chips = await page.$$eval('[data-restock]', els => els.map(e => e.dataset.restock));
+  expectEqual('restock chips', chips, ['spinach']);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  console.log('links intact, standing merged instead of duplicated: ok');
+  await page.context().close();
+}
+
+async function legacyOnceScenario(browser) {
+  console.log('\n--- LEGACY NAMES: migration runs once; repeat loads change nothing ---');
+  const { page, errors, read } = await seedLegacy(browser, day => ({
+    fridge: [{ id: 1, key: '_c_牛奶', bought: day - 1, custom: legacyCustom('牛奶') }],
+    standing: { '_c_牛奶': { count: 1, lastBought: day - 1, custom: legacyCustom('牛奶') } },
+    ledger: { wasteG: 0, wasteUSD: 0, savedG: 0 },
+    uid: 1, startedAt: day - 3, lastVisit: day,
+  }));
+  const first = await read();
+  for (let n = 0; n < 3; n++) { await page.reload(); await page.waitForSelector('#headline'); }
+  const later = await read();
+  console.log('after first load:', JSON.stringify({ fridge: first.fridge, standing: first.standing }));
+  expectEqual('state after three more loads', later, first);
+  expectEqual('no duplicate records', [later.fridge.length, Object.keys(later.standing).length], [1, 1]);
+  // A schema-2 state is never re-migrated, even if it somehow holds a
+  // name the old table would have mapped.
+  await page.evaluate(() => {
+    const st = JSON.parse(localStorage.getItem('perishable.v1'));
+    st.fridge.push({ id: 9, key: '_c_牛奶', bought: st.lastVisit, custom: { en: '牛奶', zh: [], shelf: 7, g: 250, usd: 2.5 } });
+    localStorage.setItem('perishable.v1', JSON.stringify(st));
+  });
+  await page.reload(); await page.waitForSelector('#headline');
+  const stamped = await read();
+  expectEqual('schema-2 record left alone', stamped.fridge.find(it => it.id === 9).key, '_c_牛奶');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  console.log('idempotent, schema-gated: ok');
+  await page.context().close();
+}
+
+async function legacyUnmappedScenario(browser) {
+  console.log('\n--- LEGACY NAMES: anything not mapped exactly stays as it was ---');
+  const keep = day => ({
+    fridge: [
+      { id: 1, key: '_c_火龙果', bought: day - 2, custom: legacyCustom('火龙果') },
+      { id: 2, key: '_c_有机菠菜', bought: day - 1, custom: legacyCustom('有机菠菜') },
+      { id: 3, key: '_c_菠菜', bought: day - 1, custom: legacyCustom('菠菜') },
+      { id: 4, key: '_c_dragonfruit', bought: day - 3, custom: legacyCustom('Dragonfruit') },
+    ],
+    standing: {
+      '_c_火龙果': { count: 1, lastBought: day - 2, custom: legacyCustom('火龙果') },
+      '_c_有机菠菜': { count: 1, lastBought: day - 1, custom: legacyCustom('有机菠菜') },
+      // same key as fridge record 3, but this entry's own name doesn't map
+      // exactly -- so neither moves, and the pair stays linked
+      '_c_菠菜': { count: 1, lastBought: day - 1, custom: legacyCustom('菠菜（散装）') },
+      '_c_dragonfruit': { count: 1, lastBought: day - 3, custom: legacyCustom('Dragonfruit') },
+    },
+    ledger: { wasteG: 0, wasteUSD: 0, savedG: 0 },
+    uid: 4, startedAt: day - 10, lastVisit: day,
+  });
+  const { page, errors, state, read } = await seedLegacy(browser, keep);
+  const after = await read();
+  console.log('fridge keys after load:', after.fridge.map(it => it.key).join(', '));
+  expectEqual('unmapped fridge records', after.fridge, state.fridge);
+  expectEqual('unmapped standing entries', after.standing, state.standing);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  console.log('unmapped and partly-mapped records kept exactly: ok');
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -761,6 +917,10 @@ async function realFridgeItemTapScenario(browser) {
   await pluralAgreementScenario(browser);
   await dishRepeatScenario(browser);
   await migrationScenario(browser);
+  await legacyMapScenario(browser);
+  await legacyLinkScenario(browser);
+  await legacyOnceScenario(browser);
+  await legacyUnmappedScenario(browser);
   await realFridgeDoorLoadScenario(browser);
   await realFridgeHandleToggleScenario(browser);
   await realFridgeReducedMotionScenario(browser);

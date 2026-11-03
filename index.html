@@ -659,7 +659,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     <div class="mono" style="color:var(--ink-2);margin-top:26px;margin-bottom:10px">Something new or unusual</div>
     <div class="add">
       <div class="entrywrap">
-        <input id="entry" placeholder="what did you buy? e.g. spinach, milk, chicken breast 2d — English or Chinese" autocomplete="off">
+        <input id="entry" placeholder="what did you buy? e.g. spinach, milk, chicken breast 2d" autocomplete="off">
         <div class="suggest" id="suggest" style="display:none"></div>
       </div>
       <button class="solid" id="addbtn">Add</button>
@@ -669,7 +669,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     </div>
     <div class="missing" id="voicePreview" style="display:none"></div>
     <div class="missing" id="receiptPreview" style="display:none"></div>
-    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. English or Chinese. Anything typed here joins the tap list above next time.</p>
+    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. Anything typed here joins the tap list above next time.</p>
   </section>
 
   <section class="ledger">
@@ -729,48 +729,48 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    falls back to DEFAULT_BASE_HEX.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        zh:['菠菜'],            shelf:7,  g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
-  lettuce:    {en:'Lettuce',        zh:['生菜'],            shelf:7,  g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
-  milk:       {en:'Milk',           zh:['牛奶'],            shelf:7,  g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
-  yogurt:     {en:'Yogurt',         zh:['酸奶'],            shelf:14, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
-  chicken:    {en:'Chicken breast', zh:['鸡胸肉','鸡肉'],    shelf:2,  g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
-  beef:       {en:'Ground beef',    zh:['牛肉末','牛肉'],    shelf:2,  g:450, usd:7.20, cat:'protein', base:'#91473b'},
-  bacon:      {en:'Bacon',          zh:['培根'],            shelf:7,  g:340, usd:6.00, cat:'protein', base:'#c76b60'},
-  egg:        {en:'Eggs',           zh:['鸡蛋','蛋'],        shelf:35, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
-  tofu:       {en:'Tofu',           zh:['豆腐'],            shelf:4,  g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
-  onion:      {en:'Onion, cut',     zh:['洋葱'],            shelf:10, g:150, usd:0.80, cat:'veg', shape:'halfonion', base:'#ddd7e0'},
-  scallion:   {en:'Scallion',       zh:['葱','小葱'],        shelf:10, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
-  garlic:     {en:'Garlic',         zh:['蒜','大蒜'],        shelf:90, g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
-  ginger:     {en:'Ginger',         zh:['姜','生姜'],        shelf:21, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
-  tomato:     {en:'Tomato',         zh:['番茄','西红柿'],     shelf:7,  g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
-  carrot:     {en:'Carrot',         zh:['胡萝卜'],           shelf:28, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
-  pepper:     {en:'Bell pepper',    zh:['彩椒','青椒'],      shelf:14, g:300, usd:2.80, cat:'soft', base:'#c65539'},
-  broccoli:   {en:'Broccoli',       zh:['西兰花'],           shelf:5,  g:400, usd:2.50, cat:'veg', base:'#287139'},
-  mushroom:   {en:'Mushrooms',      zh:['蘑菇'],            shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
-  cilantro:   {en:'Cilantro',       zh:['香菜'],            shelf:7,  g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
-  potato:     {en:'Potato',         zh:['土豆','马铃薯'],     shelf:21, g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
-  lemon:      {en:'Lemon',          zh:['柠檬'],            shelf:28, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
-  mango:      {en:'Mango',          zh:['芒果'],            shelf:5,  g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
+  spinach:    {en:'Spinach',        shelf:7,  g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
+  lettuce:    {en:'Lettuce',        shelf:7,  g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
+  milk:       {en:'Milk',           shelf:7,  g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
+  yogurt:     {en:'Yogurt',         shelf:14, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
+  chicken:    {en:'Chicken breast', shelf:2,  g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
+  beef:       {en:'Ground beef',    shelf:2,  g:450, usd:7.20, cat:'protein', base:'#91473b'},
+  bacon:      {en:'Bacon',          shelf:7,  g:340, usd:6.00, cat:'protein', base:'#c76b60'},
+  egg:        {en:'Eggs',           shelf:35, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
+  tofu:       {en:'Tofu',           shelf:4,  g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
+  onion:      {en:'Onion, cut',     shelf:10, g:150, usd:0.80, cat:'veg', shape:'halfonion', base:'#ddd7e0'},
+  scallion:   {en:'Scallion',       shelf:10, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  garlic:     {en:'Garlic',         shelf:90, g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
+  ginger:     {en:'Ginger',         shelf:21, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
+  tomato:     {en:'Tomato',         shelf:7,  g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
+  carrot:     {en:'Carrot',         shelf:28, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
+  pepper:     {en:'Bell pepper',    shelf:14, g:300, usd:2.80, cat:'soft', base:'#c65539'},
+  broccoli:   {en:'Broccoli',       shelf:5,  g:400, usd:2.50, cat:'veg', base:'#287139'},
+  mushroom:   {en:'Mushrooms',      shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
+  cilantro:   {en:'Cilantro',       shelf:7,  g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
+  potato:     {en:'Potato',         shelf:21, g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
+  lemon:      {en:'Lemon',          shelf:28, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
+  mango:      {en:'Mango',          shelf:5,  g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
   // Apple: FoodKeeper gives refrigerator life as a 4-6 week range (28-42
   // days) -- using the conservative 28, same "don't round up" rule as
   // every ranged value here.
-  apple:      {en:'Apple',          zh:['苹果'],            shelf:28, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
+  apple:      {en:'Apple',          shelf:28, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
   // Banana: FoodKeeper's refrigerator figure (3 days) only applies once
   // ripe -- an unripe banana belongs on the counter, not in here, but the
   // app has no "pantry" concept, so this is the fridge number as given.
-  banana:     {en:'Banana',         zh:['香蕉'],            shelf:3,  g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
-  cheese:     {en:'Cheese',         zh:['奶酪','芝士'],      shelf:42, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
-  butter:     {en:'Butter',         zh:['黄油'],            shelf:30, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
-  cookedrice: {en:'Cooked rice',    zh:['米饭','剩饭'],      shelf:5,  g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
+  banana:     {en:'Banana',         shelf:3,  g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
+  cheese:     {en:'Cheese',         shelf:42, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
+  butter:     {en:'Butter',         shelf:30, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
+  cookedrice: {en:'Cooked rice',    shelf:5,  g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper category, e.g. Chinese eggplant via the
   // generic "Eggplant" entry). No `estimated` flag.
-  bokchoy:        {en:'Bok choy',          zh:['小白菜','上海青'], shelf:3,  g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
-  daikon:         {en:'Daikon',            zh:['白萝卜','萝卜'],   shelf:14, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
-  chineseeggplant:{en:'Chinese eggplant',  zh:['茄子'],           shelf:7,  g:300, usd:2.10, cat:'soft', base:'#7e4592'},
-  beansprouts:    {en:'Bean sprouts',      zh:['豆芽','绿豆芽'],   shelf:10, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
-  shiitake:       {en:'Shiitake mushroom', zh:['香菇'],           shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
-  enoki:          {en:'Enoki mushroom',    zh:['金针菇'],         shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
+  bokchoy:        {en:'Bok choy',          shelf:3,  g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
+  daikon:         {en:'Daikon',            shelf:14, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
+  chineseeggplant:{en:'Chinese eggplant',  shelf:7,  g:300, usd:2.10, cat:'soft', base:'#7e4592'},
+  beansprouts:    {en:'Bean sprouts',      shelf:10, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
+  shiitake:       {en:'Shiitake mushroom', shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
+  enoki:          {en:'Enoki mushroom',    shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -778,14 +778,14 @@ const FOODS = {
   // dataset). Shipping the sourced figure as-is rather than quietly
   // correcting it toward intuition — that correction is exactly the kind
   // of move that turns a source into a guess. Revisit if verified.
-  taro:           {en:'Taro',              zh:['芋头','芋'],      shelf:3,  g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
-  bambooshoots:   {en:'Bamboo shoots',     zh:['竹笋','笋'],       shelf:14, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
-  edamame:        {en:'Edamame',           zh:['毛豆'],           shelf:5,  g:300, usd:2.40, cat:'veg', base:'#46a44a'},
-  leek:           {en:'Leeks',             zh:['韭葱'],           shelf:14, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
-  cucumber:       {en:'Cucumber',          zh:['黄瓜'],           shelf:6,  g:300, usd:1.40, cat:'soft', base:'#54ab54'},
-  zucchini:       {en:'Zucchini',          zh:['西葫芦'],         shelf:5,  g:250, usd:1.90, cat:'soft', base:'#328640'},
-  cauliflower:    {en:'Cauliflower',       zh:['花椰菜','菜花'],   shelf:5,  g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
-  corn:           {en:'Corn',              zh:['玉米'],           shelf:2,  g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
+  taro:           {en:'Taro',              shelf:3,  g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
+  bambooshoots:   {en:'Bamboo shoots',     shelf:14, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
+  edamame:        {en:'Edamame',           shelf:5,  g:300, usd:2.40, cat:'veg', base:'#46a44a'},
+  leek:           {en:'Leeks',             shelf:14, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
+  cucumber:       {en:'Cucumber',          shelf:6,  g:300, usd:1.40, cat:'soft', base:'#54ab54'},
+  zucchini:       {en:'Zucchini',          shelf:5,  g:250, usd:1.90, cat:'soft', base:'#328640'},
+  cauliflower:    {en:'Cauliflower',       shelf:5,  g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
+  corn:           {en:'Corn',              shelf:2,  g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
   // No FoodKeeper entry, and no same-species proxy close enough to call
   // sourced — either nothing in the dataset resembles them (lotus root,
   // winter melon, water spinach, snow peas) or the closest entry is a
@@ -794,14 +794,14 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed/spoken items.
-  napacabbage:  {en:'Napa cabbage',   zh:['大白菜','白菜'], shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy', base:'#a7c0a5'},
-  garlicchives: {en:'Garlic chives',  zh:['韭菜'],          shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy', plural:true, base:'#429453'},
-  lotusroot:    {en:'Lotus root',     zh:['莲藕','藕'],     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg', base:'#dfdad8'},
-  gailan:       {en:'Chinese broccoli', zh:['芥兰','芥蓝'], shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy', base:'#3a8847'},
-  choysum:      {en:'Choy sum',       zh:['菜心'],          shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy', base:'#489953'},
-  waterspinach: {en:'Water spinach',  zh:['空心菜','通菜'], shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy', base:'#429450'},
-  wintermelon:  {en:'Winter melon',   zh:['冬瓜'],          shelf:7, g:800, usd:2.00, estimated:true, cat:'veg', base:'#b8cfb4'},
-  snowpeas:     {en:'Snow peas',      zh:['荷兰豆'],        shelf:5, g:200, usd:2.70, estimated:true, cat:'veg', plural:true, base:'#5bae61'}
+  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy', base:'#a7c0a5'},
+  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy', plural:true, base:'#429453'},
+  lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg', base:'#dfdad8'},
+  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy', base:'#3a8847'},
+  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy', base:'#489953'},
+  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy', base:'#429450'},
+  wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, cat:'veg', base:'#b8cfb4'},
+  snowpeas:     {en:'Snow peas',      shelf:5, g:200, usd:2.70, estimated:true, cat:'veg', plural:true, base:'#5bae61'}
 };
 
 const DISHES = [
@@ -929,15 +929,123 @@ function loadState(){
   } catch(e){ return null; }
 }
 
+// Saved state written before schema 2 may hold Chinese names: the app used
+// to accept them, and anything it didn't recognise was saved as a custom
+// item under '_c_' + the raw text, on both the fridge record and its
+// restock (standing) entry. Recognised foods were always saved under their
+// English FOODS key, so only those custom records can need this.
+// LEGACY_ZH is the old synonym list, frozen here for this migration only --
+// it is the one place Chinese is left in the app, and nothing else reads it.
+const SCHEMA = 2;
+const LEGACY_ZH = {
+  '菠菜':'spinach',
+  '生菜':'lettuce',
+  '牛奶':'milk',
+  '酸奶':'yogurt',
+  '鸡胸肉':'chicken', '鸡肉':'chicken',
+  '牛肉末':'beef', '牛肉':'beef',
+  '培根':'bacon',
+  '鸡蛋':'egg', '蛋':'egg',
+  '豆腐':'tofu',
+  '洋葱':'onion',
+  '葱':'scallion', '小葱':'scallion',
+  '蒜':'garlic', '大蒜':'garlic',
+  '姜':'ginger', '生姜':'ginger',
+  '番茄':'tomato', '西红柿':'tomato',
+  '胡萝卜':'carrot',
+  '彩椒':'pepper', '青椒':'pepper',
+  '西兰花':'broccoli',
+  '蘑菇':'mushroom',
+  '香菜':'cilantro',
+  '土豆':'potato', '马铃薯':'potato',
+  '柠檬':'lemon',
+  '芒果':'mango',
+  '苹果':'apple',
+  '香蕉':'banana',
+  '奶酪':'cheese', '芝士':'cheese',
+  '黄油':'butter',
+  '米饭':'cookedrice', '剩饭':'cookedrice',
+  '小白菜':'bokchoy', '上海青':'bokchoy',
+  '白萝卜':'daikon', '萝卜':'daikon',
+  '茄子':'chineseeggplant',
+  '豆芽':'beansprouts', '绿豆芽':'beansprouts',
+  '香菇':'shiitake',
+  '金针菇':'enoki',
+  '芋头':'taro', '芋':'taro',
+  '竹笋':'bambooshoots', '笋':'bambooshoots',
+  '毛豆':'edamame',
+  '韭葱':'leek',
+  '黄瓜':'cucumber',
+  '西葫芦':'zucchini',
+  '花椰菜':'cauliflower', '菜花':'cauliflower',
+  '玉米':'corn',
+  '大白菜':'napacabbage', '白菜':'napacabbage',
+  '韭菜':'garlicchives',
+  '莲藕':'lotusroot', '藕':'lotusroot',
+  '芥兰':'gailan', '芥蓝':'gailan',
+  '菜心':'choysum',
+  '空心菜':'waterspinach', '通菜':'waterspinach',
+  '冬瓜':'wintermelon',
+  '荷兰豆':'snowpeas'
+};
+
+// Runs once per saved state (schema < 2), then stamps schema 2 so later
+// loads skip it. A custom key moves to a FOODS key only when every record
+// under it -- fridge items and the standing entry alike -- carries a name
+// that maps exactly, and all to the same food; otherwise the whole key is
+// left exactly as it was, so a restock entry and its fridge records never
+// get split. Mapped fridge records keep id, bought and crossed; only key
+// and custom change. A standing entry that lands on a key already present
+// merges into it (counts added, latest purchase kept) rather than
+// duplicating it.
+function migrateLegacyNames(saved){
+  if ((saved.schema || 1) >= SCHEMA) return saved;
+  const items = Array.isArray(saved.fridge) ? saved.fridge : [];
+  const standingIn = saved.standing && typeof saved.standing === 'object' ? saved.standing : {};
+  const target = c => {
+    const name = c && typeof c.en === 'string' ? c.en.trim() : '';
+    return Object.prototype.hasOwnProperty.call(LEGACY_ZH, name) ? LEGACY_ZH[name] : null;
+  };
+  const verdict = {}; // custom key -> FOODS key, or false once any record disagrees
+  const vote = (key, t) => {
+    if (typeof key !== 'string' || !key.startsWith('_c_')) return;
+    if (!t || (key in verdict && verdict[key] !== t)) verdict[key] = false;
+    else verdict[key] = t;
+  };
+  items.forEach(it => vote(it.key, target(it.custom)));
+  Object.keys(standingIn).forEach(k => vote(k, target(standingIn[k].custom)));
+
+  items.forEach(it => {
+    const t = verdict[it.key];
+    if (t){ it.key = t; it.custom = null; }
+  });
+  Object.keys(standingIn).forEach(k => {
+    const t = verdict[k];
+    if (!t) return;
+    const old = standingIn[k];
+    delete standingIn[k];
+    const cur = standingIn[t];
+    if (cur){
+      cur.count = (cur.count || 0) + (old.count || 0);
+      cur.lastBought = Math.max(cur.lastBought || 0, old.lastBought || 0);
+    } else {
+      standingIn[t] = {count:old.count, lastBought:old.lastBought, custom:null};
+    }
+  });
+  saved.schema = SCHEMA;
+  return saved;
+}
+
 function saveState(){
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({fridge, standing, ledger, uid, startedAt, lastVisit}));
+    localStorage.setItem(STORE_KEY, JSON.stringify({schema:SCHEMA, fridge, standing, ledger, uid, startedAt, lastVisit}));
   } catch(e){ /* storage unavailable: carry on in memory only */ }
 }
 
 function boot(){
   const now = today();
   const saved = loadState();
+  if (saved) migrateLegacyNames(saved);
   if (saved){
     fridge = saved.fridge || [];
     standing = saved.standing || {};
@@ -3538,7 +3646,7 @@ function cancelClear(){
 
 /* ---------- entry ---------- */
 
-// Exact only: token must equal a food's key, name, or a zh synonym outright.
+// Exact only: token must equal a food's key or name outright.
 // Used standalone by the speech tokenizer, where a multi-unit window must
 // match a whole food name rather than merely contain one.
 function exactLookup(token){
@@ -3549,7 +3657,6 @@ function exactLookup(token){
     if (k === t) return k;
     if (f.en.toLowerCase() === t) return k;
     if (f.en.toLowerCase().split(',')[0] === t) return k;
-    if (f.zh.some(z => z === token.trim())) return k;
   }
   return null;
 }
@@ -3562,13 +3669,12 @@ function lookup(token){
   for (const k in FOODS){
     const f = FOODS[k];
     if (f.en.toLowerCase().includes(t) || t.includes(f.en.toLowerCase().split(',')[0])) return k;
-    if (f.zh.some(z => token.includes(z))) return k;
   }
   return null;
 }
 
 function slug(s){
-  return s.toLowerCase().trim().replace(/[^a-z0-9一-鿿]+/g, '');
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '');
 }
 
 function touchStanding(key, custom){
@@ -3604,7 +3710,7 @@ function restock(key){
 
 // Pure: text in, parsed parts out. No fridge/standing mutation, no render.
 function parseText(text){
-  const parts = text.split(/[,，、\n;]+/).map(s => s.trim()).filter(Boolean);
+  const parts = text.split(/[,\n;]+/).map(s => s.trim()).filter(Boolean);
   return parts.map(part => {
     let age = 0;
     const m = part.match(/(\d+)\s*d\b/i);
@@ -3613,17 +3719,15 @@ function parseText(text){
     const key = lookup(part);
     if (key) return {known:true, key, label:FOODS[key].en, age, raw:part};
     const name = part.charAt(0).toUpperCase() + part.slice(1);
-    const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
+    const custom = {en:name, shelf:7, g:250, usd:2.50};
     return {known:false, custom, label:name, age, raw:part};
   }).filter(Boolean);
 }
 
 // Pure: speech transcript in, parsed parts out. Speech carries no punctuation
-// to split on, so this walks a flat sequence of units (Latin words, or single
-// CJK characters — Chinese has no spaces) and greedily tries the largest
-// plausible window at each position: 2 units for Latin (covers every
-// multi-word food name), 3 for CJK (covers the longest zh entries). Windows
-// wider than 1 unit require an EXACT match (exactLookup) — the full lookup()
+// to split on, so this walks a flat sequence of words and greedily tries
+// the largest plausible window at each position: 2 words (covers every
+// multi-word food name). Windows wider than 1 word require an EXACT match (exactLookup) — the full lookup()
 // with its "candidate contains a food name" fallback would let something like
 // "milk chicken" match 'milk' as one 2-word candidate, silently swallowing
 // two separate items. Only the 1-unit window uses full lookup(), preserving
@@ -3635,8 +3739,6 @@ function parseText(text){
 // marker (glued "2d" or spoken-apart "2 d"). Natural phrases like "two days
 // ago" are not parsed — nobody actually says "2d" out loud, so this needs
 // revisiting, just not in this pass.
-const CJK_RE = /[一-鿿]/;
-
 function parseSpeech(text){
   const raw = text.trim().replace(/\s+/g, ' ');
   if (!raw) return [];
@@ -3646,31 +3748,19 @@ function parseSpeech(text){
   while (i < raw.length){
     const ch = raw[i];
     if (ch === ' '){ i++; continue; }
-    if (CJK_RE.test(ch)){
-      units.push({text:ch, cjk:true});
-      i++;
-    } else {
-      let j = i;
-      while (j < raw.length && /[a-zA-Z0-9']/.test(raw[j])) j++;
-      if (j === i) { i++; continue; } // stray punctuation
-      units.push({text:raw.slice(i, j), cjk:false});
-      i = j;
-    }
+    let j = i;
+    while (j < raw.length && /[a-zA-Z0-9']/.test(raw[j])) j++;
+    if (j === i) { i++; continue; } // stray punctuation
+    units.push({text:raw.slice(i, j)});
+    i = j;
   }
 
-  function windowText(u, len, cjk){
-    return units.slice(u, u + len).map(x => x.text).join(cjk ? '' : ' ');
-  }
-  function sameScript(u, len, cjk){
-    for (let k = 0; k < len; k++) if (units[u + k].cjk !== cjk) return false;
-    return true;
+  function windowText(u, len){
+    return units.slice(u, u + len).map(x => x.text).join(' ');
   }
   function tryMatch(u){
-    const cjk = units[u].cjk;
-    const maxLen = cjk ? 3 : 2;
-    for (let len = Math.min(maxLen, units.length - u); len >= 1; len--){
-      if (!sameScript(u, len, cjk)) continue;
-      const cand = windowText(u, len, cjk);
+    for (let len = Math.min(2, units.length - u); len >= 1; len--){
+      const cand = windowText(u, len);
       const key = len === 1 ? lookup(cand) : exactLookup(cand);
       if (key) return {key, label:FOODS[key].en, raw:cand, consumed:len};
     }
@@ -3684,24 +3774,22 @@ function parseSpeech(text){
     unresolved = '';
     if (!t) return;
     const name = t.charAt(0).toUpperCase() + t.slice(1);
-    items.push({known:false, custom:{en:name, zh:[], shelf:7, g:250, usd:2.50}, label:name, age:0, raw:t});
+    items.push({known:false, custom:{en:name, shelf:7, g:250, usd:2.50}, label:name, age:0, raw:t});
   }
 
   let u = 0;
   while (u < units.length){
-    if (!units[u].cjk){
-      const glued = units[u].text.match(/^(\d+)d$/i);
-      if (glued && items.length){
-        items[items.length - 1].age = parseInt(glued[1], 10);
-        u += 1;
-        continue;
-      }
-      if (/^\d+$/.test(units[u].text) && u + 1 < units.length &&
-          !units[u+1].cjk && /^d$/i.test(units[u+1].text) && items.length){
-        items[items.length - 1].age = parseInt(units[u].text, 10);
-        u += 2;
-        continue;
-      }
+    const glued = units[u].text.match(/^(\d+)d$/i);
+    if (glued && items.length){
+      items[items.length - 1].age = parseInt(glued[1], 10);
+      u += 1;
+      continue;
+    }
+    if (/^\d+$/.test(units[u].text) && u + 1 < units.length &&
+        /^d$/i.test(units[u+1].text) && items.length){
+      items[items.length - 1].age = parseInt(units[u].text, 10);
+      u += 2;
+      continue;
     }
 
     const m = tryMatch(u);
@@ -3710,7 +3798,7 @@ function parseSpeech(text){
       items.push({known:true, key:m.key, label:m.label, age:0, raw:m.raw});
       u += m.consumed;
     } else {
-      unresolved += (unresolved && !units[u].cjk ? ' ' : '') + units[u].text;
+      unresolved += (unresolved ? ' ' : '') + units[u].text;
       u += 1;
     }
   }
@@ -3799,8 +3887,7 @@ function receiptFoodNames(){
 }
 
 function buildReceiptPrompt(){
-  return 'You are reading a grocery receipt photo. It may be in English or ' +
-    'Chinese (e.g. Costco, 99 Ranch).\n\n' +
+  return 'You are reading a grocery receipt photo.\n\n' +
     'Return ONLY JSON, no prose, no markdown fences, in exactly this shape:\n' +
     '{"date": "YYYY-MM-DD or null", "items": [{"raw": "string as printed", ' +
     '"expanded": "string", "quantity": integer, "is_food": boolean}]}\n\n' +
@@ -3810,7 +3897,7 @@ function buildReceiptPrompt(){
     '- "expanded" is a plain, recognizable name (e.g. "KS ORG BNNA" -> ' +
     '"organic bananas"). If the item clearly matches one of these known ' +
     'foods, return that exact name instead: ' + receiptFoodNames() + '. ' +
-    'Otherwise return a plain English or Chinese name.\n' +
+    'Otherwise return a plain English name.\n' +
     '- "quantity" is an integer count of packages/units bought. A weighed ' +
     'line (e.g. "1.52 lb @ 0.99/lb") is quantity 1.\n' +
     '- "is_food" is false for paper towels, cleaning supplies, tax, ' +
@@ -4039,7 +4126,7 @@ function confirmReceipt(){
         touchStanding(it.key, null);
       } else {
         const name = it.label.trim() || it.raw || 'Item';
-        const custom = {en:name, zh:[], shelf:7, g:250, usd:2.50};
+        const custom = {en:name, shelf:7, g:250, usd:2.50};
         const key = '_c_' + (slug(name) || ('item' + id));
         fridge.push({id, key, bought: today() - age, custom});
         touchStanding(key, custom);
@@ -4089,7 +4176,7 @@ function startVoice(){
   document.getElementById('entry').value = '';
 
   recog = new SR();
-  recog.lang = navigator.language || 'en-US';
+  recog.lang = 'en-US';
   recog.continuous = true;
   recog.interimResults = true;
 
@@ -4185,7 +4272,7 @@ function discardVoicePreview(){
 let suggestItems = [];
 let suggestIndex = -1;
 
-const SEP_RE = /[,，、\n;]/;
+const SEP_RE = /[,\n;]/;
 
 // The field holds a comma-separated list, so suggestions match against the
 // unfinished tail after the last separator, not the whole value — selecting
@@ -4206,12 +4293,10 @@ function currentSegment(value){
 function matchFoods(query){
   const q = query.trim();
   if (!q) return [];
-  const isCJK = CJK_RE.test(q[0]);
   const ql = q.toLowerCase();
 
   function matches(key){
     const f = FOODS[key];
-    if (isCJK) return f.zh.some(z => z.includes(q));
     return f.en.toLowerCase().split(/\s+/).some(word => word.startsWith(ql));
   }
 
