@@ -729,48 +729,50 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    falls back to DEFAULT_BASE_HEX.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        shelf:7,  g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
-  lettuce:    {en:'Lettuce',        shelf:7,  g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
-  milk:       {en:'Milk',           shelf:7,  g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
-  yogurt:     {en:'Yogurt',         shelf:14, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
-  chicken:    {en:'Chicken breast', shelf:2,  g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
-  beef:       {en:'Ground beef',    shelf:2,  g:450, usd:7.20, cat:'protein', base:'#91473b'},
-  bacon:      {en:'Bacon',          shelf:7,  g:340, usd:6.00, cat:'protein', base:'#c76b60'},
-  egg:        {en:'Eggs',           shelf:35, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
-  tofu:       {en:'Tofu',           shelf:4,  g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
-  onion:      {en:'Onion, cut',     shelf:10, g:150, usd:0.80, cat:'veg', shape:'halfonion', base:'#ddd7e0'},
-  scallion:   {en:'Scallion',       shelf:10, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
-  garlic:     {en:'Garlic',         shelf:90, g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
-  ginger:     {en:'Ginger',         shelf:21, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
-  tomato:     {en:'Tomato',         shelf:7,  g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
-  carrot:     {en:'Carrot',         shelf:28, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
-  pepper:     {en:'Bell pepper',    shelf:14, g:300, usd:2.80, cat:'soft', base:'#c65539'},
-  broccoli:   {en:'Broccoli',       shelf:5,  g:400, usd:2.50, cat:'veg', base:'#287139'},
-  mushroom:   {en:'Mushrooms',      shelf:7,  g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
-  cilantro:   {en:'Cilantro',       shelf:7,  g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
-  potato:     {en:'Potato',         shelf:21, g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
-  lemon:      {en:'Lemon',          shelf:28, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
-  mango:      {en:'Mango',          shelf:5,  g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
-  // Apple: FoodKeeper gives refrigerator life as a 4-6 week range (28-42
-  // days) -- using the conservative 28, same "don't round up" rule as
-  // every ranged value here.
-  apple:      {en:'Apple',          shelf:28, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
-  // Banana: FoodKeeper's refrigerator figure (3 days) only applies once
-  // ripe -- an unripe banana belongs on the counter, not in here, but the
-  // app has no "pantry" concept, so this is the fridge number as given.
-  banana:     {en:'Banana',         shelf:3,  g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
-  cheese:     {en:'Cheese',         shelf:42, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
-  butter:     {en:'Butter',         shelf:30, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
-  cookedrice: {en:'Cooked rice',    shelf:5,  g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
+  spinach:    {en:'Spinach',        shelf:7, fk:291, g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
+  leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
+  romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', base:'#6aa86f'},
+  milk:       {en:'Milk',           shelf:7, fk:27, pkgDate:true, g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
+  yogurt:     {en:'Yogurt',         shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
+  chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
+  beef:       {en:'Ground beef',    shelf:2, fk:43, g:450, usd:7.20, cat:'protein', base:'#91473b'},
+  bacon:      {en:'Bacon',          shelf:7, fk:79, g:340, usd:6.00, cat:'protein', base:'#c76b60'},
+  egg:        {en:'Eggs',           shelf:35, fk:21, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
+  tofu:       {en:'Tofu',           shelf:7, fk:168, g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
+  onion:      {en:'Onion',          aliases:['onions','yellow onion','white onion','red onion','sweet onion'], shelf:30, fk:294, store:'pantry', g:150, usd:0.80, cat:'veg', base:'#ddd7e0'},
+  scallion:   {en:'Scallion',       shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  garlic:     {en:'Garlic',         shelf:30, fk:285, store:'pantry', g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
+  ginger:     {en:'Ginger',         shelf:21, fk:286, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
+  tomato:     {en:'Tomato',         shelf:7, fk:306, estimated:true, note:'FoodKeeper keeps tomatoes at room temperature until ripe and gives no refrigerator figure', g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
+  carrot:     {en:'Carrots',        aliases:['carrot','whole carrots'], shelf:21, fk:279, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
+  babycarrot: {en:'Baby carrots',   aliases:['baby carrot'], shelf:28, fk:491, g:350, usd:1.60, cat:'veg', plural:true, shape:'carrot', base:'#d9894a'},
+  pepper:     {en:'Bell pepper',    shelf:14, fk:296, g:300, usd:2.80, cat:'soft', base:'#c65539'},
+  broccoli:   {en:'Broccoli',       shelf:5, fk:276, g:400, usd:2.50, cat:'veg', base:'#287139'},
+  mushroom:   {en:'Mushrooms',      shelf:7, fk:292, g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
+  cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
+  potato:     {en:'Potato',         shelf:60, fk:297, store:'pantry', g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
+  lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
+  mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
+  apple:      {en:'Apple',          shelf:42, fk:248, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
+  // Banana: kept out of the fridge, but FoodKeeper's pantry guidance is
+  // "when ripe", not a number, so the rule falls back to its refrigerator
+  // figure.
+  banana:     {en:'Banana',         shelf:3, fk:251, g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
+  hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
+  shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
+  softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
+  butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
+  cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
-  // under a generic FoodKeeper category, e.g. Chinese eggplant via the
-  // generic "Eggplant" entry). No `estimated` flag.
-  bokchoy:        {en:'Bok choy',          shelf:3,  g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
-  daikon:         {en:'Daikon',            shelf:14, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
-  chineseeggplant:{en:'Chinese eggplant',  shelf:7,  g:300, usd:2.10, cat:'soft', base:'#7e4592'},
-  beansprouts:    {en:'Bean sprouts',      shelf:10, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
-  shiitake:       {en:'Shiitake mushroom', shelf:7,  g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
-  enoki:          {en:'Enoki mushroom',    shelf:7,  g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
+  // under a generic FoodKeeper entry, e.g. Chinese eggplant via the generic
+  // "Eggplant" entry). fk is the FoodKeeper product id; see CLAUDE.md for
+  // the rule that turns its range into days.
+  bokchoy:        {en:'Bok choy',          shelf:3, fk:275, g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
+  daikon:         {en:'Daikon',            shelf:14, fk:299, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
+  chineseeggplant:{en:'Chinese eggplant',  shelf:7, fk:284, g:300, usd:2.10, cat:'soft', base:'#7e4592'},
+  beansprouts:    {en:'Bean sprouts',      shelf:10, fk:549, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
+  shiitake:       {en:'Shiitake mushroom', shelf:7, fk:292, g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
+  enoki:          {en:'Enoki mushroom',    shelf:7, fk:292, g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -778,14 +780,14 @@ const FOODS = {
   // dataset). Shipping the sourced figure as-is rather than quietly
   // correcting it toward intuition — that correction is exactly the kind
   // of move that turns a source into a guess. Revisit if verified.
-  taro:           {en:'Taro',              shelf:3,  g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
-  bambooshoots:   {en:'Bamboo shoots',     shelf:14, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
-  edamame:        {en:'Edamame',           shelf:5,  g:300, usd:2.40, cat:'veg', base:'#46a44a'},
-  leek:           {en:'Leeks',             shelf:14, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
-  cucumber:       {en:'Cucumber',          shelf:6,  g:300, usd:1.40, cat:'soft', base:'#54ab54'},
-  zucchini:       {en:'Zucchini',          shelf:5,  g:250, usd:1.90, cat:'soft', base:'#328640'},
-  cauliflower:    {en:'Cauliflower',       shelf:5,  g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
-  corn:           {en:'Corn',              shelf:2,  g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
+  taro:           {en:'Taro',              shelf:3, fk:305, g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
+  bambooshoots:   {en:'Bamboo shoots',     shelf:14, fk:272, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
+  edamame:        {en:'Edamame',           shelf:5, fk:640, g:300, usd:2.40, cat:'veg', base:'#46a44a'},
+  leek:           {en:'Leeks',             shelf:14, fk:289, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
+  cucumber:       {en:'Cucumber',          shelf:6, fk:283, g:300, usd:1.40, cat:'soft', base:'#54ab54'},
+  zucchini:       {en:'Zucchini',          shelf:7, fk:547, g:250, usd:1.90, cat:'soft', base:'#328640'},
+  cauliflower:    {en:'Cauliflower',       shelf:5, fk:280, g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
+  corn:           {en:'Corn',              shelf:2, fk:282, g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
   // No FoodKeeper entry, and no same-species proxy close enough to call
   // sourced — either nothing in the dataset resembles them (lotus root,
   // winter melon, water spinach, snow peas) or the closest entry is a
@@ -794,14 +796,14 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed/spoken items.
-  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, cat:'leafy', base:'#a7c0a5'},
-  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, cat:'leafy', plural:true, base:'#429453'},
-  lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, cat:'veg', base:'#dfdad8'},
-  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, cat:'leafy', base:'#3a8847'},
-  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, cat:'leafy', base:'#489953'},
-  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, cat:'leafy', base:'#429450'},
-  wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, cat:'veg', base:'#b8cfb4'},
-  snowpeas:     {en:'Snow peas',      shelf:5, g:200, usd:2.70, estimated:true, cat:'veg', plural:true, base:'#5bae61'}
+  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', base:'#a7c0a5'},
+  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, base:'#429453'},
+  lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#dfdad8'},
+  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, note:'No FoodKeeper entry; Broccoli (#276) is a different variety', cat:'leafy', base:'#3a8847'},
+  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#489953'},
+  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#429450'},
+  wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#b8cfb4'},
+  snowpeas:     {en:'Snow peas',      shelf:5, fk:273, g:200, usd:2.70, cat:'veg', plural:true, base:'#5bae61'}
 };
 
 const DISHES = [
@@ -815,12 +817,12 @@ const DISHES = [
   {name:'Tofu with minced beef',       needs:['tofu','beef','garlic','scallion'],  pantry:['chili bean paste']},
   {name:'Milk pancakes',               needs:['milk','egg','butter'],              pantry:['flour']},
   {name:'Roast carrot and lemon salad',needs:['carrot','lemon','cilantro'],        pantry:['olive oil']},
-  {name:'Bacon and pepper pasta',      needs:['bacon','pepper','onion','cheese'],  pantry:['pasta']},
-  {name:'Green salad with soft egg',   needs:['lettuce','egg','tomato','lemon'],   pantry:['olive oil']},
+  {name:'Bacon and pepper pasta',      needs:['bacon','pepper','onion','hardcheese'],  pantry:['pasta']},
+  {name:'Green salad with soft egg',   needs:['leaflettuce','egg','tomato','lemon'],   pantry:['olive oil']},
   {name:'Ginger scallion noodles',     needs:['scallion','ginger','garlic'],       pantry:['noodles','oil']},
-  {name:'Cheese omelette',             needs:['egg','cheese','butter'],            pantry:['salt']},
+  {name:'Cheese omelette',             needs:['egg','shreddedcheese','butter'],            pantry:['salt']},
   {name:'Potato and onion hash',       needs:['potato','onion','pepper'],          pantry:['oil','paprika']},
-  {name:'Mushroom cream pasta',        needs:['mushroom','milk','cheese','garlic'],pantry:['pasta']},
+  {name:'Mushroom cream pasta',        needs:['mushroom','milk','hardcheese','garlic'],pantry:['pasta']},
   {name:'Tomato beef noodle',          needs:['tomato','beef','ginger','scallion'],pantry:['noodles']},
   {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame']},
 
@@ -866,7 +868,8 @@ const SUBS = {
   milk:      [{key:'yogurt', pct:84},{name:'Water and butter', pct:61}],
   onion:     [{key:'scallion', pct:79},{key:'garlic', pct:66}],
   butter:    [{name:'Neutral oil', pct:88}],
-  cheese:    [{name:'Nutritional yeast', pct:55}],
+  hardcheese:[{name:'Nutritional yeast', pct:55}],
+  shreddedcheese:[{name:'Nutritional yeast', pct:55}],
   ginger:    [{key:'garlic', pct:60},{name:'Ground ginger', pct:82}],
   cilantro:  [{key:'scallion', pct:58},{name:'Parsley', pct:71}],
   lemon:     [{name:'Rice vinegar', pct:74}],
@@ -882,9 +885,9 @@ const SUBS = {
   tofu:      [{key:'egg', pct:64}],
   bacon:     [{key:'chicken', pct:70}],
   beef:      [{key:'chicken', pct:75}],
-  lettuce:   [{key:'spinach', pct:85}],
+  leaflettuce:[{key:'spinach', pct:85}],
   pepper:    [{key:'carrot', pct:66}],
-  spinach:   [{key:'lettuce', pct:72}],
+  spinach:   [{key:'leaflettuce', pct:72}],
   chicken:   [{key:'tofu', pct:68}],
   potato:    [{key:'carrot', pct:60}],
   cookedrice:[{name:'Instant noodles', pct:70}]
@@ -936,7 +939,7 @@ function loadState(){
 // English FOODS key, so only those custom records can need this.
 // LEGACY_ZH is the old synonym list, frozen here for this migration only --
 // it is the one place Chinese is left in the app, and nothing else reads it.
-const SCHEMA = 2;
+const SCHEMA = 3;
 const LEGACY_ZH = {
   '菠菜':'spinach',
   '生菜':'lettuce',
@@ -999,7 +1002,7 @@ const LEGACY_ZH = {
 // merges into it (counts added, latest purchase kept) rather than
 // duplicating it.
 function migrateLegacyNames(saved){
-  if ((saved.schema || 1) >= SCHEMA) return saved;
+  if ((saved.schema || 1) >= 2) return saved;
   const items = Array.isArray(saved.fridge) ? saved.fridge : [];
   const standingIn = saved.standing && typeof saved.standing === 'object' ? saved.standing : {};
   const target = c => {
@@ -1032,7 +1035,40 @@ function migrateLegacyNames(saved){
       standingIn[t] = {count:old.count, lastBought:old.lastBought, custom:null};
     }
   });
-  saved.schema = SCHEMA;
+  saved.schema = 2;
+  return saved;
+}
+
+// Schema 3 split and removed FOODS entries: lettuce became leaf and
+// romaine, cheese became hard, shredded and soft, carrot gained baby
+// carrots, and "Onion, cut" left (the onion key is now a whole onion).
+// Saved records under those keys keep their purchase date and the shelf
+// life they were saved with -- pinned on the record as it.shelf -- so an
+// expiry already on screen never moves. The old generic keys that are now
+// ambiguous move to the entry that matches what was drawn and counted:
+// lettuce (7 days) to leaf lettuce, cheese (the wedge) to hard cheese.
+// Milk now asks for the printed date at entry; saved milk keeps its 7.
+const SPLIT_RENAME = {lettuce:'leaflettuce', cheese:'hardcheese'};
+const SPLIT_PIN = {lettuce:7, cheese:42, carrot:28, onion:10, milk:7};
+
+function migrateSplitEntries(saved){
+  if ((saved.schema || 1) >= 3) return saved;
+  (Array.isArray(saved.fridge) ? saved.fridge : []).forEach(it => {
+    if (it.custom || !Object.prototype.hasOwnProperty.call(SPLIT_PIN, it.key)) return;
+    if (it.shelf == null) it.shelf = SPLIT_PIN[it.key];
+    if (SPLIT_RENAME[it.key]) it.key = SPLIT_RENAME[it.key];
+  });
+  const st = saved.standing && typeof saved.standing === 'object' ? saved.standing : {};
+  Object.keys(SPLIT_RENAME).forEach(old => {
+    if (!st[old]) return;
+    const to = SPLIT_RENAME[old], prev = st[old];
+    delete st[old];
+    if (st[to]){
+      st[to].count = (st[to].count || 0) + (prev.count || 0);
+      st[to].lastBought = Math.max(st[to].lastBought || 0, prev.lastBought || 0);
+    } else st[to] = {count:prev.count, lastBought:prev.lastBought, custom:null};
+  });
+  saved.schema = 3;
   return saved;
 }
 
@@ -1045,7 +1081,7 @@ function saveState(){
 function boot(){
   const now = today();
   const saved = loadState();
-  if (saved) migrateLegacyNames(saved);
+  if (saved){ migrateLegacyNames(saved); migrateSplitEntries(saved); }
   if (saved){
     fridge = saved.fridge || [];
     standing = saved.standing || {};
@@ -1056,8 +1092,8 @@ function boot(){
     fridge.forEach(it => {
       if (it.crossed) return;
       const f = food(it);
-      const leftAtVisit = f.shelf - (prevVisit - it.bought);
-      const leftNow = f.shelf - (now - it.bought);
+      const leftAtVisit = shelfOf(it) - (prevVisit - it.bought);
+      const leftNow = shelfOf(it) - (now - it.bought);
       if (leftAtVisit >= 0 && leftNow < 0) it.crossed = true;
     });
   } else {
@@ -1067,7 +1103,10 @@ function boot(){
 }
 
 const food = it => it.custom || FOODS[it.key];
-const leftAt = (it, day) => food(it).shelf - (day - it.bought);
+// A record can carry its own shelf (days from purchase): a printed package
+// date, or a value pinned by a migration. Otherwise the food's own.
+const shelfOf = it => it.shelf != null ? it.shelf : food(it).shelf;
+const leftAt = (it, day) => shelfOf(it) - (day - it.bought);
 const left = it => leftAt(it, today());
 
 function state(d){
@@ -1083,7 +1122,7 @@ const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh
 // date. The fridge view's only decay math; everything else (darken, sag,
 // shrink, mold) is this one number driving continuous CSS/SVG output.
 function decayFraction(it, day){
-  return Math.max(0, Math.min(1, 1 - leftAt(it, day) / food(it).shelf));
+  return Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
 }
 
 function fmtDate(epochDay){
@@ -3533,7 +3572,7 @@ function renderRows(){
     const d = left(it);
     const st = state(d);
     const f = food(it);
-    const frac = Math.max(0, Math.min(1, d / f.shelf));
+    const frac = Math.max(0, Math.min(1, d / shelfOf(it)));
     const on = d < 0 ? 0 : Math.max(1, Math.ceil(frac * 10));
     const bars = Array.from({length:10}, (_,i) => `<i class="${i < on ? '' : 'off'}"></i>`).join('');
     return `<div class="row ${d<0?'dead':''}">
@@ -3657,6 +3696,7 @@ function exactLookup(token){
     if (k === t) return k;
     if (f.en.toLowerCase() === t) return k;
     if (f.en.toLowerCase().split(',')[0] === t) return k;
+    if ((f.aliases || []).includes(t)) return k;
   }
   return null;
 }
@@ -3700,6 +3740,7 @@ function restock(key){
     }
     existing.bought = today();
     existing.crossed = false;
+    delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
   } else {
     fridge.push({id:++uid, key, bought:today(), custom: entry.custom || null});
   }

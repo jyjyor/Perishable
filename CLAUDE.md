@@ -15,8 +15,31 @@ consumer food app.
 
 - Single self-contained HTML file. No build step, no framework, no npm.
 - No backend, no accounts, no database.
-- Shelf-life values follow USDA FoodKeeper refrigerator guidance. Do not
-  round them up to be friendlier. Raw chicken is 2 days.
+- Shelf-life values come only from USDA FoodKeeper (tools/data/
+  foodkeeper.json, unmodified; tools/data/README.md says where it came
+  from). Every FOODS entry carries its FoodKeeper id as fk. The rule:
+  1. Column: refrigerator, counted from purchase -- DOP_Refrigerate, else
+     Refrigerate. Never the after-opening or after-thawing values; the app
+     counts from purchase and has no "opened" state.
+  2. Foods usually kept out of the fridge use the pantry value instead
+     (DOP_Pantry, else Pantry): bananas, potatoes, sweet potatoes, whole
+     onions, garlic, tomatoes, winter squash, whole spaghetti squash,
+     pumpkins, avocados, bread and bagels (FoodKeeper ids 251, 297, 422,
+     294, 285, 306, 303, 596, 298, 250, 195, 460, 461, 574, 449). If the
+     pantry value is "When Ripe", use the refrigerator number.
+  3. Ranges: the upper end. Do not go past it to be friendlier -- raw
+     chicken is 2 days.
+  4. Units: days x1, weeks x7, months x30, years x365. Hours give no value.
+  5. No number:
+     - Package use-by date (milk and similar): ask for the date printed on
+       the package at entry, and flag it in receipt review (pkgDate).
+     - No printed date and no FoodKeeper number (tomato, and the
+       vegetables FoodKeeper doesn't list): keep the current number,
+       marked estimated:true, with a note saying why.
+     - Anything that matches nothing needs a date before it can be saved.
+       There is no default shelf life.
+  6. Matches: the same food, or the same species under a generic
+     FoodKeeper entry. A different species or variety is not a match.
 - English only. Typed entry, voice (en-US), autocomplete, receipt
   scanning and every hint and placeholder work in English; FOODS carries
   no other-language synonyms. The single exception is LEGACY_ZH in

@@ -262,7 +262,9 @@ async function fridgeGradientScenario(browser) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForSelector('#headline');
-  await page.fill('#entry', 'carrot 7d, yogurt 7d, mushrooms 5d, cheese 40d');
+  // baby carrots 7/28, yogurt 7/14, mushrooms 5/7, hard cheese 171/180:
+  // the same 25/50/75/95% spread the original carrot/cheese values gave.
+  await page.fill('#entry', 'baby carrots 7d, yogurt 7d, mushrooms 5d, hard cheese 171d');
   await page.click('#addbtn');
   await page.waitForTimeout(150);
 
@@ -570,7 +572,7 @@ async function rfSeed(page, day){
     fridge = [
       {id: uid++, key: 'chicken', bought: day},       // today, critical
       {id: uid++, key: 'spinach', bought: day - 5},    // turn
-      {id: uid++, key: 'cheese', bought: day - 5},     // fresh (42-day shelf)
+      {id: uid++, key: 'hardcheese', bought: day - 5}, // fresh (180-day shelf)
       {id: uid++, key: 'tomato', bought: day - 9},     // gone, into the crisper
     ];
     render();
@@ -802,7 +804,7 @@ async function legacyMapScenario(browser) {
   if ('_c_菠菜' in after.standing || '_c_番茄' in after.standing) throw new Error('old Chinese standing keys survived the migration');
   expectEqual('ledger unchanged', after.ledger, { wasteG: 300, wasteUSD: 2.5, savedG: 400 });
   expectEqual('uid unchanged', after.uid, 7);
-  expectEqual('schema stamped', after.schema, 2);
+  expectEqual('schema stamped', after.schema, 3);
   const label = await page.$$eval('.row, [data-id]', els => els.map(e => e.textContent).join(' '));
   if (/[一-鿿]/.test(label)) throw new Error('Chinese text still rendered after migration');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
@@ -901,6 +903,45 @@ async function legacyUnmappedScenario(browser) {
   await page.context().close();
 }
 
+async function splitEntriesScenario(browser) {
+  console.log('\n--- SPLIT ENTRIES: saved lettuce/cheese/carrot/onion/milk keep their dates ---');
+  const { page, errors, day, read } = await seedLegacy(browser, day => ({
+    schema: 2,
+    fridge: [
+      { id: 1, key: 'lettuce', bought: day - 2, custom: null },
+      { id: 2, key: 'cheese', bought: day - 30, custom: null },
+      { id: 3, key: 'carrot', bought: day - 20, custom: null },
+      { id: 4, key: 'onion', bought: day - 4, custom: null, crossed: false },
+      { id: 5, key: 'milk', bought: day - 3, custom: null },
+    ],
+    standing: {
+      lettuce: { count: 2, lastBought: day - 2, custom: null },
+      cheese: { count: 1, lastBought: day - 30, custom: null },
+      hardcheese: { count: 1, lastBought: day - 60, custom: null },
+      onion: { count: 3, lastBought: day - 4, custom: null },
+    },
+    ledger: { wasteG: 0, wasteUSD: 0, savedG: 0 },
+    uid: 5, startedAt: day - 40, lastVisit: day,
+  }));
+  const after = await read();
+  const rows = after.fridge.map(it => [it.id, it.key, it.bought - day, it.shelf]);
+  console.log('fridge after load [id, key, bought, pinned shelf]:', JSON.stringify(rows));
+  expectEqual('records', rows, [
+    [1, 'leaflettuce', -2, 7], [2, 'hardcheese', -30, 42], [3, 'carrot', -20, 28], [4, 'onion', -4, 10], [5, 'milk', -3, 7],
+  ]);
+  expectEqual('standing', Object.keys(after.standing).sort(), ['hardcheese', 'leaflettuce', 'onion']);
+  expectEqual('merged cheese standing', [after.standing.hardcheese.count, after.standing.hardcheese.lastBought - day], [2, -30]);
+  // Days left on screen are the ones the old values gave: 5, 12, 8, 6, 4.
+  const shown = await page.$$eval('#rows .row', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  console.log('inventory rows:', JSON.stringify(shown));
+  for (const [name, days] of [['Leaf lettuce', 5], ['Hard cheese', 12], ['Carrots', 8], ['Onion', 6], ['Milk', 4]]) {
+    if (!shown.some(t => t.includes(name) && new RegExp(`\\b${days}\\b`).test(t))) throw new Error(`${name} does not show ${days} days left`);
+  }
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  console.log('dates kept, items still display under their new names: ok');
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -921,6 +962,7 @@ async function legacyUnmappedScenario(browser) {
   await legacyLinkScenario(browser);
   await legacyOnceScenario(browser);
   await legacyUnmappedScenario(browser);
+  await splitEntriesScenario(browser);
   await realFridgeDoorLoadScenario(browser);
   await realFridgeHandleToggleScenario(browser);
   await realFridgeReducedMotionScenario(browser);
