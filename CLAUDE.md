@@ -48,8 +48,7 @@ consumer food app.
        purchase (FROM_PURCHASE in the import script).
   Changing a FOODS number moves the expiry of items already saved under
   it (records store the purchase day). A date the person gives -- a
-  package date at entry, or one set later in the list's Edit mode or
-  the popover -- is stored on the record and never recomputed. Bought
+  package date at entry, or one set later in the popover -- is stored on the record and never recomputed. Bought
   can be corrected in the popover too: Use by moves with it by the
   item's shelf life unless the person set Use by. Bought can't be in the
   future or after Use by. Editing either date is a correction: it never
@@ -73,8 +72,8 @@ consumer food app.
 
 Two colour roles, kept apart on purpose. Urgency — how soon something
 turns — is told only by the decay-sequence palette below, and it appears
-in exactly four places: the fridge's item labels and popover, the
-inventory list, the decay line, and its legend. Do not
+in exactly four places: the line-art row's labels (name and days left),
+the fridge's popover, the decay line, and its legend. Do not
 add colours outside this set for urgency, and do not let urgency colour
 migrate anywhere else.
 
@@ -174,26 +173,33 @@ colour, never crossing the line or each other; further out is a dot
 only. Both read from the same shelf-life math (leftAt, pos) and must
 never disagree with each other.
 
-The fridge is the illustrated one: a literal drawing of a fridge (door,
-shelves, crisper, door bins). The line-art shelf view that used to sit
-below it is retired; its food drawings live on, because the fridge draws
-every item through them (foodShapeMarkupLine, natureColor, fridgeCatOf/
-fridgeShapeOf). See REPORT.md for how it was first built. Urgency colour
-keeps the role it has elsewhere: a small name label hung below each of
-the three most urgent items only (no days: deli containers and trays
-look alike, and those are the ones to recognise at a glance), and the
-popover any tapped item shows — nothing on the closed door itself. The
-fridge tells urgency by position, size and decay; dates live in the
-popover, the decay line and the list. Every item is a button (pointer, a
-slight lift on hover, a focus ring). The popover carries the dates and
-Used and Tossed, which run the list's own code (useItem); either one
-closes the popover and shows the toast with Undo, never a confirmation
-dialog. Past-date items sit in the crisper, whose drawer front reads "N
-past date · Toss all" and opens the list's confirmation.
+Two fridge views, one after the other, from the same `fridge` array.
 
-Below the fridge, the inventory list is collapsed under "All items (N)",
-closed by default: the fastest way to find an item by name and act on
-several at once, and the view for keyboard and screen-reader users.
+The illustrated fridge opens the page: a literal drawing of a fridge
+(door, shelves, crisper, door bins). See REPORT.md for how it was first
+built. It tells urgency by position, size and decay only: no tags or
+labels under its items. Every item is a button (pointer, a slight lift
+on hover, a focus ring) that opens the popover: name, status, Bought and
+Use by (both editable), shelf-life source, Est. weight, It's ripe for a
+ripening item, Used and Tossed, and a quiet Remove link for an item
+logged by mistake (removeFridgeItem: out of the fridge, not waste, its
+restock count undone). Past-date items sit in the crisper, whose drawer
+front reads "N past date · Toss all"; Toss all asks right there ("Toss N
+past date? Toss N · Cancel") before anything counts as waste.
+
+The line-art "The fridge" section follows and does the job the list used
+to: every item drawn by the same food drawings (foodShapeMarkupLine,
+natureColor, fridgeCatOf/fridgeShapeOf), on shelves by urgency, with its
+name and days left in its urgency colour, and Used and Tossed as small
+text buttons under each. Tapping a drawing opens the same popover. On a
+phone each button is a full 44px tap target, and each item gets a slot at
+least as wide as its label, so a row wraps to a new shelf rather than
+letting labels or buttons collide. There is no separate list.
+
+Used and Tossed, from the row or the popover, both run useItem: the same
+ledger change, and the toast with Undo for a few seconds, never a
+confirmation dialog or anything celebratory. Undo puts the same record
+back and takes the same amounts off the ledger.
 
 ## Voice
 
