@@ -7,6 +7,9 @@
 //   - foods usually kept out of the fridge (PANTRY_KEPT): DOP_Pantry, else
 //     Pantry; "When Ripe" falls back to the refrigerator number
 //   - upper end of a range; days x1, weeks x7, months x30, years x365
+//   - a refrigerator number FoodKeeper says "applies to ripe fruit" counts
+//     from ripeness, not purchase: kept as 'ripe', so the app asks for a
+//     date with the hint "about N days after it ripens"
 //   - no number, but the refrigerator guidance is the package date: kept,
 //     with no days, so the app asks for the printed date
 //   - no number at all: left out, so the app treats it as no match
@@ -70,7 +73,10 @@ function valueOf(r) {
     .concat([['DOP_Refrigerate', 'R'], ['Refrigerate', 'R']]);
   for (const [col, store] of order) {
     const days = range(r, col);
-    if (days != null) return { days, store };
+    if (days != null){
+      if (col === 'Refrigerate' && /applies to ripe/i.test(r.Refrigerate_tips || '')) return { days, store: 'ripe' };
+      return { days, store };
+    }
   }
   if (['DOP_Refrigerate', 'Refrigerate'].some(c => r[c + '_Metric'] === 'Package use-by date')) {
     return { days: null, store: 'pkg' };
@@ -157,7 +163,8 @@ function main() {
 
   const body =
     `// [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,\n` +
-    `//  storage column (R refrigerator, P pantry, pkg package date), category index]\n` +
+    `//  storage column (R refrigerator, P pantry, ripe refrigerator counted from\n` +
+    `//  ripeness, pkg package date), category index]\n` +
     `const FK_CATEGORIES = ${JSON.stringify(catNames)};\n` +
     `const FK_TABLE = [\n` + rows.map(r => JSON.stringify(r)).join(',\n') + `\n];`;
   const block = `${BEGIN}\n${body}\n${END}`;
@@ -167,9 +174,9 @@ function main() {
   if (a < 0 || b < 0 || b < a) throw new Error('FOODKEEPER markers not found in index.html');
   fs.writeFileSync(HTML, html.slice(0, a) + block + html.slice(b + END.length));
 
-  const counts = { R: 0, P: 0, pkg: 0 };
+  const counts = { R: 0, P: 0, ripe: 0, pkg: 0 };
   rows.forEach(r => counts[r[4]]++);
-  console.log(`${rows.length} items written (refrigerator ${counts.R}, pantry ${counts.P}, package date ${counts.pkg}); ` +
+  console.log(`${rows.length} items written (refrigerator ${counts.R}, pantry ${counts.P}, from ripeness ${counts.ripe}, package date ${counts.pkg}); ` +
     `${products.length - rows.length} left out with no value; ${dropped} generic keywords dropped; ` +
     `table ${(Buffer.byteLength(block) / 1024).toFixed(1)} KB.`);
 }

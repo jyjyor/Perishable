@@ -92,16 +92,23 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .fridgeview{padding:28px 0 8px}
 .fridgeview-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:18px}
 .fridgeview-head .spacer{flex:1}
-.fridge-shelf{
-  position:relative;
-  padding:4px 4px 0;
-  border-bottom:2px solid var(--ink);
-}
+.fridge-shelf{position:relative;padding:4px 4px 0}
+/* One shelf per row: the items stand on its line, their labels hang in
+   one band under it, stepping down a tier (--tier) only where two would
+   collide -- the illustrated fridge's rule. */
+.fridge-row{position:relative;border-bottom:2px solid var(--ink)}
 .fridge-shelf .fridge-item{position:absolute;bottom:0}
+.fridge-shelf .fridge-label{
+  position:absolute;left:50%;width:max-content;max-width:92px;
+  top:calc(100% + 8px + var(--tier, 0) * var(--tier-h, 30px));
+  transform:translateX(calc(-50% + var(--dx, 0px)));
+}
+.fridge-shelf .fridge-label::before{
+  content:'';position:absolute;bottom:100%;left:calc(50% - var(--dx, 0px));width:1px;
+  height:calc(6px + var(--tier, 0) * var(--tier-h, 30px));background:var(--line);
+}
 .fridge-item{display:flex;flex-direction:column;align-items:center;gap:4px;max-width:92px}
-.fridge-item.covered{cursor:pointer}
-.fridge-item.covered .fridge-label{opacity:0;pointer-events:none;transition:opacity .15s ease}
-.fridge-item.covered.revealed .fridge-label{opacity:1;pointer-events:auto}
+.fridge-shelf .fridge-item{max-width:none}
 .fridge-shape{display:flex;align-items:flex-end;justify-content:center}
 .fridge-shape svg{display:block}
 .fridge-label{
@@ -772,8 +779,9 @@ const FOODS = {
   apple:      {en:'Apple',          shelf:42, fk:248, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
   // Banana: kept out of the fridge, but FoodKeeper's pantry guidance is
   // "when ripe", not a number, so the rule falls back to its refrigerator
-  // figure.
-  banana:     {en:'Banana',         shelf:3, fk:251, g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
+  // figure -- which FoodKeeper says applies to ripe fruit, so it asks for
+  // a date (see avocado).
+  banana:     {en:'Banana',         shelf:3, fk:251, pkgDate:true, dateHint:'about 3 days after it ripens', g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
   hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
   shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
   softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
@@ -840,10 +848,11 @@ const FOODS = {
   avocado:       {en:'Avocados',          aliases:['avocado','hass avocado'], shelf:4, fk:250, store:'pantry', pkgDate:true, dateHint:'about 4 days after it ripens', g:1000, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#5b8a3a'},
   orange:        {en:'Oranges',           aliases:['orange','navel orange','navel oranges','cara cara orange'], shelf:21, fk:256, g:3600, usd:9.99, estPrice:true, cat:'soft', plural:true, base:'#e48a2c'},
   // #266 is "Peaches, nectarines, plums, pears, sapote": one entry for
-  // both; its 3-5 days is for ripe fruit.
-  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, g:1800, usd:8.99, estPrice:true, cat:'soft', plural:true, base:'#f0a868'},
-  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, g:1800, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#c9cf6a'},
-  pineapple:     {en:'Pineapple',         shelf:7, fk:267, g:1600, usd:2.99, estPrice:true, cat:'soft', base:'#e3c55a'},
+  // both. Its 3-5 days is for ripe fruit, so these ask for a date (see
+  // avocado), as do pineapple and banana.
+  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, pkgDate:true, dateHint:'about 5 days after it ripens', g:1800, usd:8.99, estPrice:true, cat:'soft', plural:true, base:'#f0a868'},
+  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, pkgDate:true, dateHint:'about 5 days after it ripens', g:1800, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#c9cf6a'},
+  pineapple:     {en:'Pineapple',         shelf:7, fk:267, pkgDate:true, dateHint:'about 7 days after it ripens', g:1600, usd:2.99, estPrice:true, cat:'soft', base:'#e3c55a'},
   // #495 counts from purchase (DOP), whole: pantry 1-2 days "or until
   // ripe", refrigerator 3-4. Not a cut value, and not on the pantry list.
   watermelon:    {en:'Watermelon',        aliases:['seedless watermelon'], shelf:4, fk:495, g:7000, usd:6.99, estPrice:true, cat:'soft', base:'#e2584a'},
@@ -969,7 +978,8 @@ const SUBS = {
 
 /* BEGIN FOODKEEPER -- generated by tools/import-foodkeeper.js from tools/data/foodkeeper.json; do not edit by hand */
 // [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,
-//  storage column (R refrigerator, P pantry, pkg package date), category index]
+//  storage column (R refrigerator, P pantry, ripe refrigerator counted from
+//  ripeness, pkg package date), category index]
 const FK_CATEGORIES = ["Dairy Products & Eggs","Meat / Fresh","Meat / Smoked or Processed","Meat / Stuffed or Assembled","Meat / Shelf Stable Foods","Poultry / Fresh","Poultry / Stuffed or Assembled","Poultry / Cooked or Processed","Deli & Prepared Foods","Seafood / Fresh","Seafood / Shellfish","Seafood / Smoked","Vegetarian Proteins","Baked Goods / Bakery","Baked Goods / Refrigerated Dough","Produce / Fresh Fruits","Produce / Fresh Vegetables","Food Purchased Frozen","Grains, Beans & Pasta","Condiments, Sauces & Canned Goods","Shelf Stable Foods","Beverages","Baked Goods / Baking and Cooking"];
 const FK_TABLE = [
 [1,"Butter","",60,"R",0],
@@ -1146,25 +1156,25 @@ const FK_TABLE = [
 [246,"Ready-to-bake pie crust","ready to bake pie crust",null,"pkg",14],
 [247,"Cookie dough","",null,"pkg",14],
 [248,"Apples","",42,"R",15],
-[249,"Apricots","",5,"R",15],
-[250,"Avocados","",4,"R",15],
-[251,"Bananas","",3,"R",15],
+[249,"Apricots","",5,"ripe",15],
+[250,"Avocados","",4,"ripe",15],
+[251,"Bananas","",3,"ripe",15],
 [252,"Berries (cherries, goose berries, lychee)","goose berry|lychee",7,"R",15],
 [253,"Berries (blackberries, boysenberries, currant)","blackberry|boysenberry|currant",6,"R",15],
 [254,"Blueberries","",14,"R",15],
-[255,"Cherimoya","",4,"R",15],
+[255,"Cherimoya","",4,"ripe",15],
 [256,"Citrus fruit (lemon, lime, orange, grapefruit, tangerines, clementines)","lime|grapefruit|tangerine|clementine",21,"R",15],
 [258,"Coconuts (fresh)","",21,"R",15],
 [259,"Cranberries","",60,"R",15],
 [260,"Dates","",360,"R",15],
 [261,"Grapes","",7,"R",15],
-[262,"Guava","",4,"R",15],
-[263,"Kiwi fruit","",6,"R",15],
+[262,"Guava","",4,"ripe",15],
+[263,"Kiwi fruit","",6,"ripe",15],
 [264,"Melons","",14,"R",15],
 [265,"Papaya, mango, feijoa, passionfruit, casaha melon","",7,"R",15],
-[266,"Peaches, nectarines, plums, pears, sapote","",5,"R",15],
-[267,"Pineapple","",7,"R",15],
-[268,"Plantains","",5,"R",15],
+[266,"Peaches, nectarines, plums, pears, sapote","",5,"ripe",15],
+[267,"Pineapple","",7,"ripe",15],
+[268,"Plantains","",5,"ripe",15],
 [269,"Pomegranate","",90,"R",15],
 [270,"Artichokes, whole","",14,"R",16],
 [271,"Asparagus","",4,"R",16],
@@ -1220,7 +1230,7 @@ const FK_TABLE = [
 [343,"Dry gravy mixes","",2,"R",19],
 [346,"Horseradish (in jar)","",360,"R",19],
 [354,"Pesto (jarred)","",180,"R",19],
-[414,"Kumquats","",21,"R",15],
+[414,"Kumquats","",21,"ripe",15],
 [415,"Bagged greens (leaf, spinach, lettuce, etc.)","spinach",5,"R",16],
 [417,"Seafood salads ((tuna salad, shrimp salad, salmon salad, mixed seafood salad, etc.))","tuna salad|shrimp salad|salmon salad|mixed seafood salad|mixed seafood",4,"R",8],
 [418,"Chicken salad","",4,"R",8],
@@ -1570,7 +1580,9 @@ function boot(){
   lastVisit = now;
 }
 
-const food = it => it.custom || foodOf(it.key);
+// A FoodKeeper fallback item shows the name it was typed or scanned as
+// (it.name, cleaned); FoodKeeper's own title is only its source.
+const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : foodOf(it.key));
 // A record can carry its own shelf (days from purchase): a printed package
 // date, or a value pinned by a migration. Otherwise the food's own.
 const shelfOf = it => it.shelf != null ? it.shelf : food(it).shelf;
@@ -2255,10 +2267,10 @@ function garlicOutline(s){
 function catOutlinePoints(shape, s){
   const cx = s / 2;
   switch(shape){
-    case 'leafy':    return ellipseRing(8, s*0.44, s*0.32, cx, s*0.60);
-    case 'soft':     return ellipseRing(8, s*0.40, s*0.40, cx, s*0.52);
-    case 'veg':      return ellipseRing(6, s*0.30, s*0.40, cx, s*0.52);
-    case 'cooked':   return ellipseRing(7, s*0.44, s*0.21, cx, s*0.60);
+    case 'leafy':    return leafyOutline(s);
+    case 'soft':     return softOutline(s);
+    case 'veg':      return vegOutline(s);
+    case 'cooked':   return cookedOutline(s);
     case 'mushroom': return mushroomOutline(s);
     case 'potato':   return potatoOutline(s);
     case 'apple':    return appleOutline(s);
@@ -2273,12 +2285,64 @@ function catOutlinePoints(shape, s){
     case 'eggs':     return eggsOutline(s);
     case 'wedge':    return wedgeOutline(s);
     case 'garlic':   return garlicOutline(s);
-    case 'dairy':    return rectCorners(s*0.28, s*0.08, s*0.72, s*0.92);
-    case 'protein':  return rectCorners(s*0.10, s*0.28, s*0.90, s*0.68);
-    default:         return rectCorners(s*0.08, s*0.08, s*0.92, s*0.92);
+    case 'dairy':    return dairyOutline(s);
+    case 'protein':  return proteinOutline(s);
+    default:         return genericOutline(s);
   }
 }
-const BOXY_SHAPES = {dairy:1, protein:1, tofu:1, carton:1, wedge:1};
+const BOXY_SHAPES = {dairy:1, cooked:1, generic:1, tofu:1, carton:1, wedge:1};
+
+// ---- The category silhouettes: what a food with no drawing of its own
+// is drawn as, one per decay category, so an unfamiliar item still reads
+// as greens, fruit, a vegetable, a tub, a wrapped tray or a container.
+// Index 0 is where mold starts on each.
+const catPts = (s, pts) => pts.map(([x, y]) => [x * s, y * s]);
+// Leafy: a loose head of leaves, scalloped at the top, gathered to a stem.
+function leafyOutline(s){
+  return catPts(s, [[0.50, 0.15], [0.61, 0.20], [0.71, 0.15], [0.81, 0.24], [0.86, 0.38], [0.81, 0.52],
+    [0.70, 0.66], [0.59, 0.77], [0.55, 0.88], [0.45, 0.88], [0.41, 0.77], [0.30, 0.66], [0.19, 0.52],
+    [0.14, 0.38], [0.19, 0.24], [0.29, 0.15], [0.39, 0.20]]);
+}
+// Soft: a round fruit, a little dimpled where the stem sits (index 0).
+function softOutline(s){
+  const pts = [], n = 18;
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const dip = i === 0 ? 0.13 : (i === 1 || i === n - 1) ? 0.03 : 0;
+    pts.push([0.5 + Math.cos(a) * 0.35, 0.57 + Math.sin(a) * 0.33 * (1 - dip)]);
+  }
+  return catPts(s, pts);
+}
+// Veg: a firm, oblong rounded form lying on its side, one end fuller.
+function vegOutline(s){
+  const pts = [], n = 16;
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2;
+    const full = 1 + 0.16 * Math.cos(a);   // fuller at the right
+    const x = Math.cos(a) * 0.39, y = Math.sin(a) * 0.20 * full;
+    const t = -0.18;                        // a slight tilt
+    pts.push([0.5 + x * Math.cos(t) - y * Math.sin(t), 0.62 + x * Math.sin(t) + y * Math.cos(t)]);
+  }
+  return catPts(s, pts);
+}
+// Dairy: a tub with its lid: lid top (0, 1), lid lip (2, 7), body.
+function dairyOutline(s){
+  return catPts(s, [[0.20, 0.26], [0.80, 0.26], [0.80, 0.35], [0.76, 0.35], [0.71, 0.86], [0.29, 0.86],
+    [0.24, 0.35], [0.20, 0.35]]);
+}
+// Protein: a portion lying on a tray (the tray is proteinTray's).
+function proteinOutline(s){
+  return catPts(s, [[0.17, 0.69], [0.20, 0.55], [0.32, 0.47], [0.50, 0.45], [0.68, 0.47], [0.80, 0.55],
+    [0.83, 0.69], [0.70, 0.76], [0.30, 0.76]]);
+}
+// Cooked: a deli container, its body only; the lid rides on top of it.
+function cookedOutline(s){
+  return catPts(s, [[0.15, 0.46], [0.85, 0.46], [0.79, 0.84], [0.21, 0.84]]);
+}
+// No match at all: a plain sealed packet.
+function genericOutline(s){
+  return catPts(s, [[0.24, 0.22], [0.76, 0.22], [0.78, 0.86], [0.22, 0.86]]);
+}
 
 // The outline losing symmetry as decay climbs: the top droops, the whole
 // shape leans, the sides bow out, the base spreads -- all scaled by the
@@ -2961,7 +3025,79 @@ function garlicCloves(deformed, size){
   return seams + plate + tip;
 }
 
-const IDENTITY_CUES = {potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
+// Leafy: a midrib up from the stem, two veins off it, and the stem.
+function leafyRibs(deformed, size){
+  const top = deformed[0], base = rfLerp(deformed[8], deformed[9], 0.5);
+  const c = centroidOf(deformed);
+  const rib = `<path d="M ${f1(base[0])} ${f1(base[1])} Q ${f1(c[0] + size * 0.02)} ${f1(c[1])} ${f1(top[0])} ${f1(top[1] + size * 0.06)}"/>`;
+  const veins = [[0.45, 4], [0.45, 13], [0.7, 2], [0.7, 15]].map(([t, j]) => {
+    const a = rfLerp(base, top, t), b = rfLerp(deformed[j], c, 0.3);
+    return `<path d="${lineD([a, b])}" stroke-opacity="0.7"/>`;
+  }).join('');
+  const stem = `<path d="${lineD([[base[0] - size * 0.03, base[1]], [base[0] - size * 0.03, base[1] - size * 0.07]])}"/>
+    <path d="${lineD([[base[0] + size * 0.03, base[1]], [base[0] + size * 0.03, base[1] - size * 0.07]])}"/>`;
+  return rib + veins + stem;
+}
+// Soft: a short stem from the dimple and a highlight on the shoulder.
+function softStem(deformed, size){
+  const top = deformed[0], c = centroidOf(deformed);
+  const stem = `<path d="M ${f1(top[0])} ${f1(top[1])} q ${f1(size * 0.01)} ${f1(-size * 0.06)} ${f1(size * 0.05)} ${f1(-size * 0.09)}"/>`;
+  const a = rfLerp(deformed[14], c, 0.25), b = rfLerp(deformed[16], c, 0.22);
+  return stem + `<path d="M ${f1(a[0])} ${f1(a[1])} Q ${f1((a[0] + b[0]) / 2 - size * 0.02)} ${f1((a[1] + b[1]) / 2 - size * 0.03)} ${f1(b[0])} ${f1(b[1])}" stroke-opacity="0.6"/>`;
+}
+// Veg: two lines along its length and the stalk scar at the narrow end.
+function vegLines(deformed, size){
+  const c = centroidOf(deformed), n = deformed.length;
+  const left = deformed[n / 2], right = deformed[0];
+  const lines = [0.35, -0.35].map(k => {
+    const top = rfLerp(c, deformed[Math.round(n * (k > 0 ? 0.25 : 0.75))], Math.abs(k));
+    return `<path d="M ${f1(rfLerp(left, c, 0.25)[0])} ${f1(rfLerp(left, c, 0.25)[1])} Q ${f1(top[0])} ${f1(top[1])} ${f1(rfLerp(right, c, 0.2)[0])} ${f1(rfLerp(right, c, 0.2)[1])}" stroke-opacity="0.6"/>`;
+  }).join('');
+  const scar = `<path d="${lineD([left, [left[0] - size * 0.05, left[1] - size * 0.03]])}"/>`;
+  return lines + scar;
+}
+// Dairy: the lid's lip and a label band round the tub.
+function tubBand(deformed){
+  const [, , lipR, bodyR, botR, botL, bodyL, lipL] = deformed;
+  const band = t => lineD([rfLerp(bodyL, botL, t), rfLerp(bodyR, botR, t)]);
+  return `<path d="${lineD([lipL, lipR])}"/><path d="${band(0.28)}"/><path d="${band(0.62)}"/>`;
+}
+// Protein: the tray's back wall behind the portion ...
+function proteinTrayBack(deformed, size){
+  return `<path d="${polyD(scalePts(size, [[0.05, 0.62], [0.95, 0.62], [0.91, 0.86], [0.09, 0.86]]))}" fill="${TRAY_HEX}"/>`;
+}
+// ... its front wall, a grain line across the portion, and the wrap: one
+// taut line from rim to rim over the top, with a glint on it.
+function wrappedTray(deformed, size){
+  const c = centroidOf(deformed);
+  const grain = insetPts(deformed.slice(1, 6), c, 0.45);
+  const wall = scalePts(size, [[0.06, 0.72], [0.94, 0.72], [0.91, 0.86], [0.09, 0.86]]);
+  const top = Math.min(...deformed.map(p => p[1])) - size * 0.03;
+  const wrap = [[size * 0.05, size * 0.62], [size * 0.16, top], [size * 0.84, top], [size * 0.95, size * 0.62]];
+  return `<path d="${smoothOpenPath(grain)}" stroke-opacity="0.6"/>
+    <path d="${polyD(wall)}" fill="${TRAY_HEX}"/>
+    <path d="${lineD(wrap)}" stroke-opacity="0.55"/>
+    <path d="${lineD([[size * 0.62, top + size * 0.05], [size * 0.72, top + size * 0.12]])}" stroke-opacity="0.45"/>`;
+}
+// Cooked: the lid, sitting on the (possibly shrunken) rim, and the
+// contents' line seen through the clear side.
+function containerLid(deformed, size){
+  const [tl, tr, br, bl] = deformed;
+  const lid = [[tl[0] - size * 0.04, tl[1]], [tr[0] + size * 0.04, tr[1]],
+    [tr[0] + size * 0.04, tr[1] - size * 0.08], [tl[0] - size * 0.04, tl[1] - size * 0.08]];
+  const a = rfLerp(tl, bl, 0.35), b = rfLerp(tr, br, 0.35), m = rfLerp(a, b, 0.5);
+  return `<path d="${polyD(lid)}" fill="${TRAY_HEX}"/>
+    <path d="M ${f1(a[0])} ${f1(a[1])} Q ${f1(m[0])} ${f1(m[1] - size * 0.04)} ${f1(b[0])} ${f1(b[1])}" stroke-opacity="0.6"/>`;
+}
+// No match: the packet's sealed top.
+function packetSeal(deformed, size){
+  const [tl, tr, br, bl] = deformed;
+  const a = rfLerp(tl, bl, 0.1), b = rfLerp(tr, br, 0.1);
+  return `<path d="${lineD([a, b])}"/>`;
+}
+
+const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: tubBand, protein: wrappedTray,
+  cooked: containerLid, generic: packetSeal, potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
   chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, spinach: spinachRibs, carrot: carrotTops,
   onion: onionSkin, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves};
 // Packaging behind the food, drawn before its body (see the note above
@@ -2969,7 +3105,7 @@ const IDENTITY_CUES = {potato: potatoEyes, apple: appleStem, banana: bananaRidge
 // svg's first direct <path> child. A packaged food's mold is drawn under
 // its cue layer, so it grows on the food, not on the tray or carton wall
 // in front of it.
-const UNDERLAYS = {chicken: chickenTrayBack, tofu: tofuTrayBack, eggs: eggCartonLid};
+const UNDERLAYS = {chicken: chickenTrayBack, tofu: tofuTrayBack, eggs: eggCartonLid, protein: proteinTrayBack};
 
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
@@ -3000,38 +3136,51 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   </svg>`;
 }
 
-// Greedy left-to-right width packing, items pre-sorted soonest-first so
-// size is already non-increasing within any row this produces -- the
-// first item placed in a row is always that row's largest, which is what
-// lets the single-pass row-height math in renderFridgeView stay simple.
-// Each row IS the depth tier: row 0 is the front shelf (always exposed),
-// every row after it is "behind" (covered, tap to reveal) -- not a second,
-// fuzzier threshold on top of the packing that already produces it.
-function layoutShelfRow(items, day, containerWidth){
-  const padX = 10, overlapRatio = 0.42;
-  let x = padX, row = 0, rowStarted = false;
-  const laidOut = [];
-  items.forEach(it => {
+// Shelves, front (soonest) first, each holding one row -- the illustrated
+// fridge's rfFitRow rule: an item's size is its depth (nearer to turning,
+// larger and in front), a row is spaced out when there is room and
+// overlaps by at most 40% of its average size when there isn't, and a new
+// shelf starts when the next item would need more overlap than that. Every
+// item stands on a shelf line with its own label showing; nothing sits in
+// a hidden row behind another.
+function layoutShelves(items, day, width){
+  const W = width * 0.96, x0 = width * 0.02;
+  const place = it => {
     const d = leftAt(it, day);
     const frontness = 1 - pos(Math.max(0, d)) / 100;
-    // Large enough that the front row reads at a glance, bigger than the
-    // headline numerals beside it -- 44-174px, not the earlier 34-104.
-    const size = Math.round(44 + frontness * 130);
-    if (rowStarted && x + size > containerWidth - padX){
-      row++;
-      x = padX;
-      rowStarted = false;
-    }
-    rowStarted = true;
-    const depthLift = Math.round((1 - frontness) * 16);
-    laidOut.push({it, d, frontness, size, x, row, depthLift, covered: row > 0});
-    x += size - Math.round(size * overlapRatio);
+    // 44-174px: the front row reads at a glance, bigger than the headline
+    // numerals beside it.
+    return {it, d, frontness, size: Math.round(44 + frontness * 130)};
+  };
+  const fits = row => {
+    const sum = row.reduce((a, p) => a + p.size, 0);
+    return row.length < 2 || sum - (sum / row.length) * 0.4 * (row.length - 1) <= W;
+  };
+  const rows = [];
+  let cur = [];
+  items.map(place).forEach(p => {
+    if (cur.length && !fits([...cur, p])){ rows.push(cur); cur = []; }
+    cur.push(p);
   });
-  return laidOut;
+  if (cur.length) rows.push(cur);
+  rows.forEach(row => {
+    const n = row.length, sum = row.reduce((a, p) => a + p.size, 0), avg = sum / n;
+    let gap = n > 1 ? Math.min(avg * 0.25, (W - sum) / (n - 1)) : 0, k = 1;
+    if (n === 1 && sum > W) k = W / sum;
+    if (gap < -avg * 0.4){ gap = -avg * 0.4; k = W / (sum + gap * (n - 1)); gap *= k; }
+    let x = x0;
+    row.forEach((p, i) => {
+      p.size = Math.round(p.size * k);
+      p.x = Math.round(x);
+      p.z = n - i; // more urgent paints over less urgent
+      x += p.size + gap;
+    });
+  });
+  return rows;
 }
 
 function buildShelfItem(p, day){
-  const {it, d, frontness, size, x, depthLift, covered} = p;
+  const {it, d, frontness, size, x} = p;
   const f = food(it);
   const cat = fridgeCatOf(it);
   const frac = decayFraction(it, day);
@@ -3044,9 +3193,9 @@ function buildShelfItem(p, day){
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = d === 0 ? 'today' : d + 'd';
-  const itemStyle = `left:${x}px;bottom:${p.bottom}px;z-index:${p.z}`;
+  const itemStyle = `left:${x}px;z-index:${p.z}`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
-  return `<div class="fridge-item${covered ? ' covered' : ''}" style="${itemStyle}">
+  return `<div class="fridge-item" style="${itemStyle}">
     <div class="fridge-shape" style="${shapeStyle}">${svg}</div>
     <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${dayLabel}</span></div>
   </div>`;
@@ -3073,30 +3222,35 @@ function buildDrawerItem(it, day){
   </div>`;
 }
 
-// Front-row (always-visible) labels only -- covered items' labels are
-// hidden until tapped, so they can't collide with anything by default.
-// The initial x positions are packed by shape size alone; a long name's
-// label column can still be wider than that spacing (max-width:92px lets
-// a label wrap, but two adjacent 92px columns centred ~60px apart still
-// overlap). This runs after the real DOM exists specifically so it can
-// read each label's actual rendered width -- no static estimate of text
-// width would be honest across every food name and every viewport.
-function preventLabelOverlap(shelf){
-  const shelfRect = shelf.getBoundingClientRect();
-  const GAP = 6;
-  let prevRight = -Infinity;
-  shelf.querySelectorAll('.fridge-item:not(.covered)').forEach(el => {
-    const label = el.querySelector('.fridge-label');
-    const labelRect = label.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    const elCenter = (elRect.left - shelfRect.left) + elRect.width / 2;
-    let labelLeft = elCenter - labelRect.width / 2;
-    if (labelLeft < prevRight + GAP){
-      const shift = (prevRight + GAP) - labelLeft;
-      el.style.left = (parseFloat(el.style.left) + shift) + 'px';
-      labelLeft += shift;
-    }
-    prevRight = labelLeft + labelRect.width;
+// Each shelf's labels left to right take the first tier where they
+// overlap no label already placed, read off real rendered boxes (no
+// static text-width estimate is honest across names and viewports); a
+// label that would run past the shelf's edge is nudged back in (--dx).
+// The shelf then leaves room under its line for its deepest tier.
+function staggerFridgeLabels(shelf){
+  const M = 4, bounds = shelf.getBoundingClientRect();
+  shelf.querySelectorAll('.fridge-row').forEach(row => {
+    const labels = [...row.querySelectorAll('.fridge-label')];
+    const step = Math.max(0, ...labels.map(l => l.offsetHeight)) + 4;
+    row.style.setProperty('--tier-h', step + 'px');
+    const rowBottom = row.getBoundingClientRect().bottom;
+    const placed = [];
+    let deepest = 0;
+    labels.forEach(l => {
+      l.style.removeProperty('--tier');
+      l.style.removeProperty('--dx');
+      let r = l.getBoundingClientRect();
+      const dx = r.left < bounds.left ? bounds.left - r.left : r.right > bounds.right ? bounds.right - r.right : 0;
+      if (dx){ l.style.setProperty('--dx', dx + 'px'); r = l.getBoundingClientRect(); }
+      const hits = dy => placed.some(q => r.left < q.right + M && r.right > q.left - M
+        && r.top + dy < q.bottom + M && r.bottom + dy > q.top - M);
+      let tier = 0;
+      while (tier < 8 && hits(tier * step)) tier++;
+      if (tier) l.style.setProperty('--tier', tier);
+      placed.push({left: r.left, right: r.right, top: r.top + tier * step, bottom: r.bottom + tier * step});
+      deepest = Math.max(deepest, r.bottom + tier * step - rowBottom);
+    });
+    row.style.marginBottom = Math.ceil(deepest + 12) + 'px';
   });
 }
 
@@ -3483,6 +3637,11 @@ function renderRealFridge(){
   });
   rfStaggerTags([upperShelf, eyeShelf, crisperItems]);
   bins.forEach(b => rfStaggerTags([b]));
+  // Tags can hang below the cabinet; keep that much room under it so they
+  // never lie over whatever follows on the page.
+  const unitBottom = unit.getBoundingClientRect().bottom;
+  const hang = Math.max(0, ...[...unit.querySelectorAll('.rf-tag')].map(t => t.getBoundingClientRect().bottom - unitBottom));
+  unit.style.marginBottom = hang > 0 ? Math.ceil(hang + 12) + 'px' : '';
   unit.querySelectorAll('[data-rf-item]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
   });
@@ -3507,7 +3666,7 @@ function rfStaggerTags(rows){
       const hits = dy => placed.some(p => r.left < p.right + M && r.right > p.left - M
         && r.top + dy < p.bottom + M && r.bottom + dy > p.top - M);
       let tier = 0;
-      while (tier < 6 && hits(tier * step)) tier++;
+      while (tier < 12 && hits(tier * step)) tier++;
       if (tier) u.style.setProperty('--rf-tier', tier);
       placed.push({left: r.left, right: r.right, top: r.top + tier * step, bottom: r.bottom + tier * step});
     });
@@ -3608,24 +3767,12 @@ function renderFridgeView(){
   const gone = fridge.filter(it => leftAt(it, day) < 0);
 
   if (savable.length){
-    const containerWidth = shelf.clientWidth || shelf.parentElement.clientWidth || 900;
-    const laidOut = layoutShelfRow(savable, day, containerWidth);
-    const rowSizes = [];
-    laidOut.forEach(p => { if (rowSizes[p.row] === undefined) rowSizes[p.row] = p.size; });
-    const rowGap = 34, padBottom = 14;
-    const rowBottoms = [];
-    let acc = padBottom;
-    for (let r = 0; r < rowSizes.length; r++){ rowBottoms[r] = acc; acc += rowSizes[r] + rowGap; }
-    laidOut.forEach((p, i) => {
-      p.bottom = rowBottoms[p.row] + p.depthLift;
-      p.z = laidOut.length - i; // earlier (more urgent) items always paint over later ones
-    });
-    shelf.style.height = (acc + 6) + 'px';
-    shelf.innerHTML = laidOut.map(p => buildShelfItem(p, day)).join('');
-    shelf.querySelectorAll('.fridge-item.covered').forEach(el => {
-      el.onclick = () => el.classList.toggle('revealed');
-    });
-    preventLabelOverlap(shelf);
+    const width = (shelf.clientWidth || shelf.parentElement.clientWidth || 900) - 8;
+    shelf.style.height = '';
+    shelf.innerHTML = layoutShelves(savable, day, width).map(row =>
+      `<div class="fridge-row" style="height:${Math.max(...row.map(p => p.size))}px">${row.map(p => buildShelfItem(p, day)).join('')}</div>`
+    ).join('');
+    staggerFridgeLabels(shelf);
   } else {
     shelf.style.height = '';
     shelf.innerHTML = '<div class="empty">Nothing left to save — check the drawer below.</div>';
@@ -4298,7 +4445,8 @@ function fkFood(id){
   const cat = fkDecayCat(FK_CATEGORIES[r[5]]);
   const m = CAT_MEDIANS[cat];
   const f = {en: r[1], shelf: r[3], fk: id, src: 'FoodKeeper', g: m.g, usd: m.usd, estWeight: true,
-             cat, shape: 'generic', base: FALLBACK_BASE[cat], pkgDate: r[4] === 'pkg'};
+             cat, base: FALLBACK_BASE[cat], pkgDate: r[4] === 'pkg' || r[4] === 'ripe'};
+  if (r[4] === 'ripe') f.dateHint = 'about ' + r[3] + ' days after it ripens';
   if (r[4] === 'P') f.store = 'pantry';
   fkCache.set(id, f);
   return f;
@@ -4308,7 +4456,22 @@ function foodOf(key){
   if (/^_fk_\d+$/.test(key)) return fkFood(+key.slice(4));
   return undefined;
 }
-const labelOf = key => standing[key] && standing[key].custom ? standing[key].custom.en : foodOf(key).en;
+const labelOf = key => {
+  const st = standing[key];
+  return st && st.custom ? st.custom.en : st && st.name ? st.name : foodOf(key).en;
+};
+// The words someone typed or a receipt expanded to, without the store's
+// words (organic, Kirkland, sizes, counts): "Kirkland organic plums 2 lb"
+// -> "Plums". Spelling and plurals are kept as typed.
+function cleanName(raw){
+  const words = String(raw).replace(/[^A-Za-z0-9&' -]+/g, ' ').split(/\s+/)
+    .filter(w => w && !NAME_MODIFIERS.has(singular(w.toLowerCase())) && !/^\d/.test(w));
+  const t = words.join(' ').toLowerCase();
+  return capFirst(t || String(raw).trim().toLowerCase());
+}
+// What an entry is called once it has a key: the FOODS name, or for a
+// FoodKeeper fallback the person's own (cleaned) words.
+const entryLabel = (key, raw) => FOODS[key] ? FOODS[key].en : cleanName(raw);
 // FOODS keeps its own number unless the package date governs; a
 // FoodKeeper item without days, or anything unmatched, needs a date.
 function needsDate(key){
@@ -4323,11 +4486,12 @@ function sourceOf(key){
 function shelfSourceOf(it){
   const f = food(it);
   if (it.shelf != null && it.shelfFrom === 'date')
-    return f.pkgDate && !f.dateHint ? 'package date' : 'date given at entry' + (f.dateHint ? ' (' + f.dateHint + ')' : '');
+    return (f.pkgDate && !f.dateHint ? 'package date' : 'date given at entry' + (f.dateHint ? ' (' + f.dateHint + ')' : ''))
+      + (FOODS[it.key] || it.custom ? '' : ' · FoodKeeper #' + f.fk + ' “' + foodOf(it.key).en + '”');
   if (it.custom) return 'estimated';
   if (it.shelf != null) return 'kept from when it was saved' + (f.fk != null ? ' (now FoodKeeper #' + f.fk + ')' : '');
   if (f.estimated) return 'estimated' + (f.note ? ' — ' + f.note : '');
-  return 'FoodKeeper #' + f.fk + (FOODS[it.key] ? '' : ' (not in FOODS; weight and price estimated)');
+  return 'FoodKeeper #' + f.fk + (FOODS[it.key] ? '' : ' “' + foodOf(it.key).en + '” (not in FOODS; weight and price estimated)');
 }
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -4341,7 +4505,7 @@ function entryFor(raw, age){
   const res = resolveName(raw);
   const key = res.keys.length === 1 ? res.keys[0] : null;
   return {raw, age, included: true, options: res.keys, suggestions: res.suggestions || [], key, date: '',
-          label: key ? foodOf(key).en : capFirst(raw.trim())};
+          label: key ? entryLabel(key, raw) : cleanName(raw)};
 }
 // Re-match after the name was edited, keeping where the entry came from.
 function rematchEntry(e, name){
@@ -4357,7 +4521,7 @@ function entryNeeds(e){
 // The fridge record an entry becomes, bought on `bought` (an epoch day).
 function entryRecord(e, bought){
   const shelf = needsDate(e.key) ? parseReceiptDate(e.date) - bought : null;
-  if (e.key) return {key: e.key, custom: null, shelf};
+  if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw))};
   const name = e.label.trim() || e.raw || 'Item';
   const m = CAT_MEDIANS.all;
   return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf};
@@ -4401,7 +4565,7 @@ function wireEntryControls(box, entries, rerender){
     sel.onchange = () => {
       const e = entries[+sel.dataset.idx];
       e.key = sel.value || null;
-      if (e.key) e.label = foodOf(e.key).en;
+      e.label = e.key ? entryLabel(e.key, e.raw) : cleanName(e.raw);
       rerender();
     };
   });
@@ -4414,11 +4578,12 @@ function slug(s){
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '');
 }
 
-function touchStanding(key, custom){
+function touchStanding(key, custom, name){
   if (!standing[key]) standing[key] = {count:0, lastBought:today(), custom:custom||null};
   standing[key].count++;
   standing[key].lastBought = today();
   if (custom) standing[key].custom = custom;
+  if (name) standing[key].name = name;
 }
 
 // shelf: days from today, from a date the person gave in the preview.
@@ -4434,16 +4599,12 @@ function restock(key, shelf){
     return;
   }
   const label = labelOf(key);
-  const existing = fridge.find(it => it.key === key);
+  // Only a toss counts as waste. A past-date one of these stays in the
+  // drawer for the person to check, toss or remove; the new one is a
+  // separate record.
+  const existing = fridge.find(it => it.key === key && left(it) >= 0);
   let msg = label + ' restocked';
   if (existing){
-    if (left(existing) < 0){
-      // the old one didn't get used — it was already waste, same as a toss
-      const f = food(existing);
-      ledger.wasteG += f.g;
-      ledger.wasteUSD += f.usd;
-      msg = 'Tossed the old ' + label.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone, restocked';
-    }
     existing.bought = today();
     existing.crossed = false;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
@@ -4451,10 +4612,12 @@ function restock(key, shelf){
     if (shelf != null){ existing.shelf = shelf; existing.shelfFrom = 'date'; }
   } else {
     const it = {id:++uid, key, bought:today(), custom: entry.custom || null};
+    if (entry.name) it.name = entry.name;
     if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
     fridge.push(it);
+    if (fridge.some(x => x.key === key && left(x) < 0)) msg += ' · the old one stays in the drawer until you toss it';
   }
-  touchStanding(key, entry.custom);
+  touchStanding(key, entry.custom, entry.name);
   toast(msg);
   render();
 }
@@ -4559,9 +4722,10 @@ function commitItems(entries){
     if (e.restockKey){ restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined); return; }
     for (let n = 0; n < (e.quantity || 1); n++){
       const it = {id: ++uid, key: rec.key, bought, custom: rec.custom};
+      if (rec.name) it.name = rec.name;
       if (rec.shelf != null){ it.shelf = rec.shelf; it.shelfFrom = 'date'; }
       fridge.push(it);
-      touchStanding(rec.key, rec.custom);
+      touchStanding(rec.key, rec.custom, rec.name);
       added++;
     }
   });
@@ -4873,9 +5037,10 @@ function confirmReceipt(){
     const rec = entryRecord(it, bought);
     for (let n = 0; n < it.quantity; n++){
       const item = {id: ++uid, key: rec.key, bought, custom: rec.custom};
+      if (rec.name) item.name = rec.name;
       if (rec.shelf != null){ item.shelf = rec.shelf; item.shelfFrom = 'date'; }
       fridge.push(item);
-      touchStanding(rec.key, rec.custom);
+      touchStanding(rec.key, rec.custom, rec.name);
       added++;
     }
   });
