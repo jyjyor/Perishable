@@ -124,7 +124,7 @@ async function receiptScenario(browser) {
   await page.click('#receiptConfirm');
   await page.waitForTimeout(150);
 
-  const fridgeRows = await page.$$eval('#rows .row', els => els.map(e => ({
+  const fridgeRows = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
     name: e.querySelector('.name').childNodes[0].textContent.trim(), left: e.querySelector('.left').textContent.trim()
   })));
   console.log('fridge rows after confirm:', JSON.stringify(fridgeRows));
@@ -985,7 +985,7 @@ async function splitEntriesScenario(browser) {
   expectEqual('standing', Object.keys(after.standing).sort(), ['hardcheese', 'leaflettuce', 'onion']);
   expectEqual('merged cheese standing', [after.standing.hardcheese.count, after.standing.hardcheese.lastBought - day], [2, -30]);
   // Days left on screen are the ones the old values gave: 5, 12, 8, 6, 4.
-  const shown = await page.$$eval('#rows .row', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  const shown = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
   console.log('inventory rows:', JSON.stringify(shown));
   for (const [name, days] of [['Leaf lettuce', 5], ['Hard cheese', 12], ['Carrots', 8], ['Onion', 6], ['Milk', 4]]) {
     if (!shown.some(t => t.includes(name) && new RegExp(`\\b${days}\\b`).test(t))) throw new Error(`${name} does not show ${days} days left`);
@@ -1029,7 +1029,7 @@ function readReview(page, box) {
 // The list sits collapsed under "All items (N)"; open it before clicking in it.
 const openList = page => page.evaluate(() => { const d = document.getElementById('allItems'); if (d) d.open = true; });
 function readInventory(page) {
-  return page.$$eval('#rows .row', els => els.map(e => ({
+  return page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
     name: e.querySelector('.name').childNodes[0].textContent.trim(),
     left: e.querySelector('.left').textContent.trim(),
     g: e.querySelector('.meta').textContent.trim()
@@ -1504,7 +1504,7 @@ async function allItemsScenario(browser) {
              below: rf.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false,
              next: rf.nextElementSibling === d };
   });
-  info.rowsVisible = await page.isVisible('#rows .row');
+  info.rowsVisible = await page.isVisible('#rows .row:not(.row-head)');
   expectEqual('closed by default', info.open, false);
   expectEqual('summary', info.summary, 'All items (3)');
   expectEqual('directly below the fridge', info.next, true);
@@ -1519,6 +1519,37 @@ async function allItemsScenario(browser) {
   // stays closed across a reload
   await page.reload(); await page.waitForSelector('#headline');
   expectEqual('closed after reload', await page.$eval('#allItems', d => d.open), false);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// The list's columns: "Est. weight" and "Time left" headers; bars on the
+// decay line's absolute scale, so the same days left means the same bars
+// whatever the shelf life; "1 day", never "1 days".
+async function listFixesScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  console.log('\n--- LIST: headers, absolute bars, 1 day ---');
+  await seedMixed18(page);
+  await page.waitForSelector('#headline');
+  await openList(page);
+  const head = await page.$eval('#rows .row-head', r => [r.querySelector('.meta').textContent, r.querySelector('.left').textContent]);
+  expectEqual('headers', head, ['Est. weight', 'Time left']);
+  const rows = await page.$$eval('#rows .row:not(.row-head)', els => els.map(e => ({
+    name: e.querySelector('.name').childNodes[0].textContent.trim(),
+    left: e.querySelector('.left').textContent.trim(),
+    bars: e.querySelectorAll('.bars i:not(.off)').length })));
+  const one = rows.filter(r => r.left === '1 day');
+  console.log('1 day:', JSON.stringify(one));
+  if (one.length < 2) throw new Error('the fixture has two items with 1 day left');
+  if (rows.some(r => /^1 days$/.test(r.left))) throw new Error('"1 days" in the list');
+  expectEqual('same days left, same bars', new Set(one.map(r => r.bars)).size, 1);
+  const expected = await page.evaluate(() => fridge.map(it => { const d = left(it); return [food(it).en, d < 0 ? 0 : Math.max(1, Math.ceil(pos(d) / 10))]; }));
+  for (const [name, bars] of expected) expectEqual(`${name} bars`, rows.find(r => r.name === name).bars, bars);
+  // nothing on the page writes "1 days"
+  const text = await page.evaluate(() => document.body.innerText);
+  if (/\b1 days\b/i.test(text)) throw new Error('"1 days" on the page');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1741,6 +1772,7 @@ async function ripenessScenario(browser) {
   await goneTossScenario(browser);
   await popoverUseScenario(browser);
   await allItemsScenario(browser);
+  await listFixesScenario(browser);
 
   await browser.close();
   server.close();
