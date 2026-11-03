@@ -1741,8 +1741,22 @@ const nearMiss = () => nearMissAt(fridge, today(), skipped);
 // an earlier day's suggestion already used something up, the fact line
 // stops citing it -- it was contradicting the dish-sub right under it,
 // which already says whether that earlier day was ever a real plan.
+// A projected day (after today) names what turns on that day: items
+// already past date today are old news and left out, and everything whose
+// last day is that day is named together ("Chicken salad and rotisserie
+// chicken are on their last day."). With none, the most urgent of the rest.
 function factAt(day, sourceFridge){
-  const pool = sourceFridge || fridge;
+  let pool = sourceFridge || fridge;
+  if (day > today()){
+    const before = pool.length;
+    pool = pool.filter(it => leftAt(it, today()) >= 0);
+    if (before && !pool.length) return 'Nothing new turns that day.';
+    const turning = pool.filter(it => !it.ripening && leftAt(it, day) === 0);
+    if (turning.length > 1){
+      const names = turning.map((it, i) => i ? food(it).en.toLowerCase() : food(it).en);
+      return `${joinWords(names)} are on their last day.`;
+    }
+  }
   if (!pool.length) return null;
   let worst = pool[0];
   pool.forEach(it => { if (leftAt(it, day) < leftAt(worst, day)) worst = it; });

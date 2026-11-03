@@ -1568,6 +1568,31 @@ async function allItemsScenario(browser) {
   await page.context().close();
 }
 
+// A projected day's headline names what turns that day; an item already
+// past date today (the fixture's spinach) is left out.
+async function projectionHeadlineScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  console.log('\n--- PROJECTIONS: Tomorrow names what turns tomorrow ---');
+  await seedMixed18(page);
+  await page.waitForSelector('#headline');
+  const facts = await page.$$eval('#tomorrow .daily-fact, #dayAfter .daily-fact', els => els.map(e => e.textContent.trim()));
+  console.log('facts:', JSON.stringify(facts));
+  if (!facts.length) throw new Error('the fixture should show a Tomorrow card');
+  if (facts.some(f => /spinach/i.test(f))) throw new Error('a projection names spinach, already past date today: ' + JSON.stringify(facts));
+  // from Tomorrow's own projected fridge: tonight's dish may use some up
+  const expected = await page.evaluate(() => {
+    const t = today() + 1, start = buildDayProjections()[1].fridgeAtStart;
+    return start.filter(it => left(it) >= 0 && !it.ripening && leftAt(it, t) === 0).map(it => food(it).en);
+  });
+  console.log('turning tomorrow:', JSON.stringify(expected));
+  if (!expected.length) throw new Error('the fixture should have something whose last day is tomorrow');
+  for (const n of expected) if (!facts[0].toLowerCase().includes(n.toLowerCase())) throw new Error(`Tomorrow should name ${n}: ${facts[0]}`);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // The popover carries what the list used to: Est. weight, and a quiet
 // Remove for an item logged by mistake -- out of the fridge, no waste, its
 // restock count undone. Days are "1 day", never "1 days", anywhere.
@@ -1830,6 +1855,7 @@ async function ripenessScenario(browser) {
   await popoverUseScenario(browser);
   await popoverDetailsScenario(browser);
   await allItemsScenario(browser);
+  await projectionHeadlineScenario(browser);
 
   await browser.close();
   server.close();
