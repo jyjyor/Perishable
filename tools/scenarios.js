@@ -66,20 +66,21 @@ async function receiptScenario(browser) {
   await page.reload();
   await page.waitForSelector('#headline');
 
-  // Stub the network call: canned items cover a FOODS match (milk), an
-  // unrecognised item that should fall back to the 7-day estimate
-  // (dragonfruit, quantity 2 -> two fridge rows), and a non-food line
-  // that must land unchecked. The date is legible, so age is
-  // receipt-derived. (Bananas were the unrecognised fixture here until
-  // banana joined FOODS -- lookup() now resolves it correctly, which is
-  // the point, so this moved to dragonfruit to keep testing the
-  // unresolved path rather than accidentally validating recognition.)
+  // Stub the network call: canned items cover a FOODS match that needs
+  // its package date (milk), a FoodKeeper-only match (dragonfruit ->
+  // Pitaya/dragon fruit #480, 21 days, quantity 2 -> two fridge rows), a
+  // name that must match nothing (potato chips: never Potato) and a
+  // non-food line that must land unchecked. The date is legible, so age
+  // is receipt-derived. (Dragonfruit was the no-match fixture until the
+  // FoodKeeper fallback table arrived and recognised it; potato chips took
+  // that role.)
   await page.evaluate(() => {
     window.__receiptApiOverride = async () => ({
       date: '2026-10-20',
       items: [
         {raw: 'ORG DRAGONFRUIT', expanded: 'organic dragonfruit', quantity: 2, is_food: true},
         {raw: 'MILK 2% GAL', expanded: 'Milk', quantity: 1, is_food: true},
+        {raw: 'KS POTATO CHIPS', expanded: 'Potato chips', quantity: 1, is_food: true},
         {raw: 'PAPER TOWEL 12CT', expanded: 'Paper towels', quantity: 3, is_food: false}
       ]
     });
@@ -91,37 +92,82 @@ async function receiptScenario(browser) {
   await page.waitForSelector('.receipt-row');
 
   console.log('\n--- RECEIPT SCAN ---');
-  const rows = await page.$$eval('.receipt-row', els => els.map(el => ({
+  const readRows = () => page.$$eval('#receiptPreview .receipt-row', els => els.map(el => ({
     checked: el.querySelector('input[type=checkbox]').checked,
     name: el.querySelector('input[type=text]').value,
-    unresolved: el.classList.contains('unresolved'),
+    flag: el.classList.contains('unresolved') ? 'no match' : el.classList.contains('needs-date') ? 'needs date' : '',
+    match: (el.querySelector('.match') || {textContent: ''}).textContent.trim(),
     qty: el.querySelector('.qty').textContent.trim()
   })));
+  const rows = await readRows();
   console.log('review rows:', JSON.stringify(rows));
   const dateLine = await page.textContent('#receiptPreview > div:first-child');
   console.log('date line:', dateLine);
 
-  const expectChecked = [true, true, false];
+  const expectChecked = [true, true, true, false];
   rows.forEach((r, i) => {
     if (r.checked !== expectChecked[i]) throw new Error(`row ${i} checked=${r.checked}, expected ${expectChecked[i]}`);
   });
-  if (!rows[0].unresolved) throw new Error('dragonfruit should be flagged unresolved');
-  if (rows[1].unresolved) throw new Error('milk should resolve against FOODS, not be flagged');
+  if (rows[0].flag || !rows[0].match.includes('FoodKeeper #480')) throw new Error('dragonfruit should match FoodKeeper #480: ' + JSON.stringify(rows[0]));
+  if (rows[1].flag !== 'needs date' || !rows[1].match.includes('FOODS')) throw new Error('milk should match FOODS and ask for its package date: ' + JSON.stringify(rows[1]));
+  if (rows[2].flag !== 'no match' || !rows[2].match.includes('no shelf-life data')) throw new Error('potato chips should match nothing: ' + JSON.stringify(rows[2]));
+  if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked while lines need answers');
 
+  // Answer through the real controls: milk's printed date 7 days after
+  // purchase, the chips' use-by 60 days after.
+  const purchase = await page.evaluate(() => receiptPending.age);
+  const isoAfter = n => page.evaluate(([a, d]) => new Date((today() - a + d - DAY_OFFSET) * 86400000).toISOString().slice(0, 10), [purchase, n]);
+  await page.fill('#receiptPreview .entry-date[data-idx="1"]', await isoAfter(7));
+  await page.fill('#receiptPreview .entry-date[data-idx="2"]', await isoAfter(60));
+  if (await page.$eval('#receiptConfirm', b => b.disabled)) throw new Error('confirm still blocked after every line was answered');
   await page.click('#receiptConfirm');
   await page.waitForTimeout(150);
 
-  const rowNames = await page.$$eval('#rows .row .name', els => els.map(e => e.childNodes[0].textContent.trim()));
-  console.log('fridge rows after confirm:', JSON.stringify(rowNames));
-  if (rowNames.length !== 3) throw new Error(`expected 3 fridge rows (2 dragonfruit + 1 milk), got ${rowNames.length}`);
-  if (rowNames.filter(n => n === 'Organic dragonfruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
-  if (!rowNames.includes('Milk')) throw new Error('expected milk to resolve and commit');
+  const fridgeRows = await page.$$eval('#rows .row', els => els.map(e => ({
+    name: e.querySelector('.name').childNodes[0].textContent.trim(), left: e.querySelector('.left').textContent.trim()
+  })));
+  console.log('fridge rows after confirm:', JSON.stringify(fridgeRows));
+  const rowNames = fridgeRows.map(r => r.name);
+  if (rowNames.length !== 4) throw new Error(`expected 4 fridge rows (2 dragonfruit + milk + chips), got ${rowNames.length}`);
+  if (rowNames.filter(n => n === 'Pitaya/dragon fruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
+  const leftOf = n => fridgeRows.find(r => r.name === n).left;
+  expectEqual('dragonfruit days left (21 - age)', leftOf('Pitaya/dragon fruit'), (21 - purchase) + ' days');
+  expectEqual('milk days left (package date)', leftOf('Milk'), 7 - purchase < 0 ? Math.abs(7 - purchase) + 'd past' : (7 - purchase) + ' days');
+  expectEqual('chips days left (use-by given)', leftOf('Potato chips'), (60 - purchase) + ' days');
   if (rowNames.includes('Paper towels')) throw new Error('unchecked paper towels should not have been added');
 
   if (errors.length) console.log('console errors:', errors);
   await page.screenshot({ path: path.join(OUT, 'scn-receipt.png'), fullPage: true });
   await page.context().close();
   fs.unlinkSync(fixturePath);
+}
+
+// Typed entry now stops at a preview when a name needs an answer: a
+// package date (milk), or which of several equal matches (cheese, lettuce).
+// Older scenarios were written before that, so this answers it through the
+// real controls the way they used to be resolved: the first option (what
+// the old first-match lookup picked) and a package date seven days after
+// purchase (milk's old fixed value), then adds. No-op when nothing opened.
+async function answerPreview(page) {
+  await page.waitForTimeout(50);
+  if (!(await page.$('#voicePreview .receipt-row'))) return;
+  for (;;) {
+    const pick = await page.$('#voicePreview .receipt-row.unresolved .entry-pick');
+    if (!pick) break;
+    const first = await pick.$eval('option:nth-child(2)', o => o.value);
+    await pick.selectOption(first);
+  }
+  for (;;) {
+    const input = await page.$('#voicePreview .entry-date:not([data-done])');
+    if (!input) break;
+    const idx = await input.getAttribute('data-idx');
+    const iso = await page.evaluate(i => new Date((today() - pendingItems[i].age + 7 - DAY_OFFSET) * 86400000)
+      .toISOString().slice(0, 10), +idx);
+    await input.fill(iso);
+    await page.$eval(`#voicePreview .entry-date[data-idx="${idx}"]`, el => el.setAttribute('data-done', ''));
+  }
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
 }
 
 async function scenario(browser, name, entryText, shotName) {
@@ -135,6 +181,7 @@ async function scenario(browser, name, entryText, shotName) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', entryText);
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log(`\n--- ${name} ---`);
@@ -164,6 +211,7 @@ async function recommendationScenario(browser) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', 'spinach, milk, chicken, onion');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- RECOMMENDATION: at-risk naming ---');
@@ -220,6 +268,7 @@ async function noRiskScenario(browser) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', 'egg, cheese, butter');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- NO RISK: nothing to suggest ---');
@@ -266,6 +315,7 @@ async function fridgeGradientScenario(browser) {
   // the same 25/50/75/95% spread the original carrot/cheese values gave.
   await page.fill('#entry', 'baby carrots 7d, yogurt 7d, mushrooms 5d, hard cheese 171d');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- FRIDGE GRADIENT: 25/50/75/95% ---');
@@ -303,6 +353,7 @@ async function fridgeHaulScenario(browser) {
     'mushroom 3d, potato, cheese 10d, butter, cooked rice 2d, ' +
     'daikon 20d, zucchini 8d, enoki 10d');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- FRIDGE HAUL: ~25 items ---');
@@ -368,6 +419,7 @@ async function fridgeFactBugScenario(browser) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', 'chicken, spinach, milk, onion, bacon');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- FACT-LINE BUG: Tomorrow must read the projected fridge ---');
@@ -396,6 +448,7 @@ async function fridgeFactBugScenario(browser) {
   await page2.waitForSelector('#headline');
   await page2.fill('#entry', 'spinach, milk, chicken, onion');
   await page2.click('#addbtn');
+  await answerPreview(page2);
   await page2.waitForTimeout(150);
   const emptyFact = await page2.textContent('#tomorrow .daily-fact');
   console.log('Tomorrow fact when the projection is fully emptied:', emptyFact.trim());
@@ -420,6 +473,7 @@ async function pluralAgreementScenario(browser) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', 'chicken, spinach, milk, onion, egg 34d');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- PLURAL AGREEMENT ---');
@@ -447,6 +501,7 @@ async function dishRepeatScenario(browser) {
   await page.waitForSelector('#headline');
   await page.fill('#entry', 'yogurt 10d');
   await page.click('#addbtn');
+  await answerPreview(page);
   await page.waitForTimeout(150);
 
   console.log('\n--- DISH REPEAT COLLAPSING ---');
