@@ -168,8 +168,9 @@ every item through the same food-rendering and decay functions as the
 line-art view below it (foodShapeMarkupLine, natureColor, fridgeCatOf/
 fridgeShapeOf) rather than a second implementation, and keeps urgency
 colour to the same role it already has elsewhere: each item's label —
-here a small tag hung below the item (name and days left), and the
-popover a tapped item shows — and nothing on the closed door itself.
+here a small tag hung below the item (days left only; the three most
+urgent items also carry their name, every other name is a tap away),
+and the popover a tapped item shows — and nothing on the closed door itself.
 Which of the two fridges stays is an open decision, not a resolved one.
 
 ## Voice

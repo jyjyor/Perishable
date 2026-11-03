@@ -236,6 +236,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   height:calc(var(--rf-string, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
 }
 .rf-tag .rf-tag-days{opacity:.85}
+.rf-tag{cursor:pointer}
 .rf-tag button{font-size:10px;padding:0 4px;letter-spacing:.02em;color:var(--ink-2)}
 .rf-crisper-label{
   position:absolute;z-index:2;
@@ -3556,10 +3557,11 @@ function rfFillRow(el, fit, day, opts = {}){
     el.style.setProperty('--rf-drop', rfCq(opts.dropU));
     el.style.setProperty('--rf-string', rfCq(opts.stringU));
   }
-  el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null)).join('');
+  el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null,
+    opts.named && opts.named.has(p.it.id))).join('');
 }
 
-function rfBuildFoodItem(it, day, u, z){
+function rfBuildFoodItem(it, day, u, z, named){
   const f = food(it);
   const cat = fridgeCatOf(it);
   const d = leftAt(it, day);
@@ -3569,17 +3571,18 @@ function rfBuildFoodItem(it, day, u, z){
   const color = natureColor(foodBaseColor(it), frac);
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
-  const dayLabel = gone ? `${Math.abs(d)}d gone` : shortLeft(it, d);
-  // The tag is this item's label in CLAUDE.md's sense: name and days left
-  // in the urgency bucket's colour, the same state()/COLOR lookup as the
-  // list, the decay line and the line-art fridge.
+  const dayLabel = gone ? 'gone' : shortLeft(it, d);
+  // The tag is this item's label in CLAUDE.md's sense: days left in the
+  // urgency bucket's colour, the same state()/COLOR lookup as the list,
+  // the decay line and the line-art fridge. Only the three most urgent
+  // carry their name too; every other name is a tap away (the popover).
   const c = COLOR[state(d)];
   const toss = gone ? `<button type="button" class="ghost" data-rf-toss="${it.id}">Toss</button>` : '';
   return `<div class="rf-item"${z != null ? ` style="z-index:${z}"` : ''}>
     <button type="button" class="rf-fooditem" data-rf-item="${it.id}" aria-label="${f.en}">
       <span class="rf-foodshape" data-u="${u.toFixed(2)}" style="width:${cq};height:${cq}">${svg}</span>
     </button>
-    <div class="rf-under"><div class="rf-tag"><span style="color:${c}">${f.en}</span><span class="rf-tag-days" style="color:${c}">${dayLabel}${toss}</span></div></div>
+    <div class="rf-under"><div class="rf-tag" data-rf-tag="${it.id}">${named ? `<span style="color:${c}">${f.en}</span>` : ''}<span class="rf-tag-days" style="color:${c}">${dayLabel}${toss}</span></div></div>
   </div>`;
 }
 
@@ -3638,6 +3641,9 @@ function renderRealFridge(){
   const ordered = [...left.reverse(), ...right];
   const rank = new Map(eyeItems.map((it, i) => [it.id, i]));
 
+  // The three soonest (not yet gone) carry their name on the tag.
+  const named = new Set(active.filter(it => !it.ripening).slice(0, 3).map(it => it.id));
+
   const o = RF.open;
   // Items stand on the glass just behind its front edge; the row's width
   // is the shelf's at that depth.
@@ -3661,7 +3667,7 @@ function renderRealFridge(){
   const eyeFinal = shared < eyeFit.scale ? rfFitRow(ordered, day, eye.w, shared) : eyeFit;
   // Tags start 4 units under the shelf's front edge, the string covering
   // those 4: the edge itself (and the 1.5 the base sits above it) stays clear.
-  const shelfTag = {dropU: 1.5 + RF.edge + 4, stringU: 4};
+  const shelfTag = {dropU: 1.5 + RF.edge + 4, stringU: 4, named};
   // Shelf rows stack above the crisper's front panel (z 2) and its tags
   // (z 3); the upper shelf's hanging tags above the eye-level food.
   rfFillRow(eyeShelf, eyeFinal, day, {...shelfTag, z: (i, n) => 10 + n - rank.get(eyeFinal.items[i].it.id)});
@@ -3676,7 +3682,7 @@ function renderRealFridge(){
     rfPlaceRow(el, 30, DW - 30, bt + 52, DW, DH);
     const mine = doorItems.slice(i * 3, i * 3 + 3);
     const tallest = Math.max(0, ...mine.map(it => rfUrgencyPx(it, day) / RF.PX));
-    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4});
+    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4, named});
   });
 
   // foodShapeMarkupLine centres a body in its square; pull each one down
@@ -3697,6 +3703,9 @@ function renderRealFridge(){
   unit.style.marginBottom = hang > 0 ? Math.ceil(hang + 12) + 'px' : '';
   unit.querySelectorAll('[data-rf-item]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
+  });
+  unit.querySelectorAll('[data-rf-tag]').forEach(t => {
+    t.onclick = e => { if (e.target.closest('[data-rf-toss]')) return; e.stopPropagation(); rfShowPopover(+t.dataset.rfTag, t); };
   });
   unit.querySelectorAll('[data-rf-toss]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); useItem(+b.dataset.rfToss, true); };

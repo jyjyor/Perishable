@@ -1355,6 +1355,21 @@ async function mixedFridgeScenario(browser) {
     const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
     if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
     await assertFridgeLayout(page, `mixed 18 at ${w}px`);
+    // Illustrated tags: days left only, a name on the three most urgent.
+    const tags = await page.$$eval('#rfUnit .rf-tag', els => els.map(t => ({
+      id: +t.dataset.rfTag, named: t.children.length > 1 && !t.children[0].classList.contains('rf-tag-days'),
+      days: t.querySelector('.rf-tag-days').childNodes[0].textContent.trim() })));
+    const soonest = await page.evaluate(() => fridge.filter(it => left(it) >= 0 && !it.ripening)
+      .sort((a, b) => left(a) - left(b)).slice(0, 3).map(it => it.id));
+    expectEqual(`named tags at ${w}px`, tags.filter(t => t.named).map(t => t.id).sort(), [...soonest].sort());
+    const bad = tags.filter(t => !/^(\d+d|today|gone|ripening)$/.test(t.days));
+    if (bad.length) throw new Error('a tag shows more than days left: ' + JSON.stringify(bad));
+    const quiet = tags.find(t => !t.named);
+    await page.$eval(`[data-rf-tag="${quiet.id}"]`, el => el.click());
+    const popName = await page.textContent('#rfPopover .rf-pop-name');
+    expectEqual('tap shows the name', popName.trim(), await page.evaluate(id => food(fridge.find(i => i.id === id)).en, quiet.id));
+    await page.mouse.click(2, 2);
+    await page.waitForTimeout(100);
     await (await page.$('#rfUnit')).screenshot({ path: path.join(OUT, `mixed18-illustrated-${tag}.png`) });
     await (await page.$('.fridgeview')).screenshot({ path: path.join(OUT, `mixed18-lineart-${tag}.png`) });
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
