@@ -320,8 +320,7 @@ async function fridgeGradientScenario(browser) {
   await page.waitForTimeout(150);
 
   console.log('\n--- FRIDGE GRADIENT: 25/50/75/95% ---');
-  await page.waitForTimeout(900);
-  const fills = await page.$$eval('#rfUnit .rf-foodshape svg > path:first-of-type',
+  const fills = await page.$$eval('#fridgeShelf .fridge-item .fridge-shape svg > path',
     els => els.map(e => e.getAttribute('fill')));
   console.log('shelf fills (front to back):', JSON.stringify(fills));
   if (new Set(fills).size < 4) throw new Error(`expected 4 distinct colors across the decay gradient, got ${JSON.stringify(fills)}`);
@@ -330,24 +329,32 @@ async function fridgeGradientScenario(browser) {
   await page.context().close();
 }
 
-// The fridge: no two name labels overlap, and nothing -- food or label --
-// is drawn over its heading.
+// Both fridges: no two item labels overlap (line-art labels, illustrated
+// tags), no line-art label sits on any food, and no food is drawn above
+// the line-art fridge's heading.
 async function assertFridgeLayout(page, where) {
   const res = await page.evaluate(() => {
     const box = el => { const r = el.getBoundingClientRect(); return {left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: el.textContent.trim().slice(0, 30)}; };
     const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
     const pairs = list => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return [list[i], list[j]]; return null; };
+    const labels = [...document.querySelectorAll('#fridgeShelf .fridge-label')].map(box);
+    const shapes = [...document.querySelectorAll('#fridgeShelf .fridge-shape svg > path:first-of-type')].map(box);
     const tags = [...document.querySelectorAll('#rfUnit .rf-tag')].filter(t => t.offsetParent).map(box);
-    const items = [...document.querySelectorAll('#rfUnit .rf-item')].map(box);
-    const headBox = box(document.querySelector('.rf-head'));
+    const head = document.querySelector('.fridgeview-head').getBoundingClientRect().bottom;
+    const items = [...document.querySelectorAll('#fridgeShelf .fridge-item')].map(box);
+    const headBox = box(document.querySelector('.fridgeview-head'));
+    const tagOnHeading = tags.find(t => hit(t, headBox)) || null;
     return {
-      tags: tags.length, items: items.length, illustratedTags: pairs(tags),
-      onHeading: items.concat(tags).find(t => hit(t, headBox)) || null
+      labels: labels.length, tags: tags.length, rows: document.querySelectorAll('#fridgeShelf .fridge-row').length,
+      lineArtLabels: pairs(labels), labelOnFood: labels.flatMap(l => shapes.filter(s => hit(l, s)).map(s => [l, s]))[0] || null,
+      illustratedTags: pairs(tags), aboveHeading: items.filter(i => i.top < head - 0.5)[0] || tagOnHeading
     };
   });
-  console.log(`${where}: ${res.items} items, ${res.tags} name labels`);
-  if (res.illustratedTags) throw new Error(`${where}: name labels overlap: ${JSON.stringify(res.illustratedTags)}`);
-  if (res.onHeading) throw new Error(`${where}: something is drawn over the fridge heading: ${JSON.stringify(res.onHeading)}`);
+  console.log(`${where}: line-art ${res.labels} labels on ${res.rows} shelves, illustrated ${res.tags} tags`);
+  if (res.lineArtLabels) throw new Error(`${where}: line-art labels overlap: ${JSON.stringify(res.lineArtLabels)}`);
+  if (res.labelOnFood) throw new Error(`${where}: a line-art label sits on a food: ${JSON.stringify(res.labelOnFood)}`);
+  if (res.illustratedTags) throw new Error(`${where}: illustrated tags overlap: ${JSON.stringify(res.illustratedTags)}`);
+  if (res.aboveHeading) throw new Error(`${where}: an item is drawn above the fridge heading: ${JSON.stringify(res.aboveHeading)}`);
   return res;
 }
 
@@ -379,12 +386,16 @@ async function fridgeHaulScenario(browser) {
   await page.waitForTimeout(150);
 
   console.log('\n--- FRIDGE HAUL: ~25 items ---');
+  const fridgeCount = await page.textContent('#fridgeCount');
+  console.log('fridge count:', fridgeCount);
+  if (fridgeCount.trim() !== '25 items') throw new Error(`expected "25 items", got "${fridgeCount.trim()}"`);
+
   await page.waitForTimeout(900);
   const layout = await assertFridgeLayout(page, 'haul at 390px');
-  expectEqual('every item drawn', layout.items, 25);
-  expectEqual('name labels on the three most urgent', layout.tags, 3);
+  if (layout.rows < 2) throw new Error('a 25-item haul at phone width should need more than one shelf');
+  expectEqual('every savable item labelled', layout.labels, 22);
 
-  const drawerCount = await page.$$eval('#rfCrisperItems .rf-item', els => els.length);
+  const drawerCount = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
   console.log('drawer (gone) items:', drawerCount);
   if (drawerCount !== 3) throw new Error(`expected 3 gone items in the drawer, got ${drawerCount}`);
 
@@ -604,9 +615,9 @@ async function migrationScenario(browser) {
   // unrecognized "dragonfruit" custom entry, which carries none of the
   // newer cat/shape/plural fields) must render through the current
   // category/shape lookups without crashing or silently dropping anything.
-  const shelfItems = await page.$$eval('#rfUnit .rf-item', els => els.length);
-  const drawerItems = 0;
-  console.log('fridge: items drawn =', shelfItems);
+  const shelfItems = await page.$$eval('#fridgeShelf .fridge-item', els => els.length);
+  const drawerItems = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
+  console.log('fridge view: shelf =', shelfItems, ', drawer =', drawerItems);
   if (shelfItems + drawerItems !== expectedCount) throw new Error(`fridge view shows ${shelfItems + drawerItems} items total, expected ${expectedCount}`);
 
   if (errors.length) throw new Error(`current code threw console errors loading migrated state: ${JSON.stringify(errors)}`);
@@ -1344,8 +1355,8 @@ async function mixedFridgeScenario(browser) {
     await seedMixed18(page);
     await page.waitForSelector('#headline');
     await page.waitForTimeout(1300);
-    const names = await page.$$eval('#rfUnit .rf-fooditem', els => els.map(e => e.getAttribute('aria-label')));
-    if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('an item is named by a FoodKeeper title: ' + JSON.stringify(names));
+    const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
+    if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
     await assertFridgeLayout(page, `mixed 18 at ${w}px`);
     // Illustrated fridge: no day tags; a small name label on the three
     // most urgent only; every item a button that opens the popover.
@@ -1373,6 +1384,7 @@ async function mixedFridgeScenario(browser) {
     await page.mouse.click(2, 2);
     await page.waitForTimeout(100);
     await (await page.$('#rfUnit')).screenshot({ path: path.join(OUT, `mixed18-illustrated-${tag}.png`) });
+    await (await page.$('.fridgeview')).screenshot({ path: path.join(OUT, `mixed18-lineart-${tag}.png`) });
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await page.context().close();
   }
