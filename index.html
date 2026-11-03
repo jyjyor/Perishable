@@ -62,8 +62,8 @@ body{
   text-transform:uppercase;
 }
 .bar .mono{color:var(--ink-2)}
-/* The Add jump lands with the Restocked heading clear of the sticky bar. */
-#restockHead{scroll-margin-top:64px}
+/* The Add jump lands with the Add food panel clear of the sticky bar. */
+#addFood{scroll-margin-top:64px}
 
 button{
   font-family:'tonos-mono-vf',ui-monospace,monospace;
@@ -625,6 +625,62 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   .chart-legend{gap:12px;font-size:10.5px}
 }
 
+/* ---------- the page's four parts ----------
+   Fridge / Kitchen, What's turning, Add food, So far. A part's title is
+   Caslonian at 22px, sentence case, so it never reads as data; the small
+   mono caps stay on data labels, axis ticks, legends, chips and buttons.
+   About three times as much space between parts as within one, and rules
+   only between parts. */
+:root{--gap-in:24px;--gap-out:76px}
+.part + .part{margin-top:var(--gap-out);border-top:1px solid var(--ink);padding-top:var(--gap-in)}
+.part-title{
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;
+  font-weight:400;font-size:22px;line-height:1.2;letter-spacing:0;text-transform:none;
+  color:var(--ink);margin-bottom:var(--gap-in);
+}
+.sub-title{
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;
+  font-weight:400;font-size:17px;line-height:1.25;color:var(--ink-2);
+}
+.sub-head{display:flex;align-items:baseline;gap:10px}
+.sub-head + .rescue{margin-top:12px}
+
+/* 1: the tabs are the title */
+.part-rooms{padding-top:calc(var(--gap-in) * 1.75)}
+.room-tabs{padding-top:0;gap:26px}
+.room-tab{
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;
+  font-size:22px;letter-spacing:0;text-transform:none;line-height:1.2;padding:0 0 3px;
+}
+.part-rooms .rf{padding-top:var(--gap-in)}
+.part-rooms .kc{padding-top:var(--gap-in)}
+.allitems{margin-top:var(--gap-in);border-top:none;border-bottom:none}
+.fridgeview-head{padding:4px 0}
+.fridge-drawer{border-bottom:none}
+#panelKitchen .tonight.projected{margin-top:calc(var(--gap-in) * 1.5);border-top:none;padding-top:0}
+#panelKitchen .dish-sub{margin-top:12px;border-top:none;padding-top:0}
+
+/* 2 */
+.part-turning .hero{padding:0}
+.part-turning .sub-title{margin-top:calc(var(--gap-in) * 1.5)}
+.part-turning .chart{margin-top:8px}
+
+/* 3: a faint tinted panel -- flat, square, no shadow -- so it reads as
+   the place you do something. It replaces the rule above it. */
+.part.part-add{border-top:none;background:var(--panel);padding:var(--gap-in) 28px 28px}
+.part-add .add{margin-top:var(--gap-in)}
+.part-add .add input{background:var(--paper)}
+.part-add .hint{margin-top:12px}
+
+/* 4 */
+.part-sofar .ledger{margin-top:0;border-top:none;padding-top:0}
+
+@media (max-width:720px){
+  :root{--gap-in:20px;--gap-out:60px}
+  .part-title,.room-tab{font-size:20px}
+  .part.part-add{margin-left:-16px;margin-right:-16px;padding:var(--gap-in) 16px 24px}
+}
+
 @media (prefers-reduced-motion:reduce){
   *{transition:none !important;animation:none !important}
 }
@@ -653,6 +709,8 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 
   <!-- Fridge and Kitchen: two panels side by side in one horizontal
        snap-scroll area, tabs above, kept in sync both ways (initRooms). -->
+  <!-- 1. Fridge / Kitchen: the tabs are its title; All items under it. -->
+  <section class="part part-rooms" aria-label="Fridge and kitchen">
   <div class="rooms" id="rooms">
   <div class="room-tabs mono" role="tablist" aria-label="Where the food is" id="roomTabs">
     <button type="button" role="tab" class="room-tab" id="tabFridge" aria-controls="panelFridge" aria-selected="true" tabindex="0">Fridge</button>
@@ -741,26 +799,31 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       <div class="fridge-drawer-items" id="fridgeDrawerItems"></div>
     </div>
   </details>
-
-  <section class="hero">
-    <h1 id="headline">—</h1>
-    <p id="subline"></p>
   </section>
 
-  <div class="chart" id="chart"></div>
-  <div class="chart-legend mono">
-    <span><i style="background:var(--crit)"></i>72 hours or less</span>
-    <span><i style="background:var(--turn)"></i>this week</span>
-    <span><i style="background:var(--fresh)"></i>holding</span>
-  </div>
+  <!-- 2. What's turning: the headline, its subline, the decay line. -->
+  <section class="part part-turning" aria-labelledby="turningTitle">
+    <h2 class="part-title" id="turningTitle">What's turning</h2>
+    <div class="hero">
+      <h1 id="headline">—</h1>
+      <p id="subline"></p>
+    </div>
+    <h3 class="sub-title">The next three weeks</h3>
+    <div class="chart" id="chart"></div>
+    <div class="chart-legend mono">
+      <span><i style="background:var(--crit)"></i>72 hours or less</span>
+      <span><i style="background:var(--turn)"></i>this week</span>
+      <span><i style="background:var(--fresh)"></i>holding</span>
+    </div>
+  </section>
 
-  <section class="inv">
-
-    <div class="mono" id="restockHead" style="color:var(--ink-2);margin-bottom:10px">Restocked <button class="ghost" id="restockEdit" style="margin-left:6px">Edit</button></div>
+  <!-- 3. Add food: the place where you do something. The top bar's Add
+       jumps here. -->
+  <section class="part part-add" id="addFood" aria-labelledby="addTitle">
+    <h2 class="part-title" id="addTitle">Add food</h2>
+    <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit">Edit</button></div>
     <div class="rescue" id="restock"></div>
 
-
-    <div class="mono" style="color:var(--ink-2);margin-top:26px;margin-bottom:10px">Something new or unusual</div>
     <div class="add">
       <div class="entrywrap">
         <input id="entry" placeholder="what did you buy? e.g. spinach, milk, chicken breast 2d" autocomplete="off">
@@ -773,10 +836,13 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     </div>
     <div class="missing" id="voicePreview" style="display:none"></div>
     <div class="missing" id="receiptPreview" style="display:none"></div>
-    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. Anything typed here joins the tap list above next time.</p>
+    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. Anything typed here joins your usuals next time.</p>
   </section>
 
-  <section class="ledger">
+  <!-- 4. So far: the ledger. -->
+  <section class="part part-sofar" aria-labelledby="sofarTitle">
+  <h2 class="part-title" id="sofarTitle">So far</h2>
+  <div class="ledger">
     <div class="stat">
       <b id="wasteG">0 g</b>
       <span class="mono">thrown away</span>
@@ -797,6 +863,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       <b id="dayCount">Day 1</b>
       <span class="mono">of this kitchen</span>
     </div>
+  </div>
   </section>
 
 </div>
@@ -1888,7 +1955,7 @@ function factAt(day, sourceFridge){
     if (before && !pool.length) return 'Nothing new turns that day.';
     const turning = pool.filter(it => !it.ripening && leftAt(it, day) === 0);
     if (turning.length > 1){
-      const names = turning.map((it, i) => i ? food(it).en.toLowerCase() : food(it).en);
+      const names = turning.map(it => food(it).en);
       return `${joinWords(names)} are on their last day.`;
     }
   }
@@ -4807,10 +4874,9 @@ function renderChart(){
     if (!buckets.has(k)) buckets.set(k, {d: d < 0 ? -1 : d, items: []});
     buckets.get(k).items.push(it);
   });
-  const lower = (n, i) => i ? n.charAt(0).toLowerCase() + n.slice(1) : n;
   const head = d => d < 0 ? 'past' : d === 0 ? 'today' : d === 1 ? '1 day' : d + ' days';
   const textFor = (b, n) => {
-    const names = b.items.slice(0, n).map((it, i) => lower(food(it).en, i)).join(', ');
+    const names = b.items.slice(0, n).map(it => food(it).en).join(', ');
     const more = b.items.length - n;
     return head(b.d) + ' · ' + names + (more > 0 ? ' +' + more : '');
   };
@@ -4952,7 +5018,7 @@ function wireDishCard(r, boxId, skipSet){
   box.querySelectorAll('[data-swap]').forEach(b => {
     b.onclick = () => {
       swapped[b.dataset.dish] = {key:b.dataset.swap, label:b.dataset.label};
-      toast('Recipe adjusted for ' + b.dataset.label.toLowerCase());
+      toast('Recipe adjusted for ' + b.dataset.label);
       render();
     };
   });
@@ -5197,7 +5263,7 @@ function useItem(id, tossed){
     ledger.savedG += f.g;
   }
   fridge.splice(i, 1);
-  const msg = tossed ? 'Tossed ' + f.en.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone' : 'Used ' + f.en.toLowerCase();
+  const msg = tossed ? 'Tossed ' + f.en + ' · $' + f.usd.toFixed(2) + ' gone' : 'Used ' + f.en;
   toast(msg, () => {
     if (fridge.some(x => x.id === it.id)) return;
     if (tossed){ ledger.wasteG -= f.g; ledger.wasteUSD -= f.usd; } else ledger.savedG -= f.g;
@@ -5227,7 +5293,7 @@ function removeFridgeItem(id){
   }
   // Undo, as for Used and Tossed: the same record back where it was, and
   // the restock entry as it stood (count and all).
-  toast('Removed ' + f.en.toLowerCase(), () => {
+  toast('Removed ' + f.en, () => {
     if (fridge.some(x => x.id === it.id)) return;
     fridge.splice(Math.min(i, fridge.length), 0, it);
     if (savedStanding) standing[it.key] = savedStanding;
@@ -5244,7 +5310,7 @@ function removeStanding(key){
   if (!entry) return;
   const label = labelOf(key);
   delete standing[key];
-  toast('Removed ' + label.toLowerCase() + ' from restock');
+  toast('Removed ' + label + ' from your usuals');
   render();
 }
 
@@ -5597,7 +5663,7 @@ function restock(key, shelf){
     const label = labelOf(key);
     showEntryPreview([{raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
       suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key}],
-      'Restocking ' + label.toLowerCase() + ' needs the date on the new one.');
+      'Restocking ' + label + ' needs the date on the new one.');
     return;
   }
   const label = labelOf(key);
@@ -5763,10 +5829,10 @@ function setApiKey(k){
   try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch(e){ /* unavailable */ }
 }
 
-// The top bar's Add: down to Restocked, cursor in the entry field.
+// The top bar's Add: down to Add food, cursor in the entry field.
 function jumpToAdd(){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.getElementById('restockHead').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+  document.getElementById('addFood').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
   document.getElementById('entry').focus({preventScroll: true});
 }
 

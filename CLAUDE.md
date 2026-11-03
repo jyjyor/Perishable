@@ -168,7 +168,19 @@ Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
 has; nothing is synthetically bolded or italicised beyond what it ships.
 Tonos Mono (tonos-mono-vf) for all dates, counts, labels, and buttons.
-No third family. Both come from an Adobe Fonts web project tied to a
+No third family. Section titles are Caslonian at about 22px, sentence
+case; the small mono caps stay only on data labels, axis ticks, legends,
+chips and buttons, so a title never reads as data. Food names keep their
+own capitals wherever they appear ("Chinese broccoli", never lowercased
+mid-list).
+
+The page is four parts, about three times as far apart as anything
+within one, with rules only between parts: Fridge / Kitchen (the tabs
+are its title, All items under it); What's turning (the headline, its
+subline, and the decay line under its own small title); Add food (a
+faint flat tinted panel: Your usuals with Edit, then the entry field
+with Add, Speak and Scan receipt -- the top bar's Add jumps here); and
+So far (the ledger). Both come from an Adobe Fonts web project tied to a
 Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
 CDN — fallbacks are Georgia/serif for Caslonian and ui-monospace for
 Tonos Mono, so the page still holds together if that stops being served.

@@ -1774,7 +1774,7 @@ async function popoverDetailsScenario(browser) {
   expectEqual('restock count undone', after.standing, null);
   // Undo brings back the same record and the restock entry
   const toastText = await page.textContent('#toast');
-  if (!/^Removed potato chips/.test(toastText) || !/Undo/.test(toastText)) throw new Error('Remove toast: ' + toastText);
+  if (!/^Removed Potato chips/.test(toastText) || !/Undo/.test(toastText)) throw new Error('Remove toast: ' + toastText);
   await page.click('#toast .toast-undo');
   await page.waitForTimeout(100);
   const undone = await page.evaluate(() => ({ ledger: {...ledger}, n: fridge.length, chips: fridge.some(i => i.key === '_c_potatochips'),
@@ -1827,7 +1827,7 @@ async function popoverUseScenario(browser) {
   expectEqual('same ledger after Used and Tossed', pop.ledgers, list.ledgers);
   if (!(pop.ledgers[1].savedG > 0 && pop.ledgers[2].wasteG > 0)) throw new Error('Used should count saved, Tossed waste');
   expectEqual('items gone from the fridge', pop.left, ['salmon']);
-  if (!/Tossed chicken breast/.test(pop.toastText) || !/Undo/.test(pop.toastText)) throw new Error('toast: ' + pop.toastText);
+  if (!/Tossed Chicken breast/.test(pop.toastText) || !/Undo/.test(pop.toastText)) throw new Error('toast: ' + pop.toastText);
   if (/!|great|nice|well done/i.test(pop.toastText)) throw new Error('no celebration: ' + pop.toastText);
 
   // Undo the toss, then Used + Undo from the popover again.
@@ -1840,7 +1840,7 @@ async function popoverUseScenario(browser) {
   await page.$eval(`[data-rf-item="${pop.ids.salmon}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
   await page.click('#rfPopover .rf-pop-used');
   await page.waitForTimeout(100);
-  if (!(await page.textContent('#toast')).startsWith('Used salmon')) throw new Error('toast should say Used salmon');
+  if (!(await page.textContent('#toast')).startsWith('Used Salmon')) throw new Error('toast should say Used Salmon');
   await page.click('#toast .toast-undo');
   await page.waitForTimeout(100);
   expectEqual('Undo restores the same record', await page.evaluate(id => JSON.stringify(fridge.find(i => i.id === id)), pop.ids.salmon), before);
@@ -1971,11 +1971,11 @@ async function ripenessScenario(browser) {
   await page.context().close();
 }
 
-// The top bar's Add: scrolls to Restocked and puts the cursor in the
+// The top bar's Add: scrolls to Add food and puts the cursor in the
 // entry field. On a phone the bar is a thin sticky strip, so Add stays
 // one tap away from anywhere on the page.
 async function addButtonScenario(browser) {
-  console.log('\n--- ADD BUTTON: top bar jumps to Restocked and focuses entry ---');
+  console.log('\n--- ADD BUTTON: top bar jumps to Add food and focuses entry ---');
   for (const [name, vp] of [['desktop', { width: 1200, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport: vp, reducedMotion: 'reduce' });
     const page = await ctx.newPage();
@@ -2005,17 +2005,17 @@ async function addButtonScenario(browser) {
     await page.waitForTimeout(200);
     const st = await page.evaluate(() => ({
       focused: document.activeElement && document.activeElement.id,
-      headTop: Math.round(document.getElementById('restockHead').getBoundingClientRect().top),
+      headTop: Math.round(document.getElementById('addFood').getBoundingClientRect().top),
       barBottom: Math.round(document.querySelector('.bar').getBoundingClientRect().bottom),
       atEnd: Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 1,
       entryVisible: (r => r.top >= 0 && r.bottom <= innerHeight)(document.getElementById('entry').getBoundingClientRect()),
     }));
     console.log(`${name}: after Add`, JSON.stringify(st));
     expectEqual(`${name}: entry focused`, st.focused, 'entry');
-    // Restocked lands at the top, unless the page ends first.
-    if (st.headTop < 0 || (st.headTop > 120 && !st.atEnd)) throw new Error(`${name}: Restocked should be near the top of the view, got ${st.headTop}`);
+    // Add food lands at the top, unless the page ends first.
+    if (st.headTop < 0 || (st.headTop > 120 && !st.atEnd)) throw new Error(`${name}: Add food should be near the top of the view, got ${st.headTop}`);
     if (!st.entryVisible) throw new Error(`${name}: the entry field should be on screen`);
-    if (name === 'phone' && st.headTop < st.barBottom) throw new Error('phone: Restocked hidden under the sticky bar');
+    if (name === 'phone' && st.headTop < st.barBottom) throw new Error('phone: Add food hidden under the sticky bar');
     await page.screenshot({ path: path.join(OUT, `add-button-${name}.png`) });
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await ctx.close();
@@ -2138,6 +2138,51 @@ async function kitchenScenario(browser) {
   await ctx.close();
 }
 
+// The page in four parts -- Fridge / Kitchen, What's turning, Add food,
+// So far -- each titled in Caslonian (the tabs are the first part's
+// title), never in the mono caps that label data. Food names keep their
+// own capitals in labels: "Chinese broccoli", never "chinese broccoli".
+async function pageStructureScenario(browser) {
+  console.log('\n--- PAGE: four parts, titles in Caslonian, food names capitalized ---');
+  const items = [...KITCHEN_20, ['gailan', 2]];
+  for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await browser.newContext({ viewport: vp });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, items);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const st = await page.evaluate(() => {
+      const parts = [...document.querySelectorAll('.wrap > .part')];
+      const titleOf = p => p.querySelector('.part-title') || p.querySelector('[role=tab]');
+      return {
+        titles: parts.map(p => titleOf(p).textContent.trim()),
+        fonts: parts.map(p => { const cs = getComputedStyle(titleOf(p)); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
+        gaps: parts.slice(1).map((p, i) => Math.round(p.getBoundingClientRect().top - parts[i].getBoundingClientRect().bottom)),
+        addTint: getComputedStyle(document.getElementById('addFood')).backgroundColor,
+        usuals: document.querySelector('#addFood .sub-title').textContent,
+        entryInAdd: !!document.querySelector('#addFood #entry') && !!document.querySelector('#addFood #restock'),
+        chart: document.getElementById('chart').textContent,
+      };
+    });
+    console.log(`${tag}:`, JSON.stringify({ ...st, chart: undefined }));
+    expectEqual(`${tag}: four parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', "What's turning", 'Add food', 'So far']);
+    for (const [fam, size, tt] of st.fonts) {
+      if (fam !== 'caslonian-std-l' || tt !== 'none' || parseFloat(size) < 19) throw new Error(`${tag}: a part title is ${fam} ${size} ${tt}`);
+    }
+    if (st.gaps.some(g => g < 50)) throw new Error(`${tag}: parts should sit well apart, got ${st.gaps}`);
+    if (st.addTint === 'rgba(0, 0, 0, 0)') throw new Error(`${tag}: Add food should have its tinted panel`);
+    expectEqual(`${tag}: Your usuals`, st.usuals, 'Your usuals');
+    expectEqual(`${tag}: chips and entry in one section`, st.entryInAdd, true);
+    // (a phone shortens a crowded day to "+N", so the full names are checked on desktop)
+    if (tag === 'desktop' && !/Chinese broccoli/.test(st.chart) || /chinese broccoli/.test(st.chart)) throw new Error(`${tag}: decay line should say "Chinese broccoli": ${st.chart}`);
+    await page.screenshot({ path: path.join(OUT, `page-${tag}.png`), fullPage: true });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -2194,6 +2239,7 @@ async function kitchenScenario(browser) {
     () => phoneDataScenario(browser),
     () => addButtonScenario(browser),
     () => kitchenScenario(browser),
+    () => pageStructureScenario(browser),
   ];
   let passed = 0;
   const failed = [];
