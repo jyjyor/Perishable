@@ -1615,6 +1615,15 @@ async function popoverDetailsScenario(browser) {
   expectEqual('Remove takes it out', [after.n, after.chips], [before.n - 1, false]);
   expectEqual('Remove is not waste', after.ledger, before.ledger);
   expectEqual('restock count undone', after.standing, null);
+  // Undo brings back the same record and the restock entry
+  const toastText = await page.textContent('#toast');
+  if (!/^Removed potato chips/.test(toastText) || !/Undo/.test(toastText)) throw new Error('Remove toast: ' + toastText);
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  const undone = await page.evaluate(() => ({ ledger: {...ledger}, n: fridge.length, chips: fridge.some(i => i.key === '_c_potatochips'),
+    count: standing._c_potatochips && standing._c_potatochips.count }));
+  expectEqual('Undo restores the item and the restock entry', [undone.n, undone.chips, undone.count], [before.n, true, before.count]);
+  expectEqual('ledger still untouched', undone.ledger, before.ledger);
   // salmon: FOODS weight, no "≈"; and one day left reads "1 day" in the row
   const salmon = await page.evaluate(() => fridge.find(i => i.key === 'salmon').id);
   await page.$eval(`[data-rf-item="${salmon}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });

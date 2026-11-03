@@ -4422,11 +4422,19 @@ function removeFridgeItem(id){
   const f = food(it);
   fridge.splice(i, 1);
   const s = standing[it.key];
+  const savedStanding = s ? {...s} : null;
   if (s){
     s.count -= 1;
     if (s.count <= 0) delete standing[it.key];
   }
-  toast('Removed ' + f.en.toLowerCase());
+  // Undo, as for Used and Tossed: the same record back where it was, and
+  // the restock entry as it stood (count and all).
+  toast('Removed ' + f.en.toLowerCase(), () => {
+    if (fridge.some(x => x.id === it.id)) return;
+    fridge.splice(Math.min(i, fridge.length), 0, it);
+    if (savedStanding) standing[it.key] = savedStanding;
+    render();
+  });
   render();
 }
 

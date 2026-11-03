@@ -183,7 +183,7 @@ on hover, a focus ring) that opens the popover: name, status, Bought and
 Use by (both editable), shelf-life source, Est. weight, It's ripe for a
 ripening item, Used and Tossed, and a quiet Remove link for an item
 logged by mistake (removeFridgeItem: out of the fridge, not waste, its
-restock count undone). Past-date items sit in the crisper, whose drawer
+restock count undone; the toast offers Undo, as for Used and Tossed). Past-date items sit in the crisper, whose drawer
 front reads "N past date · Toss all"; Toss all asks right there ("Toss N
 past date? Toss N · Cancel") before anything counts as waste.
 
