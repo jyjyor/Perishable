@@ -1358,14 +1358,9 @@ async function mixedFridgeScenario(browser) {
     const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
     if (names.some(n => /nectarines|sapote|\(/.test(n))) throw new Error('a label shows a FoodKeeper title: ' + JSON.stringify(names));
     await assertFridgeLayout(page, `mixed 18 at ${w}px`);
-    // Illustrated fridge: no day tags; a small name label on the three
-    // most urgent only; every item a button that opens the popover.
-    const tags = await page.$$eval('#rfUnit .rf-tag', els => els.map(t => ({ id: +t.dataset.rfTag, text: t.textContent.trim() })));
-    const soonest = await page.evaluate(() => fridge.filter(it => left(it) >= 0 && !it.ripening)
-      .sort((a, b) => left(a) - left(b)).slice(0, 3).map(it => ({ id: it.id, name: food(it).en })));
-    expectEqual(`name labels at ${w}px`, tags.map(t => t.id).sort(), soonest.map(s => s.id).sort());
-    for (const t of tags) expectEqual('label is the name only', t.text, soonest.find(s => s.id === t.id).name);
-    expectEqual('no Toss under items', await page.$$eval('#rfUnit [data-rf-toss]', els => els.length), 0);
+    // Illustrated fridge: nothing hangs under its items; the line-art row
+    // below names every item.
+    expectEqual(`no tags in the illustrated fridge at ${w}px`, await page.$$eval('#rfUnit .rf-tag, #rfUnit .rf-under', e => e.length), 0);
     const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
     const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
     expectEqual('drawer front', crisper, `${goneN} past date · Toss all`);
@@ -1377,7 +1372,7 @@ async function mixedFridgeScenario(browser) {
     if (onHandle) throw new Error(`${w}px: the drawer-front line runs into the crisper handle`);
     const look = await page.$eval('#rfUnit .rf-fooditem', b => getComputedStyle(b).cursor);
     expectEqual('items show a pointer', look, 'pointer');
-    const quiet = await page.evaluate(ids => fridge.find(it => left(it) >= 0 && !ids.includes(it.id)).id, tags.map(t => t.id));
+    const quiet = await page.evaluate(() => fridge.find(it => left(it) >= 0).id);
     await page.$eval(`[data-rf-item="${quiet}"]`, el => el.click());
     const popName = await page.textContent('#rfPopover .rf-pop-name');
     expectEqual('tap shows the name', popName.trim(), await page.evaluate(id => food(fridge.find(i => i.id === id)).en, quiet));

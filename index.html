@@ -218,29 +218,6 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    (the line-art fridge below still draws with its own weights). */
 .rf-foodshape svg > path{stroke-width:2.5px}
 .rf-foodshape svg > g[stroke]{stroke-width:1.25px}
-.rf-under{
-  /* The tag hangs below its item, clear of the shelf: --rf-drop (set per
-     row) clears the shelf's front edge, the string bridges the gap, and a
-     crowded row's tags step down a tier (--rf-tier) rather than collide. */
-  position:absolute;left:50%;z-index:3;
-  top:calc(100% + var(--rf-drop, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
-  transform:translateX(-50%);
-}
-.rf-tag{
-  position:relative;width:max-content;display:flex;flex-direction:column;align-items:center;gap:1px;
-  background:var(--paper);border:1px solid var(--line);padding:2px 6px 3px;
-  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.02em;line-height:1.2;
-  text-align:center;
-  /* Never break inside a word: a name wraps only at its spaces
-     ("Chicken / breast"), so the tag is as narrow as its longest word. */
-  white-space:normal;overflow-wrap:normal;word-break:keep-all;hyphens:none;
-}
-.rf-tag > span{max-width:14ch}
-.rf-tag::before{
-  content:'';position:absolute;left:50%;bottom:100%;width:1px;background:var(--ink-3);
-  height:calc(var(--rf-string, 4px) + var(--rf-tier, 0) * var(--rf-tier-h, 36px));
-}
-.rf-tag{cursor:pointer;font-size:10px;padding:1px 5px 2px}
 /* On a phone the line is wider than the room left of the drawer's
    handle, so it sits a little higher, clear of it. */
 @media (max-width:720px){ .rf-crisper-label{transform:translateY(-16px)} }
@@ -3709,11 +3686,10 @@ function rfFillRow(el, fit, day, opts = {}){
     el.style.setProperty('--rf-drop', rfCq(opts.dropU));
     el.style.setProperty('--rf-string', rfCq(opts.stringU));
   }
-  el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null,
-    opts.named && opts.named.has(p.it.id))).join('');
+  el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null)).join('');
 }
 
-function rfBuildFoodItem(it, day, u, z, named){
+function rfBuildFoodItem(it, day, u, z){
   const f = food(it);
   const cat = fridgeCatOf(it);
   const d = leftAt(it, day);
@@ -3723,18 +3699,13 @@ function rfBuildFoodItem(it, day, u, z, named){
   const color = foodBodyColor(it, frac);
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
-  // No days under items: the fridge tells urgency by position, size and
-  // decay, and dates live in the popover, the decay line and the list.
-  // Only the three most urgent carry a small name label -- deli containers
-  // and trays look alike -- in their urgency colour, the same
-  // state()/COLOR lookup as everywhere else.
-  const c = COLOR[state(d)];
+  // No tags under items: the fridge tells urgency by position, size and
+  // decay; the line-art row below names every item, and the popover has
+  // the dates.
   return `<div class="rf-item"${z != null ? ` style="z-index:${z}"` : ''}>
     <button type="button" class="rf-fooditem" data-rf-item="${it.id}" aria-label="${f.en}">
       <span class="rf-foodshape" data-u="${u.toFixed(2)}" style="width:${cq};height:${cq}">${svg}</span>
     </button>
-${named ? `
-    <div class="rf-under"><div class="rf-tag" data-rf-tag="${it.id}" style="color:${c}">${f.en}</div></div>` : ''}
   </div>`;
 }
 
@@ -3794,9 +3765,6 @@ function renderRealFridge(){
   const ordered = [...left.reverse(), ...right];
   const rank = new Map(eyeItems.map((it, i) => [it.id, i]));
 
-  // The three soonest (not yet gone) carry a name label.
-  const named = new Set(active.filter(it => !it.ripening).slice(0, 3).map(it => it.id));
-
   const o = RF.open;
   // Items stand on the glass just behind its front edge; the row's width
   // is the shelf's at that depth.
@@ -3820,7 +3788,7 @@ function renderRealFridge(){
   const eyeFinal = shared < eyeFit.scale ? rfFitRow(ordered, day, eye.w, shared) : eyeFit;
   // Tags start 4 units under the shelf's front edge, the string covering
   // those 4: the edge itself (and the 1.5 the base sits above it) stays clear.
-  const shelfTag = {dropU: 1.5 + RF.edge + 4, stringU: 4, named};
+  const shelfTag = {dropU: 1.5 + RF.edge + 4, stringU: 4};
   // Shelf rows stack above the crisper's front panel (z 2) and its tags
   // (z 3); the upper shelf's hanging tags above the eye-level food.
   rfFillRow(eyeShelf, eyeFinal, day, {...shelfTag, z: (i, n) => 10 + n - rank.get(eyeFinal.items[i].it.id)});
@@ -3835,7 +3803,7 @@ function renderRealFridge(){
     rfPlaceRow(el, 30, DW - 30, bt + 52, DW, DH);
     const mine = doorItems.slice(i * 3, i * 3 + 3);
     const tallest = Math.max(0, ...mine.map(it => rfUrgencyPx(it, day) / RF.PX));
-    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4, named});
+    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4});
   });
 
   // foodShapeMarkupLine centres a body in its square; pull each one down
@@ -3847,18 +3815,8 @@ function renderRealFridge(){
     const gap = Math.max(0, size - (box.y + box.height)) / size;
     span.style.marginBottom = `-${(gap * +span.dataset.u * 100 / RF.W).toFixed(3)}cqw`;
   });
-  rfStaggerTags([upperShelf, eyeShelf, crisperItems]);
-  bins.forEach(b => rfStaggerTags([b]));
-  // Tags can hang below the cabinet; keep that much room under it so they
-  // never lie over whatever follows on the page.
-  const unitBottom = unit.getBoundingClientRect().bottom;
-  const hang = Math.max(0, ...[...unit.querySelectorAll('.rf-tag')].map(t => t.getBoundingClientRect().bottom - unitBottom));
-  unit.style.marginBottom = hang > 0 ? Math.ceil(hang + 12) + 'px' : '';
   unit.querySelectorAll('[data-rf-item]').forEach(b => {
     b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
-  });
-  unit.querySelectorAll('[data-rf-tag]').forEach(t => {
-    t.onclick = e => { e.stopPropagation(); rfShowPopover(+t.dataset.rfTag, t); };
   });
   // The drawer front: how many are past date, and Toss all, which opens
   // the same confirmation as the list's "Toss N expired".
@@ -3873,29 +3831,6 @@ function renderRealFridge(){
     render();
     document.getElementById('clearConfirm').scrollIntoView({block: 'center', behavior: 'smooth'});
   };
-}
-
-// Rows in order (upper shelf, eye level, crisper), each tag left to
-// right takes the first tier where it overlaps no tag already placed --
-// from any row, since one shelf's hanging tags reach down toward the next
-// one's. Read off real rendered boxes, not an estimate.
-function rfStaggerTags(rows){
-  const placed = [], M = 3;
-  rows.forEach(row => {
-    const tagH = Math.max(0, ...[...row.querySelectorAll('.rf-tag')].map(t => t.offsetHeight));
-    const step = tagH + 5;
-    row.style.setProperty('--rf-tier-h', step + 'px');
-    row.querySelectorAll('.rf-under').forEach(u => {
-      u.style.removeProperty('--rf-tier');
-      const r = u.getBoundingClientRect();
-      const hits = dy => placed.some(p => r.left < p.right + M && r.right > p.left - M
-        && r.top + dy < p.bottom + M && r.bottom + dy > p.top - M);
-      let tier = 0;
-      while (tier < 12 && hits(tier * step)) tier++;
-      if (tier) u.style.setProperty('--rf-tier', tier);
-      placed.push({left: r.left, right: r.right, top: r.top + tier * step, bottom: r.bottom + tier * step});
-    });
-  });
 }
 
 function rfShowPopover(id, anchorEl){
