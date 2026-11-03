@@ -78,8 +78,9 @@ consumer food app.
 
 Two colour roles, kept apart on purpose. Urgency — how soon something
 turns — is told only by the decay-sequence palette below, and it appears
-in exactly four places: the line-art row's labels (name and days left),
-the fridge's popover, the decay line, and its legend. Do not
+in exactly five places: the line-art row's labels (name and days left),
+the fridge's popover, the decay line, its legend, and the Kitchen tab's
+count of counter food within 72 hours ("Kitchen · 2", --crit). Do not
 add colours outside this set for urgency, and do not let urgency colour
 migrate anywhere else.
 
@@ -139,7 +140,9 @@ in a muted cream (the cream body option, chosen over a cool white-blue
 one) with its own two or three flat shade tones, scoped to that drawing.
 Its interior stays a pale cold blue. The page, the type, the tags and
 every control stay in the cold fridge palette above; the cream never
-leaves the fridge body.
+leaves the fridge body. The kitchen counter is the third exception, on
+the same terms: a pale cold stone top, a bleached cutting board and a
+grey glazed bowl, a few flat tones scoped to .kc-unit.
 
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a
@@ -184,6 +187,28 @@ to a week ("2 days · Strawberries, salmon"), in that day's urgency
 colour, never crossing the line or each other; further out is a dot
 only. Both read from the same shelf-life math (leftAt, pos) and must
 never disagree with each other.
+
+Fridge and Kitchen are two panels side by side in one horizontal swipe
+area (native scroll snapping, overscroll-behavior-x: contain so a swipe
+never triggers back/forward), with tabs above in the small label style,
+the active one underlined, in sync both ways (initRooms): a swipe moves
+the underline, a tab or an arrow key scrolls to its panel, instantly
+under prefers-reduced-motion. The page always opens on Fridge; the area
+is as tall as the active panel; on a phone about 16 px of the other panel
+shows at the edge. Food and the fridge door are touch-action: pan-y, so a
+tap there never starts a swipe.
+
+Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
+top, a cutting board and a bowl, nothing else. The board carries
+Tonight's dish: its owned ingredients drawn with the same food drawings
+and decay, the dish name, the "uses up" line, Cook this and Show another.
+Tomorrow and The day after follow as text under the counter. The bowl
+holds what's kept out of the fridge (onCounter: store:'pantry' foods --
+potatoes, onions, garlic, bread, whole melons, coconut -- plus bananas)
+and anything marked "Not ripe yet"; those leave the fridge shelves. Past
+date, they go to the crisper with everything else past date, so Toss all
+stays one place. Counter food is never out of the count: the headline,
+the decay line and All items include everything.
 
 Two fridge views, one after the other, from the same `fridge` array.
 

@@ -166,7 +166,6 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    page palette: two body options (data-body) are kept side by side for
    review until one is chosen. */
 .rf{padding:30px 0 10px}
-.rf-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:18px}
 .rf-stage{display:flex;justify-content:center;padding:4px 0 34px;--rf-w:min(600px,62vw)}
 .rf-unit{
   position:relative;width:var(--rf-w);aspect-ratio:360/640;
@@ -334,9 +333,68 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    would sit in the door bins goes on the upper shelf instead (RF_PHONE in
    renderRealFridge), so nothing is hidden behind the turned door. */
 @media (max-width:720px){
-  .rf-stage{--rf-w:min(92vw,440px)}
+  .rf-stage{--rf-w:min(82vw,440px)}
   .rf-unit{margin-right:calc(var(--rf-w) * .05)}
   .rf-unit.open .rf-door{transform:rotateY(90deg)}
+}
+
+/* ---------- fridge and kitchen ----------
+   Two panels in one horizontal scroll area with native snapping, so a
+   swipe or a two-finger trackpad swipe lands on one panel. overscroll-
+   behavior-x keeps that swipe from ever reaching the browser's back /
+   forward gesture. The area's height is the active panel's (initRooms),
+   so the page below never sits under the taller one's empty space. */
+.room-tabs{display:flex;gap:22px;padding-top:30px;color:var(--ink-2)}
+.room-tab{
+  border:none;background:none;padding:4px 0;color:var(--ink-2);
+  border-bottom:1px solid transparent;
+}
+.room-tab:hover{background:none;color:var(--ink)}
+.room-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.room-count{color:var(--crit)}
+.rooms-track{
+  display:flex;align-items:flex-start;
+  overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  scrollbar-width:none;
+}
+.rooms-track::-webkit-scrollbar{display:none}
+.room{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+.rf{padding-top:18px}
+/* Food and the fridge door take taps, never a horizontal swipe. */
+.rf-fooditem,.rf-door,.rf-handle{touch-action:pan-y}
+@media (max-width:720px){
+  /* about 16px of the other panel shows at the edge */
+  .room{flex-basis:calc(100% - 16px)}
+  .room + .room{padding-left:12px}
+}
+
+/* The counter: an illustrated object like the fridge, so it gets its own
+   few flat tones, scoped to .kc-unit and never used elsewhere -- a pale
+   cold stone top, a bleached board, a grey glazed bowl. */
+.kc{padding:18px 0 10px}
+.kc-stage{display:flex;justify-content:center}
+.kc-unit{
+  position:relative;width:min(100%,720px);aspect-ratio:360/150;
+  container-type:inline-size;
+  --rf-ink:var(--ink);
+  --kc-top:#D9DEDC;--kc-top-2:#C9D0CE;--kc-front:#BCC5C2;
+  --kc-board:#E2DCCD;--kc-board-2:#D1C9B6;
+  --kc-bowl:#CBD4D6;--kc-bowl-2:#B7C2C5;--kc-bowl-in:#DDE4E6;
+}
+.rf-svg .kt{fill:var(--kc-top)} .rf-svg .kt2{fill:var(--kc-top-2)} .rf-svg .kf{fill:var(--kc-front)}
+.rf-svg .kb{fill:var(--kc-board)} .rf-svg .kb2{fill:var(--kc-board-2)}
+.rf-svg .kw{fill:var(--kc-bowl)} .rf-svg .kw2{fill:var(--kc-bowl-2)} .rf-svg .kwi{fill:var(--kc-bowl-in)}
+.kc-unit .kc-front{z-index:2;pointer-events:none}
+.kc-row{z-index:1}
+.kc-captions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.55fr);gap:28px;max-width:720px;margin:0 auto;align-items:start}
+.kc-bowl-note{color:var(--ink-3);text-align:center;padding-top:4px}
+.tonight.kc-board{margin-top:0;border-top:none;padding-top:4px;grid-template-columns:1fr;gap:14px}
+.tonight.kc-board .actions{flex-direction:row}
+#panelKitchen .tonight.projected{max-width:720px;margin-left:auto;margin-right:auto}
+@media (max-width:720px){
+  .kc-captions{grid-template-columns:1fr;gap:6px}
+  .kc-bowl-note{order:-1;text-align:right}
 }
 
 /* ---------- hero ---------- */
@@ -593,8 +651,16 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     <div class="mono" id="settingsStatus" style="margin-top:8px;color:var(--ink-3)"></div>
   </div>
 
+  <!-- Fridge and Kitchen: two panels side by side in one horizontal
+       snap-scroll area, tabs above, kept in sync both ways (initRooms). -->
+  <div class="rooms" id="rooms">
+  <div class="room-tabs mono" role="tablist" aria-label="Where the food is" id="roomTabs">
+    <button type="button" role="tab" class="room-tab" id="tabFridge" aria-controls="panelFridge" aria-selected="true" tabindex="0">Fridge</button>
+    <button type="button" role="tab" class="room-tab" id="tabKitchen" aria-controls="panelKitchen" aria-selected="false" tabindex="-1">Kitchen<span class="room-count" id="kitchenCount"></span></button>
+  </div>
+  <div class="rooms-track" id="roomsTrack">
+  <div class="room" role="tabpanel" id="panelFridge" aria-labelledby="tabFridge">
   <section class="rf" id="rf">
-    <div class="rf-head mono"><span>The fridge</span></div>
     <div class="rf-stage">
       <div class="rf-unit" id="rfUnit" data-body="cream">
         <svg class="rf-svg" id="rfBodySvg" viewBox="0 0 360 640" aria-hidden="true"></svg>
@@ -633,8 +699,34 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
         </div>
       </div>
     </div>
-    <div class="rf-popover" id="rfPopover" hidden></div>
   </section>
+  </div>
+
+  <!-- The kitchen counter: a cutting board with tonight's dish on it, and
+       a bowl for what's kept out of the fridge or still ripening. Drawn in
+       the fridge's own line-and-wash, small. -->
+  <div class="room" role="tabpanel" id="panelKitchen" aria-labelledby="tabKitchen">
+    <section class="kc">
+      <div class="kc-stage">
+        <div class="kc-unit" id="kcUnit">
+          <svg class="rf-svg" id="kcBackSvg" viewBox="0 0 360 150" aria-hidden="true"></svg>
+          <div class="rf-row kc-row" id="kcBoardItems"></div>
+          <div class="rf-row kc-row" id="kcBowlItems"></div>
+          <svg class="rf-svg kc-front" id="kcFrontSvg" viewBox="0 0 360 150" aria-hidden="true"></svg>
+        </div>
+      </div>
+      <div class="kc-captions">
+        <section class="tonight kc-board" id="tonight"></section>
+        <div class="kc-bowl-note mono" id="kcBowlNote"></div>
+      </div>
+    </section>
+    <section class="tonight projected" id="tomorrow" style="display:none"></section>
+    <section class="tonight projected" id="dayAfter" style="display:none"></section>
+  </div>
+  </div>
+  </div>
+  <!-- Outside both panels: Fridge, Kitchen and the All items row share it. -->
+  <div class="rf-popover" id="rfPopover" hidden></div>
 
   <!-- The line-art row: every item by name and days left, with Used and
        Tossed under each. Closed by default on every load; while closed,
@@ -661,10 +753,6 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     <span><i style="background:var(--turn)"></i>this week</span>
     <span><i style="background:var(--fresh)"></i>holding</span>
   </div>
-
-  <section class="tonight" id="tonight"></section>
-  <section class="tonight projected" id="tomorrow" style="display:none"></section>
-  <section class="tonight projected" id="dayAfter" style="display:none"></section>
 
   <section class="inv">
 
@@ -1893,6 +1981,7 @@ function render(){
   renderHeadline();
   renderChart();
   renderTonight();
+  renderKitchen();
   renderRestock();
   saveState();
 }
@@ -4011,8 +4100,19 @@ function staggerFridgeLabels(shelf){
 // action -- a past-date item needs tossing, not a number read off a
 // closed door). Deliberately plain ink on the door, not urgency-colored
 // -- see REPORT.md for why that line was kept out of the four-places rule.
+// Kept out of the fridge: the foods FoodKeeper stores in the pantry
+// (store:'pantry' -- potatoes, onions, garlic, bread, whole melons,
+// coconut...), bananas, and anything marked "Not ripe yet". They sit in
+// the kitchen's bowl, not on the fridge shelves. Once past date they go
+// to the crisper with everything else past date, so Toss all stays one
+// place.
+function onCounter(it){
+  return food(it).store === 'pantry' || it.key === 'banana' || !!it.ripening;
+}
+function inFridgeAt(it, day){ return leftAt(it, day) < 0 || !onCounter(it); }
+
 function rfAtRiskCount(day){
-  return fridge.filter(it => {
+  return fridge.filter(it => inFridgeAt(it, day)).filter(it => {
     const d = leftAt(it, day);
     return d >= 0 && state(d) !== 'fresh';
   }).length;
@@ -4289,19 +4389,22 @@ function renderRealFridge(){
       ? `${atRisk} ${atRisk === 1 ? 'item needs' : 'items need'} attention`
       : 'Nothing needs attention yet';
 
-  if (!fridge.length){
+  const here = fridge.filter(it => inFridgeAt(it, day));
+  if (!here.length){
     [eyeShelf, upperShelf, crisperItems, ...bins].forEach(el => { el.innerHTML = ''; });
     document.getElementById('rfCrisperLabel').textContent = 'Crisper — past date';
     emptyCavity.hidden = false;
-    emptyCavity.innerHTML = 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
+    emptyCavity.innerHTML = fridge.length
+      ? 'Nothing in the fridge.<br>What you have is on the counter, in Kitchen.'
+      : 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
     unit.classList.remove('has-items');
     return;
   }
   emptyCavity.hidden = true;
   unit.classList.add('has-items');
 
-  const active = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
-  const gone = fridge.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  const active = here.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  const gone = here.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
 
   // Most urgent means the 72-hour bucket, state() === 'crit', and only
   // that: those go on the middle, eye-level shelf, front and center,
@@ -4484,6 +4587,140 @@ function rfInit(){
     if (!pop.hidden && !pop.contains(e.target)) rfHidePopover();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') rfHidePopover(); });
+}
+
+/* ---------- kitchen ---------- */
+
+// Tonight's dish's owned ingredients, set by renderTodayCard.
+let boardItems = [];
+// The counter's geometry, in its SVG's own units (360 x 150; the same 360
+// wide as the fridge drawing, so rfBuildFoodItem's cqw sizes carry over).
+const KC = {
+  W: 360, H: 150,
+  top: {back: 34, front: 112, face: 122},
+  board: {bx0: 32, bx1: 196, by: 48, fx0: 20, fx1: 208, fy: 102, t: 5},
+  bowl: {cx: 284, cy: 70, rx: 50, ry: 11, base: 110},
+  scale: 0.8
+};
+
+function kcDraw(){
+  const t = KC.top, b = KC.board, w = KC.bowl;
+  const P = pts => pts.map(p => p.join(',')).join(' ');
+  const r = 4; // board corners
+  const boardTop = `M${b.bx0 + r} ${b.by} H${b.bx1 - r} Q${b.bx1} ${b.by} ${b.bx1 + 1} ${b.by + r}
+    L${b.fx1} ${b.fy - r} Q${b.fx1 + 1} ${b.fy} ${b.fx1 - r} ${b.fy} H${b.fx0 + r} Q${b.fx0 - 1} ${b.fy} ${b.fx0} ${b.fy - r}
+    L${b.bx0 - 1} ${b.by + r} Q${b.bx0} ${b.by} ${b.bx0 + r} ${b.by} Z`;
+  const boardFace = `M${b.fx0} ${b.fy - r} Q${b.fx0 - 1} ${b.fy} ${b.fx0 + r} ${b.fy} H${b.fx1 - r} Q${b.fx1 + 1} ${b.fy} ${b.fx1} ${b.fy - r}
+    V${b.fy - r + b.t} Q${b.fx1 + 1} ${b.fy + b.t} ${b.fx1 - r} ${b.fy + b.t} H${b.fx0 + r} Q${b.fx0 - 1} ${b.fy + b.t} ${b.fx0} ${b.fy - r + b.t} Z`;
+  const L = w.cx - w.rx, R = w.cx + w.rx;
+  document.getElementById('kcBackSvg').innerHTML = `<g filter="url(#rfWobble)">
+    <polygon class="kt" points="${P([[0, t.back], [KC.W, t.back], [KC.W, t.front], [0, t.front]])}"/>
+    <polygon class="kf" points="${P([[0, t.front], [KC.W, t.front], [KC.W, t.face], [0, t.face]])}"/>
+    <line class="i" x1="0" y1="${t.back}" x2="${KC.W}" y2="${t.back}"/>
+    <line class="o" x1="0" y1="${t.front}" x2="${KC.W}" y2="${t.front}"/>
+    <line class="i" x1="0" y1="${t.face}" x2="${KC.W}" y2="${t.face}"/>
+    <path class="kb2 o" d="${boardFace}"/>
+    <path class="kb o" d="${boardTop}"/>
+    <path class="i nf" d="M${b.bx0 + 30} ${b.by + 14} C ${b.bx0 + 70} ${b.by + 11}, ${b.bx1 - 60} ${b.by + 17}, ${b.bx1 - 22} ${b.by + 13}" stroke-opacity=".4"/>
+    <path class="i nf" d="M${b.fx0 + 40} ${b.fy - 12} C ${b.fx0 + 80} ${b.fy - 15}, ${b.fx1 - 70} ${b.fy - 9}, ${b.fx1 - 34} ${b.fy - 12}" stroke-opacity=".4"/>
+    <ellipse class="kw2 o" cx="${w.cx}" cy="${w.base + 1}" rx="18" ry="3.5"/>
+    <ellipse class="kwi o" cx="${w.cx}" cy="${w.cy}" rx="${w.rx}" ry="${w.ry}"/>
+    <ellipse class="kw2" cx="${w.cx}" cy="${w.cy + 3}" rx="${w.rx - 8}" ry="${w.ry - 4}" opacity=".5"/>
+  </g>`;
+  // The bowl's front, over what's in it.
+  document.getElementById('kcFrontSvg').innerHTML = `<g filter="url(#rfWobble)">
+    <path class="kw o" d="M${L} ${w.cy} A${w.rx} ${w.ry} 0 0 0 ${R} ${w.cy} C ${R - 2} ${w.cy + 26}, ${w.cx + 26} ${w.base}, ${w.cx} ${w.base} C ${w.cx - 26} ${w.base}, ${L + 2} ${w.cy + 26}, ${L} ${w.cy} Z"/>
+    <path class="i nf" d="M${L + 8} ${w.cy + 14} C ${L + 16} ${w.cy + 28}, ${w.cx - 18} ${w.base - 5}, ${w.cx - 4} ${w.base - 4}" stroke-opacity=".45"/>
+  </g>`;
+}
+
+function renderKitchen(){
+  const day = today();
+  const unit = document.getElementById('kcUnit');
+  if (!unit.dataset.drawn){ kcDraw(); unit.dataset.drawn = '1'; }
+  const b = KC.board, w = KC.bowl;
+  const boardEl = document.getElementById('kcBoardItems');
+  const bowlEl = document.getElementById('kcBowlItems');
+  const bowl = fridge.filter(it => !inFridgeAt(it, day))
+    .sort((a, c) => (!!a.ripening - !!c.ripening) || leftAt(a, day) - leftAt(c, day));
+
+  rfPlaceRow(boardEl, b.fx0 + 12, b.fx1 - 12, b.fy - 10, KC.W, KC.H);
+  rfFillRow(boardEl, rfFitRow(boardItems, day, b.fx1 - b.fx0 - 24, KC.scale), day);
+  // the same food may also be in the fridge or the bowl: the board's
+  // drawing is its own button, not a second copy of that one
+  boardEl.innerHTML = boardEl.innerHTML.replace(/data-rf-item=/g, 'data-board-item=');
+  rfPlaceRow(bowlEl, w.cx - w.rx + 4, w.cx + w.rx - 4, w.cy + 8, KC.W, KC.H);
+  rfFillRow(bowlEl, rfFitRow(bowl, day, w.rx * 2 - 8, KC.scale * .8), day, {z: (i, n) => n - i});
+
+  unit.querySelectorAll('.rf-foodshape').forEach(span => {
+    const svg = span.querySelector('svg'), outline = svg && svg.querySelector(':scope > path');
+    if (!outline) return;
+    const box = outline.getBBox(), size = svg.viewBox.baseVal.height;
+    const gap = Math.max(0, size - (box.y + box.height)) / size;
+    span.style.marginBottom = `-${(gap * +span.dataset.u * 100 / KC.W).toFixed(3)}cqw`;
+  });
+  unit.querySelectorAll('[data-rf-item], [data-board-item]').forEach(el => {
+    el.onclick = e => { e.stopPropagation(); rfShowPopover(+(el.dataset.rfItem || el.dataset.boardItem), el); };
+  });
+
+  const unripe = bowl.filter(it => it.ripening).length;
+  const out = bowl.length - unripe;
+  document.getElementById('kcBowlNote').textContent = !bowl.length ? 'Nothing kept out of the fridge'
+    : [out && `${out} kept out of the fridge`, unripe && `${unripe} not ripe yet`].filter(Boolean).join(' · ');
+  // Counter food must not be forgotten: the tab carries how many of it
+  // turn within 72 hours, in the urgency colour.
+  const soon = bowl.filter(it => !it.ripening && state(leftAt(it, day)) === 'crit').length;
+  document.getElementById('kitchenCount').textContent = soon ? ` · ${soon}` : '';
+  document.getElementById('tabKitchen').setAttribute('aria-label', soon ? `Kitchen, ${soon} within 72 hours` : 'Kitchen');
+}
+
+// Tabs and the swipe area, kept in sync both ways: a swipe moves the
+// underline, a tab scrolls to its panel. Always opens on Fridge.
+function initRooms(){
+  const track = document.getElementById('roomsTrack');
+  const tabs = [...document.querySelectorAll('#roomTabs [role="tab"]')];
+  const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let active = 0;
+  const fit = () => { track.style.height = panels[active].offsetHeight + 'px'; };
+  const mark = i => {
+    active = i;
+    tabs.forEach((t, j) => { t.setAttribute('aria-selected', j === i ? 'true' : 'false'); t.tabIndex = j === i ? 0 : -1; });
+  };
+  const offsetOf = i => panels[i].offsetLeft - panels[0].offsetLeft;
+  const select = (i, focus) => {
+    mark(i);
+    if (focus) tabs[i].focus();
+    fit();
+    track.scrollTo({left: offsetOf(i), behavior: reduce.matches ? 'auto' : 'smooth'});
+  };
+  tabs.forEach((t, i) => { t.onclick = () => select(i); });
+  document.getElementById('roomTabs').addEventListener('keydown', e => {
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const n = {ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1}[e.key];
+    if (n == null) return;
+    e.preventDefault();
+    select((n + tabs.length) % tabs.length, true);
+  });
+  let settle;
+  track.addEventListener('scroll', () => {
+    if (track.scrollTop) track.scrollTop = 0; // a panel is never scrolled vertically inside the area
+    const step = offsetOf(1) || 1;
+    const i = Math.max(0, Math.min(tabs.length - 1, Math.round(track.scrollLeft / step)));
+    if (i !== active) mark(i);
+    clearTimeout(settle);
+    settle = setTimeout(fit, 120);
+  }, {passive: true});
+  // Reaching something in the other panel by keyboard moves there too.
+  panels.forEach((p, i) => p.addEventListener('focusin', () => { if (i !== active) select(i); }));
+  // A resize keeps the active panel in place, not a scroll offset.
+  window.addEventListener('resize', () => { track.scrollTo({left: offsetOf(active), behavior: 'instant'}); fit(); });
+  new ResizeObserver(fit).observe(panels[0]);
+  new ResizeObserver(fit).observe(panels[1]);
+  track.scrollLeft = 0;
+  mark(0);
+  fit();
 }
 
 function renderFridgeView(){
@@ -4746,23 +4983,18 @@ function renderTodayCard(entry){
   }
 
   const r = entry.result;
-  const {chips, pantry, gramsAll, usdAll, gramsAtRisk, usdAtRisk, missingHTML, usesUpHTML, atRiskCount} = buildDishCard(r, day);
-  const grams = entry.tier === 'recommend' ? gramsAtRisk : gramsAll;
-  const usd = entry.tier === 'recommend' ? usdAtRisk : usdAll;
+  const {missingHTML, usesUpHTML, atRiskCount} = buildDishCard(r, day);
   const eyebrow = entry.tier === 'recommend'
     ? `Tonight · rescues ${atRiskCount} ${atRiskCount === 1 ? 'item' : 'items'}`
     : 'Closest match · one ingredient short';
-  const statLabel = entry.tier === 'recommend' ? 'kept out of the bin' : 'already in the fridge for this';
+  // The ingredients are drawn on the cutting board (renderKitchen), not
+  // listed: what you own of the dish, soonest to turn first.
+  boardItems = r.matched.map(k => r.have[k]).sort((a, b) => leftAt(a, day) - leftAt(b, day));
   box.innerHTML = `
     <div>
       <div class="eyebrow mono">${eyebrow}</div>
       <h2>${r.dish.name}</h2>
       ${usesUpHTML}
-      <div class="rescue">${chips}${pantry}</div>
-      <div class="stats">
-        <div class="stat"><b>${Math.round(grams)} g</b><span class="mono">${statLabel}</span></div>
-        <div class="stat"><b>$${usd.toFixed(2)}</b><span class="mono">already paid for</span></div>
-      </div>
       ${missingHTML}
     </div>
     <div class="actions">
@@ -4860,6 +5092,7 @@ function renderProjectedCard(entry, boxId, skipSet){
 }
 
 function renderTonight(){
+  boardItems = [];
   const box = document.getElementById('tonight');
   const tomorrowBox = document.getElementById('tomorrow');
   const dayAfterBox = document.getElementById('dayAfter');
@@ -6116,6 +6349,7 @@ initReceipt();
 boot();
 render();
 rfInit();
+initRooms();
 </script>
 </body>
 </html>

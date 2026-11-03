@@ -188,8 +188,8 @@ async function scenario(browser, name, entryText, shotName) {
   console.log(`\n--- ${name} ---`);
   console.log('headline:', await page.textContent('#headline'));
   console.log('tonight h2:', await page.textContent('#tonight h2'));
-  const chips = await page.$$eval('#tonight .chip', els => els.map(e => e.textContent.trim()));
-  console.log('tonight chips:', JSON.stringify(chips));
+  const board = await page.$$eval('#kcBoardItems [data-board-item]', els => els.map(e => e.getAttribute('aria-label')));
+  console.log('on the board:', JSON.stringify(board));
   if (errors.length) console.log('console errors:', errors);
 
   await page.screenshot({ path: path.join(OUT, shotName), fullPage: true });
@@ -221,25 +221,18 @@ async function recommendationScenario(browser) {
   const expected = 'Uses up Chicken breast (2d), Spinach (7d), and Milk (7d) before they turn.';
   if (usesUp.trim() !== expected) throw new Error(`uses-up line was "${usesUp.trim()}", expected "${expected}"`);
 
-  const chipColors = await page.$$eval('#tonight .chip.use', els => els.map(e => ({
-    text: e.textContent.trim(),
-    style: e.getAttribute('style') || ''
-  })));
-  console.log('chip styles:', JSON.stringify(chipColors));
-  const chicken = chipColors.find(c => c.text.startsWith('Chicken'));
-  const spinach = chipColors.find(c => c.text.startsWith('Spinach'));
-  const milk = chipColors.find(c => c.text.startsWith('Milk'));
-  const onion = chipColors.find(c => c.text.startsWith('Onion'));
-  if (!chicken.style.includes('--crit')) throw new Error('chicken (2d, crit) chip should be colored --crit');
-  if (!spinach.style.includes('--turn')) throw new Error('spinach (7d, turn) chip should be colored --turn');
-  if (!milk.style.includes('--turn')) throw new Error('milk (7d, turn) chip should be colored --turn');
-  if (onion.style.trim()) throw new Error(`onion (10d, fresh) chip should carry no color override, got "${onion.style}"`);
+  // The ingredients are drawn on the cutting board, soonest first; onion
+  // is matched (drawn) but not at risk (not in the uses-up line).
+  const board = await page.$$eval('#kcBoardItems [data-board-item]', els => els.map(e => e.getAttribute('aria-label')));
+  console.log('on the board:', JSON.stringify(board));
+  expectEqual('board ingredients', board, ['Chicken breast', 'Spinach', 'Milk', 'Onion']);
 
   const eyebrow = await page.textContent('.tonight .eyebrow');
   console.log('eyebrow:', eyebrow);
   if (eyebrow.trim() !== 'Tonight · rescues 3 items') throw new Error(`eyebrow was "${eyebrow.trim()}", expected "Tonight · rescues 3 items" (onion isn't at risk)`);
 
-  await page.click('.js-cook');
+  await page.click('#tabKitchen');
+  await page.click('#tonight .js-cook');
   await page.waitForTimeout(150);
   const savedG = await page.textContent('#savedG');
   console.log('savedG after cook:', savedG);
@@ -276,8 +269,8 @@ async function noRiskScenario(browser) {
   const tonightH2 = await page.textContent('#tonight h2');
   console.log('tonight h2:', tonightH2);
   if (tonightH2.trim() !== 'Nothing here is about to turn.') throw new Error(`tonight h2 was "${tonightH2.trim()}"`);
-  const tonightChips = await page.$$eval('#tonight .chip', els => els.length);
-  if (tonightChips !== 0) throw new Error(`expected no dish chips on a noRisk tonight, found ${tonightChips}`);
+  const boardCount = await page.$$eval('#kcBoardItems [data-board-item]', els => els.length);
+  if (boardCount !== 0) throw new Error(`expected nothing on the board on a noRisk tonight, found ${boardCount}`);
   const cookBtn = await page.$('#tonight .js-cook');
   if (cookBtn) throw new Error('a noRisk tonight should have no Cook button');
 
@@ -846,7 +839,7 @@ async function realFridgeItemTapScenario(browser) {
   if (openBefore !== openAfterTap) throw new Error('tapping an item changed the door state -- it must never trigger the door');
 
   // Clicking elsewhere (outside the popover) dismisses it.
-  await page.click('.rf-head');
+  await page.click('#headline');
   await page.waitForTimeout(100);
   const popoverAfterOutsideClick = await page.$eval('#rfPopover', el => el.hidden);
   console.log('popover hidden after an outside click:', popoverAfterOutsideClick);
@@ -1111,7 +1104,7 @@ async function popoverText(page, key) {
   await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
   await page.waitForTimeout(80);
   const text = (await page.textContent('#rfPopover')).replace(/\s+/g, ' ').trim();
-  await page.click('.rf-head');
+  await page.click('#headline');
   return text;
 }
 function expectRow(rows, name, left, g) {
@@ -1404,9 +1397,10 @@ async function seedMixed18(page, items = MIXED_18) {
   await page.evaluate(items => {
     const d = new Date(), T = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
     const fridge = [], standing = {};
-    items.forEach(([key, ago, shelf, custom, name], i) => {
+    items.forEach(([key, ago, shelf, custom, name, extra], i) => {
       const it = {id: i + 1, key, bought: T - ago, custom: custom || null};
       if (name) it.name = name;
+      if (extra) Object.assign(it, extra);
       if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
       fridge.push(it);
       standing[key] = {count: 1, lastBought: T - ago, custom: custom || null, ...(name ? {name} : {})};
@@ -1427,10 +1421,10 @@ async function dishFixtureScenario(browser) {
   await page.waitForSelector('#headline');
   console.log('\n--- DISHES: the 18-item fixture has a dish tonight ---');
   const h2 = (await page.textContent('#tonight h2')).trim();
-  const chips = await page.$$eval('#tonight .chip', els => els.map(e => e.textContent.trim()));
-  console.log('tonight:', h2, JSON.stringify(chips));
+  const board = await page.$$eval('#kcBoardItems [data-board-item]', els => els.map(e => e.getAttribute('aria-label')));
+  console.log('tonight:', h2, JSON.stringify(board));
   expectEqual('tonight dish', h2, 'Creamy chicken spinach rice');
-  if (!chips.some(c => /^(Rotisserie chicken|Chicken thighs) · \d+d$/.test(c))) throw new Error('chicken should be filled by the thighs or the rotisserie chicken');
+  if (!board.some(c => /^(Rotisserie chicken|Chicken thighs)$/.test(c))) throw new Error('chicken should be filled by the thighs or the rotisserie chicken');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1728,7 +1722,8 @@ async function phoneDataScenario(browser) {
     names: Object.fromEntries(fridge.map(it => [it.id, food(it).en])),
     ledger: {...ledger}, standingTotal: Object.values(standing).reduce((a, s) => a + s.count, 0),
     standingLabels: Object.keys(standing).map(k => labelOf(k)),
-    drawn: [...document.querySelectorAll('#rfUnit [data-rf-item]')].map(b => +b.dataset.rfItem).sort((a, b) => a - b)
+    // the fridge's shelves or, for what's kept out of the fridge, the kitchen's bowl
+    drawn: [...document.querySelectorAll('#rfUnit [data-rf-item], #kcBowlItems [data-rf-item]')].map(b => +b.dataset.rfItem).sort((a, b) => a - b)
   }));
   console.log('current:', JSON.stringify(after.names));
   expectEqual('every record kept (ids)', Object.keys(after.left).map(Number).sort((a, b) => a - b), ids.sort((a, b) => a - b));
@@ -1736,7 +1731,7 @@ async function phoneDataScenario(browser) {
   expectEqual('ledger unchanged (nothing counted as waste)', after.ledger, before.ledger);
   expectEqual('restock counts kept', after.standingTotal, before.standingTotal);
   if (after.standingLabels.some(l => !l)) throw new Error('a restock entry lost its name');
-  expectEqual('every item drawn in the illustrated fridge', after.drawn, ids);
+  expectEqual('every item drawn in the fridge or the bowl', after.drawn, ids);
   // every item shows in the row too, with the old days left
   await openRow(page);
   const row = await page.$$eval('#allItems [data-fridge-item]', bs => bs.map(b => {
@@ -2027,6 +2022,122 @@ async function addButtonScenario(browser) {
   }
 }
 
+// Fridge and Kitchen: two panels in one snap-scrolled swipe area, tabs in
+// sync both ways. The 18-item fixture plus bananas and an unripe avocado:
+// what's kept out of the fridge (onion, bread, avocados, bananas) and the
+// unripe avocado sit in the kitchen's bowl, not on the fridge shelves;
+// tonight's dish is drawn on the cutting board; the Kitchen tab carries
+// the count of counter items within 72 hours; All items still has all 20.
+const KITCHEN_20 = [...MIXED_18, ['banana', 1], ['avocado', 0, null, null, null, { ripening: true }]];
+async function kitchenScenario(browser) {
+  console.log('\n--- KITCHEN: Fridge and Kitchen tabs, counter food, desktop and phone ---');
+  for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await browser.newContext({ viewport: vp });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, KITCHEN_20);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300); // the door's load animation
+    const sel = () => page.$$eval('#roomTabs [role=tab]', ts => ts.map(t => t.getAttribute('aria-selected')));
+    const tabText = () => page.$eval('#tabKitchen', t => t.textContent.trim());
+
+    const st = await page.evaluate(() => {
+      const tr = document.getElementById('roomsTrack'), cs = getComputedStyle(tr);
+      const ids = sel => [...document.querySelectorAll(sel)].map(e => +(e.dataset.rfItem || e.dataset.boardItem));
+      const name = id => food(fridge.find(i => i.id === id)).en + (fridge.find(i => i.id === id).ripening ? ' (not ripe)' : '');
+      return {
+        scrollLeft: tr.scrollLeft, snap: cs.scrollSnapType, overscroll: cs.overscrollBehaviorX,
+        fridgeIds: ids('#rfUnit [data-rf-item]'), bowl: ids('#kcBowlItems [data-rf-item]').map(name),
+        board: ids('#kcBoardItems [data-board-item]').map(name),
+        allItems: +document.getElementById('fridgeCount').textContent,
+        countColor: getComputedStyle(document.getElementById('kitchenCount')).color,
+        crit: getComputedStyle(document.documentElement).getPropertyValue('--crit').trim(),
+        touch: getComputedStyle(document.querySelector('.rf-fooditem')).touchAction,
+        counterIds: fridge.filter(it => onCounter(it) && left(it) >= 0).map(it => it.id),
+        headline: document.getElementById('headline').textContent,
+        chartDots: fridge.length,
+        trackH: tr.offsetHeight, fridgeH: document.getElementById('panelFridge').offsetHeight,
+      };
+    });
+    console.log(`${tag}:`, JSON.stringify({ ...st, fridgeIds: st.fridgeIds.length }));
+    expectEqual(`${tag}: opens on Fridge`, [await sel(), st.scrollLeft], [['true', 'false'], 0]);
+    expectEqual(`${tag}: native snapping`, st.snap, 'x mandatory');
+    expectEqual(`${tag}: no back/forward from the swipe`, st.overscroll, 'contain');
+    expectEqual(`${tag}: food taps never swipe`, st.touch, 'pan-y');
+    expectEqual(`${tag}: in the bowl`, st.bowl.slice().sort(), ['Avocados', 'Avocados (not ripe)', 'Banana', 'Bread', 'Onion']);
+    const onShelves = st.fridgeIds.filter(id => st.counterIds.includes(id));
+    if (onShelves.length) throw new Error(`${tag}: counter food still on the fridge shelves: ${onShelves}`);
+    expectEqual(`${tag}: board`, st.board[0] !== undefined, true);
+    expectEqual(`${tag}: All items still counts everything`, st.allItems, 20);
+    expectEqual(`${tag}: Kitchen tab`, await tabText(), 'Kitchen · 2');
+    if (st.crit.toLowerCase() !== '#6e3448' || st.countColor !== 'rgb(110, 52, 72)') throw new Error(`${tag}: the count should be in --crit, got ${st.countColor}`);
+    expectEqual(`${tag}: area height is the fridge's`, st.trackH, st.fridgeH);
+    if (tag === 'phone') {
+      const peek = await page.$eval('#panelKitchen', p => Math.round(innerWidth - p.getBoundingClientRect().left - 16));
+      console.log('phone: kitchen panel showing at the right edge (px):', peek);
+      if (peek < 12 || peek > 20) throw new Error(`phone: about 16px of Kitchen should peek, got ${peek}`);
+    }
+    await page.screenshot({ path: path.join(OUT, `kitchen-${tag}-fridge.png`) });
+
+    // A tab scrolls to its panel; the height follows.
+    await page.click('#tabKitchen');
+    await page.waitForTimeout(900);
+    const k = await page.evaluate(() => ({
+      left: document.getElementById('roomsTrack').scrollLeft,
+      trackH: document.getElementById('roomsTrack').offsetHeight,
+      kitchenH: document.getElementById('panelKitchen').offsetHeight,
+      inView: Math.round(document.getElementById('kcUnit').getBoundingClientRect().left),
+    }));
+    console.log(`${tag}: after the Kitchen tab`, JSON.stringify(k));
+    expectEqual(`${tag}: Kitchen selected`, await sel(), ['false', 'true']);
+    if (k.left < 50) throw new Error(`${tag}: the Kitchen tab didn't scroll to its panel`);
+    expectEqual(`${tag}: area height is the kitchen's`, k.trackH, k.kitchenH);
+    if (k.inView < 0 || k.inView > vp.width / 2) throw new Error(`${tag}: kitchen counter not in view (left ${k.inView})`);
+    await page.screenshot({ path: path.join(OUT, `kitchen-${tag}-kitchen.png`) });
+    await page.screenshot({ path: path.join(OUT, `kitchen-${tag}-kitchen-full.png`), fullPage: true });
+
+    // Arrow keys switch tabs, and move focus with them.
+    await page.focus('#tabKitchen');
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(900);
+    expectEqual(`${tag}: ArrowLeft`, [await sel(), await page.evaluate(() => document.activeElement.id)], [['true', 'false'], 'tabFridge']);
+    expectEqual(`${tag}: back at Fridge`, await page.$eval('#roomsTrack', t => t.scrollLeft), 0);
+
+    // A swipe (the area scrolled directly) moves the underline.
+    await page.$eval('#roomsTrack', t => t.scrollTo({ left: t.scrollWidth, behavior: 'instant' }));
+    await page.waitForTimeout(300);
+    expectEqual(`${tag}: swipe to Kitchen moves the underline`, await sel(), ['false', 'true']);
+    await page.$eval('#roomsTrack', t => t.scrollTo({ left: 0, behavior: 'instant' }));
+    await page.waitForTimeout(300);
+    expectEqual(`${tag}: swipe back`, await sel(), ['true', 'false']);
+
+    // Counter food opens the same popover.
+    await page.click('#tabKitchen');
+    await page.waitForTimeout(900);
+    await page.click('#kcBowlItems [data-rf-item]');
+    await page.waitForTimeout(100);
+    if (await page.$eval('#rfPopover', p => p.hidden)) throw new Error(`${tag}: tapping bowl food should open the popover`);
+    expectEqual(`${tag}: popover doesn't pull back to Fridge`, await sel(), ['false', 'true']);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+
+  // Reduced motion: the tab switches without the smooth scroll.
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await seedMixed18(page, KITCHEN_20);
+  await page.waitForSelector('#headline');
+  const jump = await page.evaluate(() => {
+    const tr = document.getElementById('roomsTrack');
+    document.getElementById('tabKitchen').click();
+    return tr.scrollLeft;
+  });
+  console.log('reduced motion: scrollLeft right after the click', jump);
+  if (jump < 50) throw new Error('with reduced motion the switch should be immediate, not a smooth scroll');
+  await ctx.close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -2082,6 +2193,7 @@ async function addButtonScenario(browser) {
     () => projectionHeadlineScenario(browser),
     () => phoneDataScenario(browser),
     () => addButtonScenario(browser),
+    () => kitchenScenario(browser),
   ];
   let passed = 0;
   const failed = [];
