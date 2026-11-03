@@ -761,8 +761,8 @@ const FOODS = {
   mushroom:   {en:'Mushrooms',      shelf:7, fk:292, g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
   cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
   potato:     {en:'Potato',         shelf:60, fk:297, store:'pantry', g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
-  lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', base:'#e2db8d'},
-  mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', base:'#cc8b5c'},
+  lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', shape:'lemon', base:'#e2db8d'},
+  mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', shape:'mango', base:'#cc8b5c'},
   apple:      {en:'Apple',          shelf:42, fk:248, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
   // Banana: kept out of the fridge, but FoodKeeper's pantry guidance is
   // "when ripe", not a number, so the rule falls back to its refrigerator
@@ -825,50 +825,50 @@ const FOODS = {
   celery:        {en:'Celery',            aliases:['celery hearts','celery stalks'], shelf:14, fk:281, g:700, usd:2.00, estPrice:true, cat:'leafy', base:'#9cc58a'},
   basil:         {en:'Basil',             aliases:['fresh basil'], shelf:10, fk:509, g:57, usd:2.99, estPrice:true, cat:'leafy', base:'#3d8c45'},
   parsley:       {en:'Parsley',           aliases:['fresh parsley','flat leaf parsley','italian parsley'], shelf:3, fk:611, g:60, usd:1.29, estPrice:true, cat:'leafy', base:'#3f9148'},
-  strawberry:    {en:'Strawberries',      aliases:['strawberry'], shelf:3, fk:481, g:907, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#d0443a'},
-  blueberry:     {en:'Blueberries',       aliases:['blueberry'], shelf:14, fk:254, g:510, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#4b5f9e'},
-  raspberry:     {en:'Raspberries',       aliases:['raspberry'], shelf:3, fk:482, g:340, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#c8403f'},
-  grapes:        {en:'Grapes',            aliases:['red grapes','green grapes','seedless grapes'], shelf:7, fk:261, g:1800, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#9ec25a'},
+  strawberry:    {en:'Strawberries',      aliases:['strawberry'], shelf:3, fk:481, g:907, usd:5.99, estPrice:true, cat:'soft', shape:'strawberry', plural:true, base:'#d0443a'},
+  blueberry:     {en:'Blueberries',       aliases:['blueberry'], shelf:14, fk:254, g:510, usd:5.99, estPrice:true, cat:'soft', shape:'blueberry', plural:true, base:'#4b5f9e'},
+  raspberry:     {en:'Raspberries',       aliases:['raspberry'], shelf:3, fk:482, g:340, usd:5.99, estPrice:true, cat:'soft', shape:'raspberry', plural:true, base:'#c8403f'},
+  grapes:        {en:'Grapes',            aliases:['red grapes','green grapes','seedless grapes'], shelf:7, fk:261, g:1800, usd:7.99, estPrice:true, cat:'soft', shape:'grapes', plural:true, base:'#9ec25a'},
   // ripens: FoodKeeper's refrigerator number is for ripe fruit (its
   // counter guidance is "when ripe"), so at entry the person says "Ripe"
   // (the clock starts at purchase) or "Not ripe yet" (no countdown, no
   // decay, labelled ripening, until they tap "It's ripe"). Their last
   // choice per food is the next default.
-  avocado:       {en:'Avocados',          aliases:['avocado','hass avocado'], shelf:4, fk:250, store:'pantry', ripens:true, g:1000, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#5b8a3a'},
-  orange:        {en:'Oranges',           aliases:['orange','navel orange','navel oranges','cara cara orange'], shelf:21, fk:256, g:3600, usd:9.99, estPrice:true, cat:'soft', plural:true, base:'#e48a2c'},
+  avocado:       {en:'Avocados',          aliases:['avocado','hass avocado'], shelf:4, fk:250, store:'pantry', ripens:true, g:1000, usd:6.99, estPrice:true, cat:'soft', shape:'avocado', plural:true, base:'#5b8a3a'},
+  orange:        {en:'Oranges',           aliases:['orange','navel orange','navel oranges','cara cara orange'], shelf:21, fk:256, g:3600, usd:9.99, estPrice:true, cat:'soft', shape:'orange', plural:true, base:'#e48a2c'},
   // #266 is "Peaches, nectarines, plums, pears, sapote": one entry for
   // both. Its 3-5 days is for ripe fruit, so these ripen (see avocado).
-  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, ripens:true, g:1800, usd:8.99, estPrice:true, cat:'soft', plural:true, base:'#f0a868'},
-  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, ripens:true, g:1800, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#c9cf6a'},
+  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, ripens:true, g:1800, usd:8.99, estPrice:true, cat:'soft', shape:'peach', plural:true, base:'#f0a868'},
+  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, ripens:true, g:1800, usd:6.99, estPrice:true, cat:'soft', shape:'pear', plural:true, base:'#c9cf6a'},
   // FoodKeeper's 7 days is "for ripe fruit", but a store pineapple is
   // already as ripe as it gets: it counts from purchase.
-  pineapple:     {en:'Pineapple',         shelf:7, fk:267, g:1600, usd:2.99, estPrice:true, cat:'soft', base:'#e3c55a'},
+  pineapple:     {en:'Pineapple',         shelf:7, fk:267, g:1600, usd:2.99, estPrice:true, cat:'soft', shape:'pineapple', base:'#e3c55a'},
   // #495 counts from purchase (DOP), whole: pantry 1-2 days "or until
   // ripe", refrigerator 3-4. Not a cut value, and not on the pantry list.
-  watermelon:    {en:'Watermelon',        aliases:['seedless watermelon'], shelf:4, fk:495, g:7000, usd:6.99, estPrice:true, cat:'soft', base:'#e2584a'},
+  watermelon:    {en:'Watermelon',        aliases:['seedless watermelon'], shelf:4, fk:495, g:7000, usd:6.99, estPrice:true, cat:'soft', shape:'watermelon', base:'#5c9e5a'},
   // Fruit, second pass. Same rule; no dish in DISHES uses any of these.
   // #263's 3-6 days is for ripe fruit, so kiwi ripens (see avocado).
-  kiwi:          {en:'Kiwi',              aliases:['kiwis','kiwifruit','kiwi fruit','green kiwi'], shelf:6, fk:263, ripens:true, g:1360, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#8a6646'},
+  kiwi:          {en:'Kiwi',              aliases:['kiwis','kiwifruit','kiwi fruit','green kiwi'], shelf:6, fk:263, ripens:true, g:1360, usd:7.99, estPrice:true, cat:'soft', shape:'kiwi', plural:true, base:'#8a6646'},
   // Kept on the counter whole: #258's pantry week, not its 3 refrigerator weeks.
-  coconut:       {en:'Coconut',           aliases:['coconuts','whole coconut','brown coconut','young coconut'], shelf:7, fk:258, store:'pantry', g:700, usd:2.49, estPrice:true, cat:'soft', base:'#7d5b3e'},
+  coconut:       {en:'Coconut',           aliases:['coconuts','whole coconut','brown coconut','young coconut'], shelf:7, fk:258, store:'pantry', g:700, usd:2.49, estPrice:true, cat:'soft', shape:'coconut', base:'#7d5b3e'},
   // #256 names tangerines and clementines; both are mandarins.
-  mandarin:      {en:'Mandarins',         aliases:['mandarin','clementine','clementines','cuties','cutie','tangerine','tangerines','mandarin orange','mandarin oranges'], shelf:21, fk:256, g:2268, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#ec7a26'},
-  lime:          {en:'Limes',             aliases:['lime','persian lime','persian limes'], shelf:21, fk:256, g:1360, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#4fae5a'},
+  mandarin:      {en:'Mandarins',         aliases:['mandarin','clementine','clementines','cuties','cutie','tangerine','tangerines','mandarin orange','mandarin oranges'], shelf:21, fk:256, g:2268, usd:7.99, estPrice:true, cat:'soft', shape:'mandarin', plural:true, base:'#ec7a26'},
+  lime:          {en:'Limes',             aliases:['lime','persian lime','persian limes'], shelf:21, fk:256, g:1360, usd:5.49, estPrice:true, cat:'soft', shape:'lemon', plural:true, base:'#4fae5a'},
   // #483 Cherries (2-3 days), the entry for this food itself. #252
   // "Berries (cherries, goose berries, lychee)" lists cherries at 7 days;
   // the importer already gives "cherries" to #483.
-  cherries:      {en:'Cherries',          aliases:['cherry','sweet cherries','bing cherries','rainier cherries'], shelf:3, fk:483, g:1361, usd:12.99, estPrice:true, cat:'soft', plural:true, base:'#be2f2a'},
-  blackberry:    {en:'Blackberries',      aliases:['blackberry'], shelf:6, fk:253, g:510, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#3e3558'},
+  cherries:      {en:'Cherries',          aliases:['cherry','sweet cherries','bing cherries','rainier cherries'], shelf:3, fk:483, g:1361, usd:12.99, estPrice:true, cat:'soft', shape:'cherries', plural:true, base:'#be2f2a'},
+  blackberry:    {en:'Blackberries',      aliases:['blackberry'], shelf:6, fk:253, g:510, usd:5.99, estPrice:true, cat:'soft', shape:'blackberry', plural:true, base:'#3e3558'},
   // Whole melons sit on the counter: the pantry figure (DOP_Pantry).
-  cantaloupe:    {en:'Cantaloupe',        aliases:['cantaloupes','muskmelon','cantaloupe melon'], shelf:4, fk:496, store:'pantry', g:1400, usd:3.49, estPrice:true, cat:'soft', base:'#c9cb9c'},
-  honeydew:      {en:'Honeydew',          aliases:['honeydew melon','honeydews','honeydew melons'], shelf:7, fk:497, store:'pantry', g:2300, usd:3.99, estPrice:true, cat:'soft', base:'#d3dea2'},
-  grapefruit:    {en:'Grapefruit',        aliases:['grapefruits','ruby red grapefruit','pink grapefruit','white grapefruit'], shelf:21, fk:256, g:2268, usd:6.99, estPrice:true, cat:'soft', base:'#ebd364'},
-  pomegranate:   {en:'Pomegranate',       aliases:['pomegranates'], shelf:90, fk:269, g:340, usd:2.49, estPrice:true, cat:'soft', base:'#c4402f'},
+  cantaloupe:    {en:'Cantaloupe',        aliases:['cantaloupes','muskmelon','cantaloupe melon'], shelf:4, fk:496, store:'pantry', g:1400, usd:3.49, estPrice:true, cat:'soft', shape:'cantaloupe', base:'#c9cb9c'},
+  honeydew:      {en:'Honeydew',          aliases:['honeydew melon','honeydews','honeydew melons'], shelf:7, fk:497, store:'pantry', g:2300, usd:3.99, estPrice:true, cat:'soft', shape:'honeydew', base:'#d3dea2'},
+  grapefruit:    {en:'Grapefruit',        aliases:['grapefruits','ruby red grapefruit','pink grapefruit','white grapefruit'], shelf:21, fk:256, g:2268, usd:6.99, estPrice:true, cat:'soft', shape:'grapefruit', base:'#ebd364'},
+  pomegranate:   {en:'Pomegranate',       aliases:['pomegranates'], shelf:90, fk:269, g:340, usd:2.49, estPrice:true, cat:'soft', shape:'pomegranate', base:'#c4402f'},
   // #265 is one entry for papaya and mango (and three more), 1 week.
-  papaya:        {en:'Papaya',            aliases:['papayas','maradol papaya'], shelf:7, fk:265, g:1100, usd:4.49, estPrice:true, cat:'soft', base:'#d2c856'},
-  dragonfruit:   {en:'Dragon fruit',      aliases:['dragon fruits','dragonfruit','pitaya','pitahaya'], shelf:21, fk:480, g:450, usd:4.99, estPrice:true, cat:'soft', base:'#d6449f'},
+  papaya:        {en:'Papaya',            aliases:['papayas','maradol papaya'], shelf:7, fk:265, g:1100, usd:4.49, estPrice:true, cat:'soft', shape:'papaya', base:'#d2c856'},
+  dragonfruit:   {en:'Dragon fruit',      aliases:['dragon fruits','dragonfruit','pitaya','pitahaya'], shelf:21, fk:480, g:450, usd:4.99, estPrice:true, cat:'soft', shape:'dragonfruit', base:'#d6449f'},
   // #252 "Berries (cherries, goose berries, lychee)": 7 days.
-  lychee:        {en:'Lychees',           aliases:['lychee','litchi','litchis','lichee'], shelf:7, fk:252, g:454, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#cf5848'},
+  lychee:        {en:'Lychees',           aliases:['lychee','litchi','litchis','lichee'], shelf:7, fk:252, g:454, usd:5.99, estPrice:true, cat:'soft', shape:'lychee', plural:true, base:'#cf5848'},
   cherrytomato:  {en:'Cherry tomatoes',   aliases:['cherry tomato','grape tomatoes','grape tomato'], shelf:5, fk:600, g:907, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#d4482b'},
   sweetpotato:   {en:'Sweet potatoes',    aliases:['sweet potato','yams','yam'], shelf:21, fk:422, store:'pantry', g:1360, usd:3.99, estPrice:true, cat:'veg', plural:true, base:'#c9733d'},
   asparagus:     {en:'Asparagus',         shelf:4, fk:271, g:907, usd:5.99, estPrice:true, cat:'veg', base:'#6a9a4c'},
@@ -2361,6 +2361,104 @@ function garlicOutline(s){
   }
   return pts;
 }
+// ---- Fruit silhouettes. Every fruit gets its own outline here and one
+// identity cue (FRUIT_CUES, below), so a plum, a lemon and an orange stop
+// reading as the same coloured circle. Same construction as the rings
+// above: a dense ring of points around a centre, index 0 at the top,
+// decayed by the same deformPoints, so sag, shrivel, brown spots and mold
+// work on them unchanged. Clusters (berries, grapes, cherries) are the
+// outer edge of their overlapping rounds, one closed outline like the rest.
+const bell = (a, at, w) => { let d = Math.abs(a - at) % (Math.PI * 2); if (d > Math.PI) d = Math.PI * 2 - d; return Math.exp(-((d / w) ** 2)); };
+// n points around (cx, cy), radii rx/ry scaled by rf(angle); xf bends a
+// point after (both in units of s). Angle -PI/2 is the top.
+function polarRing(s, n, cx, cy, rx, ry, rf = () => 1, xf = null){
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, r = rf(a);
+    let p = [cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r];
+    if (xf) p = xf(p[0], p[1], a);
+    pts.push([p[0] * s, p[1] * s]);
+  }
+  return pts;
+}
+// The outer edge of overlapping rounds [cx, cy, r]: from their centre,
+// the furthest crossing along each ray.
+function circleUnion(s, circles, n = 40){
+  const c = [circles.reduce((t, k) => t + k[0], 0) / circles.length, circles.reduce((t, k) => t + k[1], 0) / circles.length];
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a);
+    let t = 0;
+    for (const [ox, oy, r] of circles){
+      const b = dx * (ox - c[0]) + dy * (oy - c[1]), q = (c[0] - ox) ** 2 + (c[1] - oy) ** 2 - r * r, disc = b * b - q;
+      if (disc >= 0) t = Math.max(t, b + Math.sqrt(disc));
+    }
+    pts.push([(c[0] + dx * t) * s, (c[1] + dy * t) * s]);
+  }
+  return pts;
+}
+// Pear-like: narrower and taller toward the top (neck 0..1, lift in s).
+const neckIn = (cy, ry, neck, lift) => (x, y) => {
+  const u = Math.max(0, Math.min(1, (y - (cy - ry)) / (2 * ry)));
+  return [0.5 + (x - 0.5) * (1 - neck * (1 - u) ** 2), y - lift * (1 - u) ** 2];
+};
+const BLUEBERRY_ROUNDS = [[0.50, 0.50, 0.18], [0.29, 0.70, 0.19], [0.70, 0.69, 0.19], [0.50, 0.75, 0.17]];
+const GRAPE_ROUNDS = [[0.29, 0.40, 0.09], [0.43, 0.39, 0.09], [0.57, 0.39, 0.09], [0.71, 0.40, 0.09],
+  [0.36, 0.53, 0.09], [0.50, 0.53, 0.09], [0.64, 0.53, 0.09], [0.43, 0.67, 0.09], [0.57, 0.67, 0.09], [0.50, 0.80, 0.09]];
+const CHERRY_ROUNDS = [[0.33, 0.73, 0.18], [0.66, 0.75, 0.17]];
+const FRUIT_OUTLINES = {
+  // Lemon and lime: an oval lying down, drawn out to a point at each end.
+  lemon: s => polarRing(s, 24, 0.5, 0.62, 0.38, 0.26, a => 1 + 0.14 * (bell(a, 0, 0.2) + bell(a, Math.PI, 0.2))),
+  orange: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.3)),
+  // Mandarin: flatter than an orange, sunk a little at both poles.
+  mandarin: s => polarRing(s, 24, 0.5, 0.63, 0.38, 0.27, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)),
+  grapefruit: s => polarRing(s, 24, 0.5, 0.57, 0.40, 0.35, a => 1 - 0.05 * bell(a, -Math.PI / 2, 0.35)),
+  // Mango: a kidney lying down -- the full shoulder left, a dip along the
+  // top, both ends dropping.
+  mango: s => polarRing(s, 24, 0.5, 0.58, 0.40, 0.27, a => (1 + 0.07 * Math.cos(a + Math.PI)) * (1 - 0.12 * bell(a, -Math.PI / 2 + 0.2, 0.45)),
+    (x, y) => [x, y + 0.5 * (x - 0.5) ** 2]),
+  avocado: s => polarRing(s, 24, 0.5, 0.60, 0.31, 0.32, () => 1, neckIn(0.60, 0.32, 0.45, 0.05)),
+  pear: s => polarRing(s, 24, 0.5, 0.63, 0.31, 0.29, () => 1, neckIn(0.63, 0.29, 0.62, 0.12)),
+  peach: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.3)),
+  plum: s => polarRing(s, 24, 0.5, 0.57, 0.31, 0.35, a => 1 - 0.05 * bell(a, -Math.PI / 2, 0.3)),
+  // Pineapple: the barrel only; its crown is the cue.
+  pineapple: s => polarRing(s, 24, 0.5, 0.65, 0.26, 0.27),
+  // Strawberry: broad shoulders tapering to a point at the bottom.
+  strawberry: s => polarRing(s, 26, 0.5, 0.50, 0.35, 0.40, a => 1 - 0.06 * bell(a, -Math.PI / 2, 0.5), (x, y, a) => {
+    const sn = Math.sin(a);
+    return sn > 0 ? [0.5 + (x - 0.5) * (1 - 0.62 * sn ** 1.6), y] : [x, 0.5 + (y - 0.5) * 0.6];
+  }),
+  blueberry: s => circleUnion(s, BLUEBERRY_ROUNDS),
+  grapes: s => circleUnion(s, GRAPE_ROUNDS, 48),
+  // Raspberry: a thimble, round on top and flat where it sits.
+  raspberry: s => polarRing(s, 26, 0.5, 0.66, 0.32, 0.31, a => 1 + 0.03 * Math.cos(10 * a),
+    (x, y, a) => [x, Math.sin(a) > 0 ? 0.66 + (y - 0.66) * 0.72 : y]),
+  blackberry: s => polarRing(s, 28, 0.5, 0.58, 0.26, 0.34, a => 1 + 0.035 * Math.cos(12 * a)),
+  cherries: s => circleUnion(s, CHERRY_ROUNDS),
+  watermelon: s => polarRing(s, 26, 0.5, 0.63, 0.44, 0.28),
+  cantaloupe: s => polarRing(s, 26, 0.5, 0.58, 0.38, 0.34),
+  honeydew: s => polarRing(s, 26, 0.5, 0.60, 0.40, 0.32),
+  // Kiwi: a small egg lying down, the stem end a little narrower.
+  kiwi: s => polarRing(s, 24, 0.5, 0.64, 0.37, 0.25, a => 1 + 0.05 * Math.cos(a + Math.PI)),
+  // Coconut: nearly round, faintly three-sided, as the shell is.
+  coconut: s => polarRing(s, 24, 0.5, 0.57, 0.37, 0.35, a => 1 + 0.025 * Math.cos(3 * a + 0.5)),
+  // Pomegranate: a round body drawn up into its crown of sepals at the top.
+  pomegranate: s => {
+    const body = [], n = 22, gap = 0.34;
+    for (let i = 0; i <= n; i++){
+      const a = -Math.PI / 2 + gap + (i / n) * (Math.PI * 2 - 2 * gap);
+      body.push([0.5 + Math.cos(a) * 0.35, 0.62 + Math.sin(a) * 0.31]);
+    }
+    const crown = [[0.43, 0.28], [0.38, 0.16], [0.45, 0.22], [0.50, 0.12], [0.55, 0.22], [0.62, 0.16], [0.57, 0.28]];
+    return [...body, ...crown].map(([x, y]) => [x * s, y * s]);
+  },
+  // Papaya: long, lying down, tapering toward the stem end on the right.
+  papaya: s => polarRing(s, 26, 0.5, 0.64, 0.42, 0.25, () => 1,
+    (x, y) => [x, 0.64 + (y - 0.64) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42))]),
+  dragonfruit: s => polarRing(s, 24, 0.5, 0.60, 0.29, 0.32, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.4)),
+  // Lychee: round and finely knobbled, a little pointed at the bottom.
+  lychee: s => polarRing(s, 30, 0.5, 0.60, 0.33, 0.31, a => (1 + 0.025 * Math.cos(15 * a)) * (1 - 0.06 * bell(a, -Math.PI / 2, 0.3) + 0.05 * bell(a, Math.PI / 2, 0.3)))
+};
 function catOutlinePoints(shape, s){
   const cx = s / 2;
   switch(shape){
@@ -2384,7 +2482,7 @@ function catOutlinePoints(shape, s){
     case 'garlic':   return garlicOutline(s);
     case 'dairy':    return dairyOutline(s);
     case 'protein':  return proteinOutline(s);
-    default:         return genericOutline(s);
+    default:         return FRUIT_OUTLINES[shape] ? FRUIT_OUTLINES[shape](s) : genericOutline(s);
   }
 }
 const BOXY_SHAPES = {dairy:1, cooked:1, generic:1, tofu:1, carton:1, wedge:1};
@@ -3202,10 +3300,331 @@ function packetSeal(deformed, size){
   return `<path d="${lineD([a, b])}"/>`;
 }
 
+// ---- Fruit identity cues, one per FRUIT_OUTLINES shape. They are placed
+// on the fruit's undeformed outline, then carried onto the deformed one
+// (ridePt), so a navel, a seed or a crown sags and shrivels with the body
+// instead of floating where the fresh fruit was. Leaves and crowns dry on
+// tomatoCalyx's clock: brown and curled by half-decayed.
+// p, in the raw outline's space, moved onto the deformed outline: the same
+// fraction of the way from the centre to the edge, along the same ray.
+function ridePt(raw, def, p, edgeOnly = false){
+  const c0 = centroidOf(raw), c1 = centroidOf(def), n = raw.length;
+  const dx = p[0] - c0[0], dy = p[1] - c0[1];
+  if (Math.hypot(dx, dy) < 1e-6) return c1.slice();
+  for (let i = 0; i < n; i++){
+    const j = (i + 1) % n, a = raw[i], ex = raw[j][0] - a[0], ey = raw[j][1] - a[1];
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const ax = a[0] - c0[0], ay = a[1] - c0[1];
+    const t = (ax * ey - ay * ex) / den, u = (ax * dy - ay * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1){
+      const b = rfLerp(def[i], def[j], u);
+      return edgeOnly ? b : [c1[0] + (b[0] - c1[0]) / t, c1[1] + (b[1] - c1[1]) / t];
+    }
+  }
+  return p;
+}
+function inPoly(pts, [x, y]){
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function fruitRider(shape, deformed, size){
+  const raw = FRUIT_OUTLINES[shape](size), c = centroidOf(raw);
+  return {
+    raw,
+    at: (x, y) => ridePt(raw, deformed, [x * size, y * size]),
+    // the deformed edge in the direction of angle a (screen radians)
+    edge: a => ridePt(raw, deformed, [c[0] + Math.cos(a), c[1] + Math.sin(a)], true),
+    // count seeded points inside the raw outline, kept inset from its edge
+    scatter: (rand, count, inset = 0.16) => {
+      const shrunk = insetPts(raw, c, inset), xs = raw.map(p => p[0]), ys = raw.map(p => p[1]);
+      const out = [];
+      for (let k = 0; k < count * 30 && out.length < count; k++){
+        const p = [Math.min(...xs) + rand() * (Math.max(...xs) - Math.min(...xs)), Math.min(...ys) + rand() * (Math.max(...ys) - Math.min(...ys))];
+        if (inPoly(shrunk, p)) out.push(p);
+      }
+      return out.map(p => ridePt(raw, deformed, p));
+    }
+  };
+}
+const inkDot = (p, r, op) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="${f1(r)}" fill="${INK_HEX}" stroke="none" opacity="${op}"/>`;
+const ringAt = (p, rx, ry, op = 0.7) => `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(rx)}" ry="${f1(ry)}" stroke-opacity="${op}"/>`;
+const dryLeaf = fraction => oklchLerp(LEAF_HEX, DRIED_HEX, Math.max(0, Math.min(1, (fraction || 0) / 0.5)));
+// Peel pores: a scatter of fine dots (citrus, pear lenticels, avocado pebbling).
+const pores = (R, size, seed, count, op = 0.35, r = 0.007) => R.scatter(seededRand(seed + 61), count).map(p => inkDot(p, size * r, op)).join('');
+// Where rounds overlap, the front one's edge: the parts of each round that
+// fall inside a round listed before it (behind it).
+function roundEdges(R, rounds, size){
+  return rounds.map(([cx, cy, r], k) => {
+    if (!k) return '';
+    const runs = [];
+    let cur = [];
+    for (let i = 0; i <= 36; i++){
+      const a = (i / 36) * Math.PI * 2, p = [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+      if (rounds.slice(0, k).some(([ox, oy, or]) => Math.hypot(p[0] - ox, p[1] - oy) < or * 0.98)) cur.push(R.at(p[0], p[1]));
+      else if (cur.length){ runs.push(cur); cur = []; }
+    }
+    if (cur.length) runs.push(cur);
+    return runs.filter(run => run.length > 1).map(run => `<path d="${smoothOpenPath(run)}" stroke-opacity="0.75"/>`).join('');
+  }).join('');
+}
+// A stalk from the top of the fruit: up, leaning by lean (in s).
+const stalk = (base, size, len, lean, op = 1) =>
+  `<path d="M ${f1(base[0])} ${f1(base[1])} q ${f1(lean * size * 0.3)} ${f1(-len * size * 0.6)} ${f1(lean * size)} ${f1(-len * size)}" stroke-opacity="${op}"/>`;
+
+const FRUIT_CUES = {
+  // Pointed ends are in the outline; the peel's pores and the stem scar
+  // at one end.
+  lemon: (d, size, seed) => {
+    const R = fruitRider('lemon', d, size);
+    return pores(R, size, seed, 16) + ringAt(R.at(0.15, 0.62), size * 0.014, size * 0.014, 0.6);
+  },
+  // Dimpled peel, the navel at the bottom, the stem button at the top.
+  orange: (d, size, seed) => {
+    const R = fruitRider('orange', d, size), nav = R.at(0.5, 0.82);
+    const creases = [0, 1, 2, 3, 4].map(k => {
+      const a = k / 5 * Math.PI * 2;
+      return `<path d="${lineD([[nav[0] + Math.cos(a) * size * 0.028, nav[1] + Math.sin(a) * size * 0.015], [nav[0] + Math.cos(a) * size * 0.05, nav[1] + Math.sin(a) * size * 0.027]])}" stroke-opacity="0.5"/>`;
+    }).join('');
+    return pores(R, size, seed, 22) + ringAt(nav, size * 0.026, size * 0.014) + creases + inkDot(R.edge(-Math.PI / 2), size * 0.013, 0.8);
+  },
+  // Mandarin: flat, with a short stem and one leaf still on it.
+  mandarin: (d, size, seed, fraction) => {
+    const R = fruitRider('mandarin', d, size), top = R.edge(-Math.PI / 2);
+    const tip = [top[0] + size * 0.02, top[1] - size * 0.05];
+    const curl = Math.min(1, (fraction || 0) / 0.5) * 0.6;
+    return pores(R, size, seed, 14) + `<path d="${lineD([top, tip])}"/>` + leafPath(tip, -0.35 + curl, size * (0.17 - 0.05 * curl), size * 0.045, dryLeaf(fraction), size);
+  },
+  // Grapefruit: more pores, and the stem scar as a ring on the flat top.
+  grapefruit: (d, size, seed) => {
+    const R = fruitRider('grapefruit', d, size), scar = R.at(0.5, 0.27);
+    return pores(R, size, seed, 26) + ringAt(scar, size * 0.03, size * 0.014) + inkDot(scar, size * 0.008, 0.8);
+  },
+  // Mango: the stem nub on the high shoulder, and the line of the cheek.
+  mango: (d, size) => {
+    const R = fruitRider('mango', d, size), nub = R.edge(-Math.PI / 2 - 0.75);
+    const cheek = [R.at(0.2, 0.6), R.at(0.42, 0.5), R.at(0.68, 0.55), R.at(0.82, 0.66)];
+    return `<path d="${lineD([nub, [nub[0] - size * 0.025, nub[1] - size * 0.04]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>` +
+      `<path d="${smoothOpenPath(cheek)}" stroke-opacity="0.5"/>`;
+  },
+  // Avocado: pebbled skin, and a blunt stem cap.
+  avocado: (d, size, seed) => {
+    const R = fruitRider('avocado', d, size), top = R.edge(-Math.PI / 2);
+    return pores(R, size, seed, 34, 0.45, 0.008) + ringAt(top, size * 0.022, size * 0.012, 0.8) +
+      `<path d="${lineD([top, [top[0], top[1] - size * 0.035]])}" stroke-width="${f1(Math.max(1.5, size * 0.018))}"/>`;
+  },
+  // Pear: a long, curved stalk and a few lenticels.
+  pear: (d, size, seed) => {
+    const R = fruitRider('pear', d, size);
+    return pores(R, size, seed, 10, 0.4) + stalk(R.edge(-Math.PI / 2), size, 0.13, 0.05);
+  },
+  // Peach: the suture running down from the stem.
+  peach: (d, size) => {
+    const R = fruitRider('peach', d, size), top = R.edge(-Math.PI / 2);
+    const suture = [top, R.at(0.57, 0.36), R.at(0.6, 0.56), R.at(0.55, 0.78)];
+    return `<path d="${smoothOpenPath(suture)}" stroke-opacity="0.65"/>` + stalk(top, size, 0.05, 0.01);
+  },
+  // Plum: a fainter suture, and the bloom on its shoulder.
+  plum: (d, size) => {
+    const R = fruitRider('plum', d, size), top = R.edge(-Math.PI / 2);
+    const suture = [top, R.at(0.55, 0.38), R.at(0.57, 0.6), R.at(0.53, 0.82)];
+    const bloom = [R.at(0.3, 0.5), R.at(0.33, 0.36), R.at(0.42, 0.29)];
+    return `<path d="${smoothOpenPath(suture)}" stroke-opacity="0.5"/><path d="${smoothOpenPath(bloom)}" stroke-opacity="0.35"/>` + stalk(top, size, 0.05, 0.015);
+  },
+  // Pineapple: the crosshatched rind, and the leafy crown.
+  pineapple: (d, size, seed, fraction) => {
+    const R = fruitRider('pineapple', d, size);
+    const inside = (x, y) => ((x - 0.5) / 0.24) ** 2 + ((y - 0.65) / 0.25) ** 2 < 1;
+    let hatch = '';
+    for (const dir of [1, -1]) for (let c = -0.5; c <= 0.5; c += 0.085){
+      const run = [];
+      for (let x = 0.2; x <= 0.8; x += 0.02){ const y = 0.65 + dir * (x - 0.5) + c; if (inside(x, y)) run.push(R.at(x, y)); }
+      if (run.length > 1) hatch += `<path d="${lineD(run)}" stroke-opacity="0.45"/>`;
+    }
+    const top = R.edge(-Math.PI / 2), cFrac = Math.min(1, (fraction || 0) / 0.5), color = dryLeaf(fraction);
+    const crown = [-0.75, -0.4, -0.12, 0.12, 0.4, 0.75].map((k, i) => {
+      const a = -Math.PI / 2 + k * (1 + cFrac * 0.4);
+      return leafPath([top[0] + k * size * 0.04, top[1] + size * 0.01], a, size * (0.3 - Math.abs(k) * 0.12) * (1 - 0.25 * cFrac), size * 0.03, color, size);
+    }).join('');
+    return hatch + crown;
+  },
+  // Strawberry: rows of seeds, and the green calyx over the shoulders.
+  strawberry: (d, size, seed, fraction) => {
+    const R = fruitRider('strawberry', d, size), raw = FRUIT_OUTLINES.strawberry(1);
+    const shrunk = insetPts(raw, centroidOf(raw), 0.2);
+    let seeds = '';
+    for (let row = 0, y = 0.36; y < 0.84; y += 0.07, row++){
+      for (let x = 0.2 + (row % 2) * 0.045; x < 0.82; x += 0.09){
+        if (!inPoly(shrunk, [x, y])) continue;
+        const p = R.at(x, y);
+        seeds += `<path d="${lineD([[p[0], p[1] - size * 0.008], [p[0] + size * 0.004, p[1] + size * 0.008]])}" stroke-opacity="0.6"/>`;
+      }
+    }
+    const top = R.edge(-Math.PI / 2), cFrac = Math.min(1, (fraction || 0) / 0.5), color = dryLeaf(fraction);
+    const calyx = [Math.PI - 0.12, Math.PI - 0.55, Math.PI / 2 + 0.3, Math.PI / 2 - 0.3, 0.55, 0.12].map(a =>
+      leafPath(top, a - cFrac * 0.5 * Math.sign(Math.cos(a)), size * (0.17 - 0.05 * cFrac), size * 0.04, color, size)).join('');
+    return seeds + calyx + `<path d="${lineD([top, [top[0] + size * 0.01, top[1] - size * 0.06]])}" stroke="${color}" stroke-width="${f1(Math.max(1, size * 0.014))}"/>`;
+  },
+  // Blueberries: a small cluster, each with its crown at the blossom end.
+  blueberry: (d, size) => {
+    const R = fruitRider('blueberry', d, size);
+    const crowns = BLUEBERRY_ROUNDS.slice(1).map(([cx, cy, r]) => {
+      const p = R.at(cx + r * 0.1, cy - r * 0.35);
+      return ringAt(p, size * 0.026, size * 0.016, 0.7) + inkDot(p, size * 0.009, 0.7);
+    }).join('');
+    return roundEdges(R, BLUEBERRY_ROUNDS, size) + crowns;
+  },
+  // Grapes: a bunch hanging from its stalk.
+  grapes: (d, size) => {
+    const R = fruitRider('grapes', d, size);
+    const stem = [R.at(0.5, 0.36), R.at(0.5, 0.26), R.at(0.52, 0.18)];
+    const twigs = [[0.5, 0.29, 0.37, 0.33], [0.5, 0.28, 0.64, 0.33]].map(([x0, y0, x1, y1]) => `<path d="${lineD([R.at(x0, y0), R.at(x1, y1)])}" stroke-opacity="0.8"/>`).join('');
+    return roundEdges(R, GRAPE_ROUNDS, size) + `<path d="${smoothOpenPath(stem)}"/>` + twigs;
+  },
+  // Raspberry and blackberry: drupelets, the small rounds a bramble fruit
+  // is made of.
+  raspberry: (d, size) => {
+    const R = fruitRider('raspberry', d, size), raw = FRUIT_OUTLINES.raspberry(1), shrunk = insetPts(raw, centroidOf(raw), 0.12);
+    let beads = '';
+    for (let row = 0, y = 0.4; y < 0.86; y += 0.075, row++)
+      for (let x = 0.22 + (row % 2) * 0.04; x < 0.8; x += 0.08)
+        if (inPoly(shrunk, [x, y])){ const p = R.at(x, y); beads += ringAt(p, size * 0.03, size * 0.026, 0.55); }
+    return beads;
+  },
+  blackberry: (d, size) => {
+    const R = fruitRider('blackberry', d, size), raw = FRUIT_OUTLINES.blackberry(1), shrunk = insetPts(raw, centroidOf(raw), 0.1);
+    let beads = '';
+    for (let row = 0, y = 0.3; y < 0.9; y += 0.065, row++)
+      for (let x = 0.27 + (row % 2) * 0.035; x < 0.75; x += 0.07)
+        if (inPoly(shrunk, [x, y])){ const p = R.at(x, y); beads += ringAt(p, size * 0.026, size * 0.023, 0.6); }
+    return beads + stalk(R.edge(-Math.PI / 2), size, 0.05, 0.01);
+  },
+  // Cherries: a pair, their stalks joined at the top.
+  cherries: (d, size) => {
+    const R = fruitRider('cherries', d, size);
+    const bases = CHERRY_ROUNDS.map(([cx, cy, r]) => R.at(cx, cy - r * 0.92));
+    const knot = [(bases[0][0] + bases[1][0]) / 2 + size * 0.05, Math.min(bases[0][1], bases[1][1]) - size * 0.3];
+    const stalks = bases.map((base, i) => {
+      const mid = [base[0] + (i ? -0.01 : 0.06) * size, (base[1] + knot[1]) / 2];
+      return `<path d="M ${f1(base[0])} ${f1(base[1])} Q ${f1(mid[0])} ${f1(mid[1])} ${f1(knot[0])} ${f1(knot[1])}"/>`;
+    }).join('');
+    const glints = CHERRY_ROUNDS.map(([cx, cy, r]) => `<path d="${smoothOpenPath([R.at(cx - r * 0.6, cy - r * 0.1), R.at(cx - r * 0.45, cy - r * 0.45), R.at(cx - r * 0.1, cy - r * 0.6)])}" stroke-opacity="0.35"/>`).join('');
+    return roundEdges(R, CHERRY_ROUNDS, size) + stalks + glints;
+  },
+  // Watermelon: dark stripes along the rind, browning with it.
+  watermelon: (d, size, seed, fraction) => {
+    const R = fruitRider('watermelon', d, size), color = natureColor('#2F6B3A', fraction || 0);
+    return [-0.75, -0.38, 0, 0.38, 0.75].map((v, k) => {
+      const run = [];
+      for (let x = 0.1; x <= 0.9; x += 0.04){
+        const e = Math.sqrt(Math.max(0, 1 - ((x - 0.5) / 0.44) ** 2));
+        run.push(R.at(x, 0.63 + v * 0.28 * e * 0.92 + Math.sin(x * 22 + k) * 0.008 * e));
+      }
+      return `<path d="${smoothOpenPath(run)}" stroke="${color}" stroke-width="${f1(Math.max(1.5, size * 0.03))}" stroke-opacity="0.8"/>`;
+    }).join('');
+  },
+  // Cantaloupe: the netting -- a loose, uneven mesh over the rind.
+  cantaloupe: (d, size, seed) => {
+    const R = fruitRider('cantaloupe', d, size), rand = seededRand(seed + 71), step = 0.1;
+    const inside = (x, y) => ((x - 0.5) / 0.35) ** 2 + ((y - 0.58) / 0.31) ** 2 < 1;
+    const knots = new Map();
+    for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++){
+      const x = 0.5 + i * step + (rand() - 0.5) * step * 0.5, y = 0.58 + j * step * 0.8 + (rand() - 0.5) * step * 0.5;
+      if (inside(x, y)) knots.set(i + ',' + j, R.at(x, y));
+    }
+    let net = '';
+    for (const [k, p] of knots){
+      const [i, j] = k.split(',').map(Number);
+      for (const n of [(i + 1) + ',' + j, i + ',' + (j + 1)])
+        if (knots.has(n)) net += `<path d="${lineD([p, knots.get(n)])}" stroke-opacity="0.4"/>`;
+    }
+    return net + ringAt(R.at(0.5, 0.29), size * 0.022, size * 0.012, 0.7);
+  },
+  // Honeydew: smooth -- the stem scar at one end, the blossom spot at the
+  // other, and the sheen of the rind.
+  honeydew: (d, size) => {
+    const R = fruitRider('honeydew', d, size);
+    const sheen = [R.at(0.25, 0.48), R.at(0.33, 0.38), R.at(0.46, 0.33)];
+    return ringAt(R.at(0.14, 0.6), size * 0.012, size * 0.02, 0.7) + inkDot(R.at(0.86, 0.6), size * 0.01, 0.6) +
+      `<path d="${smoothOpenPath(sheen)}" stroke-opacity="0.35"/>`;
+  },
+  // Kiwi: fuzz all round the edge and over the skin, the stem end a dot.
+  kiwi: (d, size, seed) => {
+    const R = fruitRider('kiwi', d, size), rand = seededRand(seed + 83), c = centroidOf(d);
+    const hairs = d.map(p => {
+      const dx = p[0] - c[0], dy = p[1] - c[1], l = Math.hypot(dx, dy) || 1, len = size * (0.015 + rand() * 0.02), tw = (rand() - 0.5) * 0.6;
+      return `<path d="${lineD([p, [p[0] + (dx / l * Math.cos(tw) - dy / l * Math.sin(tw)) * len, p[1] + (dy / l * Math.cos(tw) + dx / l * Math.sin(tw)) * len]])}" stroke-opacity="0.6"/>`;
+    }).join('');
+    const fuzz = R.scatter(rand, 20).map(p => { const a = rand() * Math.PI; return `<path d="${lineD([p, [p[0] + Math.cos(a) * size * 0.016, p[1] + Math.sin(a) * size * 0.016]])}" stroke-opacity="0.35"/>`; }).join('');
+    return hairs + fuzz + inkDot(R.at(0.16, 0.64), size * 0.014, 0.8);
+  },
+  // Coconut: fibre over the shell, hair at its edge, three eyes.
+  coconut: (d, size, seed) => {
+    const R = fruitRider('coconut', d, size), rand = seededRand(seed + 89), c = centroidOf(d);
+    const fibres = R.scatter(rand, 26, 0.1).map(p => {
+      const a = rand() * Math.PI * 2, l = size * (0.04 + rand() * 0.04);
+      return `<path d="M ${f1(p[0])} ${f1(p[1])} q ${f1(Math.cos(a + 0.6) * l * 0.5)} ${f1(Math.sin(a + 0.6) * l * 0.5)} ${f1(Math.cos(a) * l)} ${f1(Math.sin(a) * l)}" stroke-opacity="0.45"/>`;
+    }).join('');
+    const hair = d.filter((_, i) => i % 2 === 0).map(p => {
+      const dx = p[0] - c[0], dy = p[1] - c[1], l = Math.hypot(dx, dy) || 1, len = size * (0.02 + rand() * 0.03);
+      return `<path d="${lineD([p, [p[0] + dx / l * len + (rand() - 0.5) * len, p[1] + dy / l * len]])}" stroke-opacity="0.55"/>`;
+    }).join('');
+    const eyes = [[0.45, 0.33], [0.55, 0.33], [0.5, 0.42]].map(([x, y]) => {
+      const p = R.at(x, y);
+      return `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(size * 0.024)}" ry="${f1(size * 0.018)}" fill="#3B2E22" stroke="none"/>`;
+    }).join('');
+    return fibres + hair + eyes;
+  },
+  // Pomegranate: the crown's opening and its sepals, and a sheen.
+  pomegranate: (d, size) => {
+    const R = fruitRider('pomegranate', d, size), n = d.length, crown = d.slice(n - 7);
+    const neck = rfLerp(crown[0], crown[6], 0.5);
+    const sepals = [1, 3, 5].map(i => `<path d="${lineD([rfLerp(neck, crown[i], 0.15), rfLerp(neck, crown[i], 0.8)])}" stroke-opacity="0.6"/>`).join('');
+    const sheen = [R.at(0.27, 0.6), R.at(0.3, 0.47), R.at(0.38, 0.39)];
+    return `<path d="${lineD([crown[0], crown[6]])}"/>` + sepals + `<path d="${smoothOpenPath(sheen)}" stroke-opacity="0.35"/>`;
+  },
+  // Papaya: faint streaks along its length, the stem end at the right.
+  papaya: (d, size) => {
+    const R = fruitRider('papaya', d, size);
+    const streaks = [-0.45, 0, 0.45].map(v => {
+      const run = [];
+      for (let x = 0.16; x <= 0.84; x += 0.06){
+        const e = Math.sqrt(Math.max(0, 1 - ((x - 0.5) / 0.42) ** 2)) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42));
+        run.push(R.at(x, 0.64 + v * 0.25 * e));
+      }
+      return `<path d="${smoothOpenPath(run)}" stroke-opacity="0.4"/>`;
+    }).join('');
+    const end = R.edge(0);
+    return streaks + `<path d="${lineD([end, [end[0] + size * 0.035, end[1] - size * 0.01]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>`;
+  },
+  // Dragon fruit: scales that flick up and out like flames, green at the
+  // tips, and a tuft of them at the top.
+  dragonfruit: (d, size, seed, fraction) => {
+    const R = fruitRider('dragonfruit', d, size), color = dryLeaf(fraction), cFrac = Math.min(1, (fraction || 0) / 0.5);
+    const scales = [[0.36, 0.5], [0.64, 0.48], [0.5, 0.62], [0.3, 0.72], [0.7, 0.71], [0.42, 0.84], [0.6, 0.85]].map(([x, y]) => {
+      const p = R.at(x, y), a = -Math.PI / 2 + (x - 0.5) * 3.2 + (x < 0.5 ? -1 : 1) * cFrac * 0.5;
+      return leafPath(p, a, size * (0.13 - 0.03 * cFrac), size * 0.03, color, size);
+    }).join('');
+    const top = R.edge(-Math.PI / 2);
+    const tuft = [-0.55, 0, 0.55].map(k => leafPath(top, -Math.PI / 2 + k, size * (0.11 - 0.03 * cFrac), size * 0.028, color, size)).join('');
+    return scales + tuft;
+  },
+  // Lychee: the knobbled shell, and its short stalk.
+  lychee: (d, size, seed) => {
+    const R = fruitRider('lychee', d, size), rand = seededRand(seed + 97), k = size * 0.016;
+    const knobs = R.scatter(rand, 26, 0.1).map(p => `<path d="${lineD([[p[0] - k, p[1] + k * 0.6], [p[0], p[1] - k * 0.6], [p[0] + k, p[1] + k * 0.6]])}" stroke-opacity="0.5"/>`).join('');
+    return knobs + stalk(R.edge(-Math.PI / 2), size, 0.06, 0.02);
+  }
+};
+
 const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: tubBand, protein: wrappedTray,
   cooked: containerLid, generic: packetSeal, potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
   chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, spinach: spinachRibs, carrot: carrotTops,
-  onion: onionSkin, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves};
+  onion: onionSkin, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves, ...FRUIT_CUES};
 // Packaging behind the food, drawn before its body (see the note above
 // chickenOutline). Kept in its own group so the body outline stays the
 // svg's first direct <path> child. A packaged food's mold is drawn under
@@ -4644,6 +5063,9 @@ function fkDecayCat(name){
   if (/^(Meat|Poultry|Seafood|Vegetarian)/.test(name)) return 'protein';
   return 'cooked';
 }
+// #266 reaches the fallback only as plums or sapote (peaches and pears
+// are FOODS): drawn as a plum, in the soft fallback's own base.
+const FK_SHAPES = {266: 'plum'};
 const FALLBACK_BASE = {veg:'#bccbb2', soft:'#e2c3a6', dairy:'#e8e6df', protein:'#d4ab9d', cooked:'#dad3c3'};
 const MEDIAN_MIN = 3;
 const CAT_MEDIANS = (() => {
@@ -4666,6 +5088,7 @@ function fkFood(id){
   const m = CAT_MEDIANS[cat];
   const f = {en: r[1], shelf: r[3], fk: id, src: 'FoodKeeper', g: m.g, usd: m.usd, estWeight: true,
              cat, base: FALLBACK_BASE[cat], pkgDate: r[4] === 'pkg'};
+  if (FK_SHAPES[id]) f.shape = FK_SHAPES[id];
   if (r[4] === 'ripe') f.ripens = true;
   if (r[4] === 'P') f.store = 'pantry';
   fkCache.set(id, f);

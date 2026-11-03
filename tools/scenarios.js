@@ -1341,7 +1341,31 @@ const MIXED_18 = [
   ['rotisserie', 3], ['beets', 1], ['bread', 15], ['_fk_427', 1, 10, null, 'Almond milk'], ['spinach', 9],
   ['shrimp', 1], ['chickenthigh', 0], ['_c_potatochips', 0, 60, {en: 'Potato chips', g: 450, usd: 2.99, estWeight: true}]
 ];
-async function seedMixed18(page) {
+// Twenty savable items, most of them fruit, across the urgency range: the
+// All items row at desktop (nine to a shelf, labels in one row) and phone.
+const ROW_20 = [
+  ['strawberry', 2], ['cherries', 2], ['raspberry', 1], ['salmon', 1], ['avocado', 2], ['peach', 3], ['kiwi', 3],
+  ['banana', 1], ['blackberry', 3], ['cantaloupe', 1], ['mango', 4], ['grapes', 3], ['_fk_266', 2, 5, null, 'Plums'],
+  ['pineapple', 2], ['honeydew', 2], ['lychee', 2], ['blueberry', 5], ['coconut', 1], ['lime', 6], ['pomegranate', 10]
+];
+async function rowFixtureScenario(browser) {
+  console.log('\n--- ALL ITEMS ROW: 20 items, desktop and phone ---');
+  for (const [w, tag] of [[1280, 'desktop'], [390, 'phone']]) {
+    const page = await (await browser.newContext({ viewport: { width: w, height: 1400 } })).newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, ROW_20);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const res = await assertFridgeLayout(page, `row 20 at ${w}px`);
+    expectEqual(`all 20 on the row at ${w}px`, res.labels, 20);
+    if (w > 720) expectEqual('desktop shelves', JSON.stringify(res.perShelf), '[9,9,2]');
+    await (await page.$('.fridgeview')).screenshot({ path: path.join(OUT, `row20-${tag}.png`) });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
+  }
+}
+async function seedMixed18(page, items = MIXED_18) {
   await page.goto(`http://localhost:${PORT}/index.html`);
   await page.evaluate(items => {
     const d = new Date(), T = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
@@ -1355,7 +1379,7 @@ async function seedMixed18(page) {
     });
     localStorage.setItem('perishable.v1', JSON.stringify({schema: 3, fridge, standing,
       ledger: {wasteG: 0, wasteUSD: 0, savedG: 0}, uid: items.length, startedAt: T - 15, lastVisit: T}));
-  }, MIXED_18);
+  }, items);
   await page.reload();
 }
 
@@ -1958,6 +1982,7 @@ async function ripenessScenario(browser) {
   await receiptNewItemsScenario(browser);
   await restockNoWasteScenario(browser);
   await mixedFridgeScenario(browser);
+  await rowFixtureScenario(browser);
   await dishFixtureScenario(browser);
   await editDateScenario(browser);
   await ripenessScenario(browser);

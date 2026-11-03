@@ -139,7 +139,10 @@ leaves the fridge body.
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a
 real cap-and-stem with gills; the other categories carry a basic version
-of the same language — a few creases — not yet bespoke per category), and
+of the same language — a few creases — not yet bespoke per category;
+every fruit has its own outline and one identity cue, FRUIT_OUTLINES and
+FRUIT_CUES: a pineapple's crown and crosshatch, a strawberry's seeds and
+calyx, a lemon's pointed ends, a pair of cherries on joined stalks), and
 decay drawn in line as much as in colour — wrinkles that multiply,
 brown discoloration that appears before mold does, an outline that
 shrivels inward as it shrinks rather than stretching or twisting. A
