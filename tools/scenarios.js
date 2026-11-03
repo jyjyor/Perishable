@@ -67,18 +67,19 @@ async function receiptScenario(browser) {
   await page.waitForSelector('#headline');
 
   // Stub the network call: canned items cover a FOODS match that needs
-  // its package date (milk), a FoodKeeper-only match (dragonfruit ->
-  // Pitaya/dragon fruit #480, 21 days, quantity 2 -> two fridge rows), a
+  // its package date (milk), a FoodKeeper-only match (cranberries ->
+  // Cranberries #259, 60 days, quantity 2 -> two fridge rows), a
   // name that must match nothing (potato chips: never Potato) and a
   // non-food line that must land unchecked. The date is legible, so age
   // is receipt-derived. (Dragonfruit was the no-match fixture until the
   // FoodKeeper fallback table arrived and recognised it; potato chips took
-  // that role.)
+  // that role. It was then the FoodKeeper-only fixture until dragon fruit
+  // got its own FOODS entry; cranberries took that role.)
   await page.evaluate(() => {
     window.__receiptApiOverride = async () => ({
       date: '2026-10-20',
       items: [
-        {raw: 'ORG DRAGONFRUIT', expanded: 'organic dragonfruit', quantity: 2, is_food: true},
+        {raw: 'ORG CRANBERRIES', expanded: 'organic cranberries', quantity: 2, is_food: true},
         {raw: 'MILK 2% GAL', expanded: 'Milk', quantity: 1, is_food: true},
         {raw: 'KS POTATO CHIPS', expanded: 'Potato chips', quantity: 1, is_food: true},
         {raw: 'PAPER TOWEL 12CT', expanded: 'Paper towels', quantity: 3, is_food: false}
@@ -108,8 +109,8 @@ async function receiptScenario(browser) {
   rows.forEach((r, i) => {
     if (r.checked !== expectChecked[i]) throw new Error(`row ${i} checked=${r.checked}, expected ${expectChecked[i]}`);
   });
-  expectEqual('dragonfruit label (the scanned name, cleaned)', rows[0].name, 'Dragonfruit');
-  if (rows[0].flag || !rows[0].match.includes('FoodKeeper #480')) throw new Error('dragonfruit should match FoodKeeper #480: ' + JSON.stringify(rows[0]));
+  expectEqual('cranberries label (the scanned name, cleaned)', rows[0].name, 'Cranberries');
+  if (rows[0].flag || !rows[0].match.includes('FoodKeeper #259') || rows[0].match.includes('FOODS')) throw new Error('cranberries should match FoodKeeper #259 alone: ' + JSON.stringify(rows[0]));
   if (rows[1].flag !== 'needs date' || !rows[1].match.includes('FOODS')) throw new Error('milk should match FOODS and ask for its package date: ' + JSON.stringify(rows[1]));
   if (rows[2].flag !== 'no match' || !rows[2].match.includes('no shelf-life data')) throw new Error('potato chips should match nothing: ' + JSON.stringify(rows[2]));
   if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked while lines need answers');
@@ -128,10 +129,10 @@ async function receiptScenario(browser) {
   const fridgeRows = await readInventory(page);
   console.log('fridge rows after confirm:', JSON.stringify(fridgeRows));
   const rowNames = fridgeRows.map(r => r.name);
-  if (rowNames.length !== 4) throw new Error(`expected 4 fridge rows (2 dragonfruit + milk + chips), got ${rowNames.length}`);
-  if (rowNames.filter(n => n === 'Dragonfruit').length !== 2) throw new Error('expected two dragonfruit rows from quantity 2');
+  if (rowNames.length !== 4) throw new Error(`expected 4 fridge rows (2 cranberries + milk + chips), got ${rowNames.length}`);
+  if (rowNames.filter(n => n === 'Cranberries').length !== 2) throw new Error('expected two cranberries rows from quantity 2');
   const leftOf = n => fridgeRows.find(r => r.name === n).left;
-  expectEqual('dragonfruit days left (21 - age)', leftOf('Dragonfruit'), (21 - purchase) + ' days');
+  expectEqual('cranberries days left (60 - age)', leftOf('Cranberries'), (60 - purchase) + ' days');
   expectEqual('milk days left (package date)', leftOf('Milk'), 7 - purchase < 0 ? Math.abs(7 - purchase) + 'd past' : (7 - purchase) + ' days');
   expectEqual('chips days left (use-by given)', leftOf('Potato chips'), (60 - purchase) + ' days');
   if (rowNames.includes('Paper towels')) throw new Error('unchecked paper towels should not have been added');
@@ -1126,23 +1127,24 @@ function expectRow(rows, name, left, g) {
 async function fkOnlyScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- FOODKEEPER ONLY: an item outside FOODS gets FoodKeeper days ---');
-  await typeEntry(page, 'blackberries, chicken salad 1d');
+  await typeEntry(page, 'boysenberries, chicken salad 1d');
   if (await previewOpen(page)) throw new Error('both match one FoodKeeper item with days; nothing should be asked');
   const rows = await readInventory(page);
   console.log('inventory:', JSON.stringify(rows));
   const med = await page.evaluate(() => [CAT_MEDIANS.soft.g, CAT_MEDIANS.cooked.g]);
-  expectRow(rows, 'Blackberries', '6 days', `≈${med[0]} g`);   // #253, 6
+  expectRow(rows, 'Boysenberries', '6 days', `≈${med[0]} g`);   // #253, 6
   expectRow(rows, 'Chicken salad', '3 days', `≈${med[1]} g`);                               // #418, 4, bought 1 day ago
   await page.waitForTimeout(900);
   const pop = await popoverText(page, '_fk_253');
   console.log('popover:', pop);
-  if (!/^× Blackberries/.test(pop)) throw new Error('popover title should be the typed name');
+  if (!/^× Boysenberries/.test(pop)) throw new Error('popover title should be the typed name');
   if (!pop.includes('FoodKeeper #253 “Berries (blackberries, boysenberries, currant)”')) throw new Error('popover source should name #253 and its title');
   // A FoodKeeper-only food counted from ripeness offers Ripe / Not ripe yet.
-  await typeEntry(page, 'kiwi fruit');
-  const [kiwi] = await readReview(page, '#voicePreview');
-  console.log(' ', kiwi.name, '|', kiwi.flag || 'ok', '|', kiwi.match);
-  if (!kiwi.match.includes('Ripe') || !kiwi.match.includes('Not ripe yet')) throw new Error('kiwi should offer the ripeness choice');
+  await typeEntry(page, 'apricots');
+  const [apricot] = await readReview(page, '#voicePreview');
+  console.log(' ', apricot.name, '|', apricot.flag || 'ok', '|', apricot.match);
+  if (apricot.match.includes('FOODS') || !apricot.match.includes('FoodKeeper #249')) throw new Error('apricots should match FoodKeeper #249 alone');
+  if (!apricot.match.includes('Ripe') || !apricot.match.includes('Not ripe yet')) throw new Error('apricots should offer the ripeness choice');
   await page.click('#voiceDiscard');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -1195,18 +1197,22 @@ async function noFalseMatchScenario(browser) {
 // FOODS food; the hand-kept aliases in the import script catch store names.
 async function handAliasScenario(browser) {
   const { page, errors } = await freshPage(browser);
-  console.log('\n--- HAND ALIASES: kiwi is Kiwi fruit; papaya is not Mango, tuna is not Salmon ---');
+  console.log('\n--- HAND ALIASES: ground pork is Pork (ground); papaya is not Mango, tuna is not Salmon ---');
   const got = await page.evaluate(() => Object.fromEntries(
     ['kiwi', 'mandarins', 'ground pork', 'deli turkey', 'yellow squash', 'green onions', 'papaya', 'tuna', 'parsnips', 'buns']
       .map(t => { const r = resolveName(t); return [t, r.keys.length === 1 ? r.keys[0] : r.keys]; })));
   console.log(JSON.stringify(got));
-  expectEqual('kiwi', got['kiwi'], '_fk_263');
-  expectEqual('mandarins', got['mandarins'], '_fk_256');
+  // kiwi and mandarins have FOODS entries now, which match first; their
+  // hand aliases still reach the FoodKeeper rows for the fallback table.
+  expectEqual('kiwi', got['kiwi'], 'kiwi');
+  expectEqual('mandarins', got['mandarins'], 'mandarin');
+  const fkAliases = await page.evaluate(() => [FK_BY_ID.get(263)[2], FK_BY_ID.get(256)[2]]);
+  if (!fkAliases[0].split('|').includes('kiwi') || !fkAliases[1].split('|').includes('mandarin')) throw new Error('hand aliases missing from FK_TABLE: ' + JSON.stringify(fkAliases));
   expectEqual('ground pork', got['ground pork'], '_fk_73');
   expectEqual('deli turkey', got['deli turkey'], '_fk_514');
   expectEqual('yellow squash', got['yellow squash'], '_fk_302');
   expectEqual('green onions', got['green onions'], 'scallion');
-  expectEqual('papaya', got['papaya'], '_fk_265');
+  expectEqual('papaya (its own FOODS entry, never Mango)', got['papaya'], 'papaya');
   expectEqual('tuna', got['tuna'], '_fk_146');
   expectEqual('parsnips', got['parsnips'], '_fk_279');
   expectEqual('buns', got['buns'], '_fk_195');
@@ -1296,7 +1302,7 @@ async function receiptNewItemsScenario(browser) {
     ['Strawberries', 'Rotisserie chicken', 'Avocados', 'Sour cream', 'Tortillas', 'Plums', 'Salmon']);
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
   if (!rows[2].match.includes('Not ripe yet')) throw new Error('avocados should offer the ripeness choice');
-  if (!rows[5].match.includes('FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FoodKeeper #266 and offer the ripeness choice');
+  if (!rows[5].match.includes('FOODS, FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FOODS (#266) and offer the ripeness choice');
   if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked');
 
   await page.check('#receiptPreview .entry-ripe[data-idx="2"][value="unripe"]');
@@ -1373,7 +1379,7 @@ const MIXED_18 = [
 // All items row at desktop (nine to a shelf, labels in one row) and phone.
 const ROW_20 = [
   ['strawberry', 2], ['cherries', 2], ['raspberry', 1], ['salmon', 1], ['avocado', 2], ['peach', 3], ['kiwi', 3],
-  ['banana', 1], ['blackberry', 3], ['cantaloupe', 1], ['mango', 4], ['grapes', 3], ['_fk_266', 2, 5, null, 'Plums'],
+  ['banana', 1], ['blackberry', 3], ['cantaloupe', 1], ['mango', 4], ['grapes', 3], ['plum', 2],
   ['pineapple', 2], ['honeydew', 2], ['lychee', 2], ['blueberry', 5], ['coconut', 1], ['lime', 6], ['pomegranate', 10]
 ];
 async function rowFixtureScenario(browser) {

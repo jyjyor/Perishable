@@ -37,6 +37,11 @@ consumer food app.
      - No printed date and no FoodKeeper number (tomato, and the
        vegetables FoodKeeper doesn't list): keep the current number,
        marked estimated:true, with a note saying why.
+     - A food FoodKeeper doesn't list can be added to FOODS as estimated
+       only with a cited source -- a university extension service's own
+       storage figure, upper end of its range -- named in a comment above
+       it and in its note (figs, persimmons, Asian pears). With no
+       credible source it stays out.
      - Anything that matches nothing needs a date before it can be saved.
        There is no default shelf life.
      - A refrigerator number FoodKeeper says "applies to ripe fruit"

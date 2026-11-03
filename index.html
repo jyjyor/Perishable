@@ -839,6 +839,7 @@ const FOODS = {
   // #266 is "Peaches, nectarines, plums, pears, sapote": one entry for
   // both. Its 3-5 days is for ripe fruit, so these ripen (see avocado).
   peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, ripens:true, g:1800, usd:8.99, estPrice:true, cat:'soft', shape:'peach', plural:true, base:'#f0a868'},
+  plum:          {en:'Plums',             aliases:['plum','black plum','black plums','red plum','red plums','italian plum','italian plums'], shelf:5, fk:266, ripens:true, g:907, usd:4.99, estPrice:true, cat:'soft', plural:true, shape:'plum', base:'#73689f'},
   pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, ripens:true, g:1800, usd:6.99, estPrice:true, cat:'soft', shape:'pear', plural:true, base:'#c9cf6a'},
   // FoodKeeper's 7 days is "for ripe fruit", but a store pineapple is
   // already as ripe as it gets: it counts from purchase.
@@ -867,6 +868,21 @@ const FOODS = {
   // #265 is one entry for papaya and mango (and three more), 1 week.
   papaya:        {en:'Papaya',            aliases:['papayas','maradol papaya'], shelf:7, fk:265, g:1100, usd:4.49, estPrice:true, cat:'soft', shape:'papaya', base:'#d2c856'},
   dragonfruit:   {en:'Dragon fruit',      aliases:['dragon fruits','dragonfruit','pitaya','pitahaya'], shelf:21, fk:480, g:450, usd:4.99, estPrice:true, cat:'soft', shape:'dragonfruit', base:'#d6449f'},
+  // No FoodKeeper entry, so estimated, each from a university extension
+  // service's own storage figure, the upper end of its range:
+  //   figs: NDSU Extension FN1845, "Focus on Whole Fruits: How to Select
+  //     and Store Fruit" -- refrigerator, 1 to 3 days.
+  //     https://www.ndsu.edu/agriculture/extension/publications/focus-whole-fruits-how-select-and-store-fruit
+  //   persimmons: Purdue Extension FoodLink, "Persimmon" -- ripe, in the
+  //     refrigerator up to 3 days; unripe keeps a month, so it ripens.
+  //     https://extension.purdue.edu/foodlink/includes/pubs/Print1perpaper/Fruit/PERSIMMON.pdf
+  //   Asian pears: Oregon State University Extension SP 50-694,
+  //     "Preserving Asian Pears" -- ripe, up to 3 months in the
+  //     refrigerator. (#266 Pears is a different species.)
+  //     https://extension.oregonstate.edu/food/preservation/preserving-asian-pears-sp-50-694
+  fig:           {en:'Figs',              aliases:['fig','fresh figs','black mission figs','mission figs','brown turkey figs'], shelf:3, estimated:true, note:'No FoodKeeper entry; NDSU Extension FN1845 gives 1-3 days refrigerated', g:454, usd:5.99, estPrice:true, cat:'soft', plural:true, shape:'fig', base:'#674f7d'},
+  persimmon:     {en:'Persimmons',        aliases:['persimmon','fuyu persimmon','fuyu persimmons','hachiya persimmon','hachiya persimmons'], shelf:3, ripens:true, estimated:true, note:'No FoodKeeper entry; Purdue Extension FoodLink gives ripe persimmons up to 3 days refrigerated', g:907, usd:5.99, estPrice:true, cat:'soft', plural:true, shape:'persimmon', base:'#e8752a'},
+  asianpear:     {en:'Asian pears',       aliases:['asian pear','nashi','nashi pear','nashi pears','apple pear','apple pears'], shelf:90, estimated:true, note:'No FoodKeeper entry (#266 Pears is a different species); Oregon State Extension SP 50-694 gives ripe Asian pears up to 3 months refrigerated', g:900, usd:5.49, estPrice:true, cat:'soft', plural:true, shape:'asianpear', base:'#d8cf86'},
   // #252 "Berries (cherries, goose berries, lychee)": 7 days.
   lychee:        {en:'Lychees',           aliases:['lychee','litchi','litchis','lichee'], shelf:7, fk:252, g:454, usd:5.99, estPrice:true, cat:'soft', shape:'lychee', plural:true, base:'#cf5848'},
   cherrytomato:  {en:'Cherry tomatoes',   aliases:['cherry tomato','grape tomatoes','grape tomato'], shelf:5, fk:600, g:907, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#d4482b'},
@@ -2481,6 +2497,15 @@ const FRUIT_OUTLINES = {
   papaya: s => polarRing(s, 26, 0.5, 0.64, 0.42, 0.25, () => 1,
     (x, y) => [x, 0.64 + (y - 0.64) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42))]),
   dragonfruit: s => polarRing(s, 24, 0.5, 0.60, 0.29, 0.32, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.4)),
+  // Fig: a teardrop standing up, drawn to a short neck at the stem.
+  fig: s => polarRing(s, 24, 0.5, 0.64, 0.3, 0.27, () => 1, neckIn(0.64, 0.27, 0.7, 0.13)),
+  // Persimmon: squat and a little squared, flat on top under its calyx.
+  persimmon: s => polarRing(s, 26, 0.5, 0.64, 0.38, 0.27, a => {
+    const c = Math.abs(Math.cos(a)), n = Math.abs(Math.sin(a));
+    return 1 / Math.pow(Math.pow(c, 2.5) + Math.pow(n, 2.5), 1 / 2.5) * 0.97;
+  }),
+  // Asian pear: round like an apple, not pear-shaped; no dimple.
+  asianpear: s => polarRing(s, 24, 0.5, 0.58, 0.36, 0.33, a => 1 - 0.03 * bell(a, -Math.PI / 2, 0.3)),
   // Lychee: round and finely knobbled, a little pointed at the bottom.
   lychee: s => polarRing(s, 30, 0.5, 0.60, 0.33, 0.31, a => (1 + 0.025 * Math.cos(15 * a)) * (1 - 0.06 * bell(a, -Math.PI / 2, 0.3) + 0.05 * bell(a, Math.PI / 2, 0.3)))
 };
@@ -3620,6 +3645,25 @@ const FRUIT_CUES = {
     const top = R.edge(-Math.PI / 2);
     const tuft = [-0.55, 0, 0.55].map(k => leafPath(top, -Math.PI / 2 + k, size * (0.11 - 0.03 * cFrac), size * 0.028, color, size)).join('');
     return scales + tuft;
+  },
+  // Fig: faint ribs up to the neck, a short thick stem, the eye below.
+  fig: (d, size) => {
+    const R = fruitRider('fig', d, size), top = R.edge(-Math.PI / 2);
+    const ribs = [-0.13, 0.13].map(k => `<path d="${smoothOpenPath([R.at(0.5 + k * 0.3, 0.42), R.at(0.5 + k, 0.62), R.at(0.5 + k * 0.7, 0.84)])}" stroke-opacity="0.35"/>`).join('');
+    return ribs + `<path d="${lineD([top, [top[0] + size * 0.012, top[1] - size * 0.05]])}" stroke-width="${f1(Math.max(1.5, size * 0.02))}"/>` +
+      ringAt(R.at(0.5, 0.86), size * 0.014, size * 0.008, 0.7);
+  },
+  // Persimmon: the broad four-leaved calyx lying flat on top, drying.
+  persimmon: (d, size, seed, fraction) => {
+    const R = fruitRider('persimmon', d, size), top = R.edge(-Math.PI / 2), cFrac = Math.min(1, (fraction || 0) / 0.5), color = dryLeaf(fraction);
+    const calyx = [-0.28, 0.12, Math.PI - 0.12, Math.PI + 0.28].map(a =>
+      leafPath([top[0], top[1] + size * 0.012], a - Math.sign(Math.cos(a)) * cFrac * 0.4, size * (0.15 - 0.04 * cFrac), size * 0.055, color, size)).join('');
+    return calyx + `<path d="${lineD([top, [top[0], top[1] - size * 0.035]])}" stroke="${color}" stroke-width="${f1(Math.max(1, size * 0.014))}"/>`;
+  },
+  // Asian pear: fine russet lenticels all over, and a short straight stalk.
+  asianpear: (d, size, seed) => {
+    const R = fruitRider('asianpear', d, size);
+    return pores(R, size, seed, 34, 0.4, 0.006) + stalk(R.edge(-Math.PI / 2), size, 0.08, 0.008);
   },
   // Lychee: the knobbled shell, and its short stalk.
   lychee: (d, size, seed) => {
@@ -5120,8 +5164,8 @@ function fkDecayCat(name){
   if (/^(Meat|Poultry|Seafood|Vegetarian)/.test(name)) return 'protein';
   return 'cooked';
 }
-// #266 reaches the fallback only as plums or sapote (peaches and pears
-// are FOODS): drawn as a plum, in the soft fallback's own base.
+// #266 reaches the fallback now only as sapote, or as plums saved before
+// plums had a FOODS entry: drawn as a plum, in the soft fallback's base.
 const FK_SHAPES = {266: 'plum'};
 const FALLBACK_BASE = {veg:'#bccbb2', soft:'#e2c3a6', dairy:'#e8e6df', protein:'#d4ab9d', cooked:'#dad3c3'};
 const MEDIAN_MIN = 3;
@@ -5185,7 +5229,7 @@ function sourceOf(key){
 // Where an item's shelf life comes from, for the popover.
 function shelfSourceOf(it){
   const f = food(it);
-  if (it.ripening) return 'ripening: FoodKeeper #' + f.fk + ' counts ' + dayCount(f.shelf) + ' from when it is ripe';
+  if (it.ripening) return 'ripening: ' + (f.fk != null ? 'FoodKeeper #' + f.fk : 'estimated') + ' counts ' + dayCount(f.shelf) + ' from when it is ripe';
   if (it.shelf != null && it.shelfFrom === 'date')
     return (f.pkgDate ? 'package date' : 'date given at entry')
       + (FOODS[it.key] || it.custom ? '' : ' · FoodKeeper #' + f.fk + ' “' + foodOf(it.key).en + '”');

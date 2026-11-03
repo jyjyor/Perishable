@@ -49,11 +49,10 @@ function serve() {
   const result = await page.evaluate(() => {
     const day = today();
     const STUDY = 150;
-    // Every fruit: FOODS entries on a fruit drawing (and apple, banana),
-    // plus plums, which reach the app only through FoodKeeper #266.
-    const KEYS = Object.keys(FOODS).filter(k => FRUIT_OUTLINES[FOODS[k].shape] || k === 'apple' || k === 'banana').concat(['_fk_266']);
+    // Every fruit: FOODS entries on a fruit drawing, and apple and banana.
+    const KEYS = Object.keys(FOODS).filter(k => FRUIT_OUTLINES[FOODS[k].shape] || k === 'apple' || k === 'banana');
     let uid = 30000;
-    const nameOf = key => key === '_fk_266' ? 'Plums (FoodKeeper #266)' : FOODS[key].en;
+    const nameOf = key => FOODS[key].en;
 
     function cellAt(key, targetFraction, shelfSize){
       const shelf = foodOf(key).shelf;
