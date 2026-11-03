@@ -585,7 +585,34 @@ async function migrationScenario(browser) {
   await livePage.fill('#entry', 'spinach, milk, chicken, onion, dragonfruit, garlic 5d');
   await livePage.click('#addbtn');
   await livePage.waitForTimeout(150);
-  const tossBtn = await livePage.$('[data-toss]');
+  // Since 42c2338 a typed batch with an item that needs a date (milk's
+  // printed date, dragonfruit matching nothing) waits in a review instead
+  // of saving at once: give every date a person would, then Add.
+  const reviewAdd = await livePage.$('#voiceAdd');
+  if (reviewAdd && await reviewAdd.isVisible()) {
+    const inFive = await livePage.evaluate(() => new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10));
+    // the review re-renders as each date is given: look again each time
+    const n = (await livePage.$$('.entry-date')).length;
+    for (let i = 0; i < n; i++) {
+      await livePage.locator('.entry-date').nth(i).fill(inFive);
+      await livePage.waitForTimeout(100);
+    }
+    if (await livePage.$eval('#voiceAdd', b => b.disabled)) throw new Error('origin/main review still blocks Add after every date was filled');
+    await livePage.click('#voiceAdd');
+    await livePage.waitForTimeout(150);
+  }
+  // A driver that no longer matches origin/main's entry UI saves nothing,
+  // and every check below would then pass on an empty state: refuse that.
+  const added = await livePage.evaluate(() => fridge.length);
+  if (added !== 6) throw new Error(`origin/main saved ${added} of 6 typed items -- the scenario no longer drives its entry UI`);
+  // Toss one item so the waste ledger has something to carry: the old
+  // list button, or (since d2cd073) Tossed under the item in the All items row.
+  let tossBtn = await livePage.$('[data-toss]');
+  if (!tossBtn && await livePage.$('#allItems')) {
+    await livePage.$eval('#allItems', d => { d.open = true; });
+    await livePage.waitForTimeout(150);
+    tossBtn = await livePage.$('[data-fridge-tossed]');
+  }
   if (tossBtn) await tossBtn.click();
   await livePage.waitForTimeout(100);
   const cookBtn = await livePage.$('.js-cook');
@@ -596,6 +623,7 @@ async function migrationScenario(browser) {
   if (!savedState) throw new Error('origin/main produced no saved state to migrate -- nothing to test');
   const parsed = JSON.parse(savedState);
   const expectedCount = parsed.fridge.length;
+  if (!(parsed.ledger.wasteG > 0)) throw new Error('origin/main saved no waste -- the scenario no longer drives its Tossed button');
   console.log('live (origin/main) fridge items:', expectedCount, '· standing keys:', Object.keys(parsed.standing).length);
   console.log('live ledger:', JSON.stringify(parsed.ledger));
   if (liveErrors.length) throw new Error(`origin/main itself threw console errors while building state: ${JSON.stringify(liveErrors)}`);
