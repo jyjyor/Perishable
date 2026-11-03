@@ -142,7 +142,10 @@ real cap-and-stem with gills; the other categories carry a basic version
 of the same language — a few creases — not yet bespoke per category;
 every fruit has its own outline and one identity cue, FRUIT_OUTLINES and
 FRUIT_CUES: a pineapple's crown and crosshatch, a strawberry's seeds and
-calyx, a lemon's pointed ends, a pair of cherries on joined stalks), and
+calyx, a lemon's pointed ends, a pair of cherries on joined stalks; a
+few carry a second natural tone, FRUIT_WASH -- a mango's blush, a
+watermelon's bands, a cut kiwi's face -- that decays through natureColor
+with the body), and
 decay drawn in line as much as in colour — wrinkles that multiply,
 brown discoloration that appears before mold does, an outline that
 shrivels inward as it shrinks rather than stretching or twisting. A

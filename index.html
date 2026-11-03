@@ -762,7 +762,7 @@ const FOODS = {
   cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
   potato:     {en:'Potato',         shelf:60, fk:297, store:'pantry', g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
   lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', shape:'lemon', base:'#e2db8d'},
-  mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', shape:'mango', base:'#cc8b5c'},
+  mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', shape:'mango', base:'#ea9b3a'},
   apple:      {en:'Apple',          shelf:42, fk:248, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
   // Banana: kept out of the fridge, but FoodKeeper's pantry guidance is
   // "when ripe", not a number, so the rule falls back to its refrigerator
@@ -853,7 +853,7 @@ const FOODS = {
   coconut:       {en:'Coconut',           aliases:['coconuts','whole coconut','brown coconut','young coconut'], shelf:7, fk:258, store:'pantry', g:700, usd:2.49, estPrice:true, cat:'soft', shape:'coconut', base:'#7d5b3e'},
   // #256 names tangerines and clementines; both are mandarins.
   mandarin:      {en:'Mandarins',         aliases:['mandarin','clementine','clementines','cuties','cutie','tangerine','tangerines','mandarin orange','mandarin oranges'], shelf:21, fk:256, g:2268, usd:7.99, estPrice:true, cat:'soft', shape:'mandarin', plural:true, base:'#ec7a26'},
-  lime:          {en:'Limes',             aliases:['lime','persian lime','persian limes'], shelf:21, fk:256, g:1360, usd:5.49, estPrice:true, cat:'soft', shape:'lemon', plural:true, base:'#4fae5a'},
+  lime:          {en:'Limes',             aliases:['lime','persian lime','persian limes'], shelf:21, fk:256, g:1360, usd:5.49, estPrice:true, cat:'soft', shape:'lime', plural:true, base:'#4fae5a'},
   // #483 Cherries (2-3 days), the entry for this food itself. #252
   // "Berries (cherries, goose berries, lychee)" lists cherries at 7 days;
   // the importer already gives "cherries" to #483.
@@ -2406,17 +2406,40 @@ const BLUEBERRY_ROUNDS = [[0.50, 0.50, 0.18], [0.29, 0.70, 0.19], [0.70, 0.69, 0
 const GRAPE_ROUNDS = [[0.29, 0.40, 0.09], [0.43, 0.39, 0.09], [0.57, 0.39, 0.09], [0.71, 0.40, 0.09],
   [0.36, 0.53, 0.09], [0.50, 0.53, 0.09], [0.64, 0.53, 0.09], [0.43, 0.67, 0.09], [0.57, 0.67, 0.09], [0.50, 0.80, 0.09]];
 const CHERRY_ROUNDS = [[0.33, 0.73, 0.18], [0.66, 0.75, 0.17]];
+// The outer edge of overlapping ellipses [cx, cy, rx, ry] (circleUnion's
+// rule, for ovals).
+function ellipseUnion(s, parts, n = 40){
+  const c = [parts.reduce((t, k) => t + k[0], 0) / parts.length, parts.reduce((t, k) => t + k[1], 0) / parts.length];
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a);
+    let t = 0;
+    for (const [ex, ey, rx, ry] of parts){
+      const ox = (c[0] - ex) / rx, oy = (c[1] - ey) / ry, vx = dx / rx, vy = dy / ry;
+      const A = vx * vx + vy * vy, B = 2 * (ox * vx + oy * vy), C = ox * ox + oy * oy - 1, disc = B * B - 4 * A * C;
+      if (disc >= 0) t = Math.max(t, (-B + Math.sqrt(disc)) / (2 * A));
+    }
+    pts.push([(c[0] + dx * t) * s, (c[1] + dy * t) * s]);
+  }
+  return pts;
+}
+// Whole kiwi (back right), then the cut half (front left), face on.
+const KIWI_PARTS = [[0.62, 0.62, 0.29, 0.2], [0.36, 0.66, 0.22, 0.235]];
 const FRUIT_OUTLINES = {
-  // Lemon and lime: an oval lying down, drawn out to a point at each end.
-  lemon: s => polarRing(s, 24, 0.5, 0.62, 0.38, 0.26, a => 1 + 0.14 * (bell(a, 0, 0.2) + bell(a, Math.PI, 0.2))),
+  // Lemon: a plump oval lying down, about 1.2:1, with a small point at
+  // each end; smaller in its box than an orange. Lime: the same, rounder
+  // and smaller still.
+  lemon: s => polarRing(s, 24, 0.5, 0.66, 0.29, 0.24, a => 1 + 0.1 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
+  lime: s => polarRing(s, 24, 0.5, 0.69, 0.245, 0.215, a => 1 + 0.09 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
   orange: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.3)),
   // Mandarin: flatter than an orange, sunk a little at both poles.
   mandarin: s => polarRing(s, 24, 0.5, 0.63, 0.38, 0.27, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)),
   grapefruit: s => polarRing(s, 24, 0.5, 0.57, 0.40, 0.35, a => 1 - 0.05 * bell(a, -Math.PI / 2, 0.35)),
-  // Mango: a kidney lying down -- the full shoulder left, a dip along the
-  // top, both ends dropping.
-  mango: s => polarRing(s, 24, 0.5, 0.58, 0.40, 0.27, a => (1 + 0.07 * Math.cos(a + Math.PI)) * (1 - 0.12 * bell(a, -Math.PI / 2 + 0.2, 0.45)),
-    (x, y) => [x, y + 0.5 * (x - 0.5) ** 2]),
+  // Mango: a kidney-teardrop lying down -- the full shoulder on the left,
+  // where the stem is, narrowing to a rounded tip low on the right, the
+  // back a little hollowed.
+  mango: s => polarRing(s, 26, 0.5, 0.6, 0.39, 0.27, a => (1 + 0.1 * Math.cos(a + Math.PI)) * (1 - 0.08 * bell(a, -Math.PI / 2 + 0.3, 0.5)),
+    (x, y, a) => { const r = Math.max(0, Math.cos(a)); return [x, 0.6 + (y - 0.6) * (1 - 0.38 * r * r) + 0.16 * Math.max(0, x - 0.5) ** 1.5 - 0.04]; }),
   avocado: s => polarRing(s, 24, 0.5, 0.60, 0.31, 0.32, () => 1, neckIn(0.60, 0.32, 0.45, 0.05)),
   pear: s => polarRing(s, 24, 0.5, 0.63, 0.31, 0.29, () => 1, neckIn(0.63, 0.29, 0.62, 0.12)),
   peach: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.3)),
@@ -2435,11 +2458,13 @@ const FRUIT_OUTLINES = {
     (x, y, a) => [x, Math.sin(a) > 0 ? 0.66 + (y - 0.66) * 0.72 : y]),
   blackberry: s => polarRing(s, 28, 0.5, 0.58, 0.26, 0.34, a => 1 + 0.035 * Math.cos(12 * a)),
   cherries: s => circleUnion(s, CHERRY_ROUNDS),
-  watermelon: s => polarRing(s, 26, 0.5, 0.63, 0.44, 0.28),
+  // Watermelon: nearly round (1.1:1), its stem end at the top.
+  watermelon: s => polarRing(s, 28, 0.5, 0.57, 0.39, 0.355),
   cantaloupe: s => polarRing(s, 26, 0.5, 0.58, 0.38, 0.34),
   honeydew: s => polarRing(s, 26, 0.5, 0.60, 0.40, 0.32),
-  // Kiwi: a small egg lying down, the stem end a little narrower.
-  kiwi: s => polarRing(s, 24, 0.5, 0.64, 0.37, 0.25, a => 1 + 0.05 * Math.cos(a + Math.PI)),
+  // Kiwi: a whole fruit lying behind, a cut half standing in front of it
+  // with its face to us -- one outline round both.
+  kiwi: s => ellipseUnion(s, KIWI_PARTS, 44),
   // Coconut: nearly round, faintly three-sided, as the shell is.
   coconut: s => polarRing(s, 24, 0.5, 0.57, 0.37, 0.35, a => 1 + 0.025 * Math.cos(3 * a + 0.5)),
   // Pomegranate: a round body drawn up into its crown of sepals at the top.
@@ -2892,33 +2917,16 @@ function appleStem(deformed, size, seed, fraction){
   return stem + leaf;
 }
 
-// One ridge line along the top edge, plus the small dark nub the shape
-// description calls for at its narrow (right-hand, t=1) end. deformed is
-// [top(n points)...bottom(n points)], so the first half is the top edge;
-// drop its two end corners (the squared stem tip and the nub) and pull
-// what's left partway toward the shape's centroid so the ridge sits
-// inset, on the body, rather than retracing the outline itself. The nub
-// is a small dark dot at the midpoint of the two points that meet at the
-// narrow end -- deformed[n-1] (top) and deformed[n] (bottom, first after
-// the reversal) -- not a second identity line, just a fixed dark fleck
-// real bananas carry even fresh.
+// The small dark nub at the narrow (right-hand, t=1) end: a fixed dark
+// fleck real bananas carry even fresh, at the midpoint of the two points
+// that meet there -- deformed[n-1] (top) and deformed[n] (bottom, first
+// after the reversal). No line along the body: it read as a seam.
 function bananaRidge(deformed, size){
   const n = deformed.length / 2;
-  const top = deformed.slice(0, n);
-  const cx = deformed.reduce((sum, p) => sum + p[0], 0) / deformed.length;
-  const cy = deformed.reduce((sum, p) => sum + p[1], 0) / deformed.length;
-  const pull = 0.3;
-  const pts = top.slice(1, -1).map(([x, y]) => [x + (cx - x) * pull, y + (cy - y) * pull]);
-  let ridge = '';
-  if (pts.length >= 2){
-    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
-    ridge = `<path d="${d}"/>`;
-  }
   const nubTop = deformed[n - 1], nubBottom = deformed[n];
   const nx = (nubTop[0] + nubBottom[0]) / 2, ny = (nubTop[1] + nubBottom[1]) / 2;
   const r = Math.max(1.4, size * 0.018);
-  const nub = `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}" fill="#3B2E22" stroke="none"/>`;
-  return ridge + nub;
+  return `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}" fill="#3B2E22" stroke="none"/>`;
 }
 
 // A small star of five pointed leaves around a short stem -- filled
@@ -3041,7 +3049,7 @@ const polyD = pts => 'M ' + pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L ') 
 const lineD = pts => 'M ' + pts.map(p => f1(p[0]) + ' ' + f1(p[1])).join(' L ');
 const scalePts = (s, pts) => pts.map(([x, y]) => [x * s, y * s]);
 // Points pulled toward the centroid -- an inset line that sits on the
-// body rather than retracing the outline (same move as bananaRidge).
+// body rather than retracing the outline.
 const insetPts = (pts, c, pull) => pts.map(([x, y]) => [x + (c[0] - x) * pull, y + (c[1] - y) * pull]);
 function smoothOpenPath(pts){
   let d = `M ${f1(pts[0][0])} ${f1(pts[0][1])} `;
@@ -3376,13 +3384,16 @@ function roundEdges(R, rounds, size){
 const stalk = (base, size, len, lean, op = 1) =>
   `<path d="M ${f1(base[0])} ${f1(base[1])} q ${f1(lean * size * 0.3)} ${f1(-len * size * 0.6)} ${f1(lean * size)} ${f1(-len * size)}" stroke-opacity="${op}"/>`;
 
+// Lemon and lime: pores, and the stem scar just inside one pointed end.
+function citrusEnds(shape, d, size, seed, count){
+  const R = fruitRider(shape, d, size);
+  return pores(R, size, seed, count) + ringAt(rfLerp(R.edge(Math.PI), centroidOf(d), 0.14), size * 0.012, size * 0.012, 0.6);
+}
 const FRUIT_CUES = {
   // Pointed ends are in the outline; the peel's pores and the stem scar
   // at one end.
-  lemon: (d, size, seed) => {
-    const R = fruitRider('lemon', d, size);
-    return pores(R, size, seed, 16) + ringAt(R.at(0.15, 0.62), size * 0.014, size * 0.014, 0.6);
-  },
+  lemon: (d, size, seed) => citrusEnds('lemon', d, size, seed, 14),
+  lime: (d, size, seed) => citrusEnds('lime', d, size, seed, 11),
   // Dimpled peel, the navel at the bottom, the stem button at the top.
   orange: (d, size, seed) => {
     const R = fruitRider('orange', d, size), nav = R.at(0.5, 0.82);
@@ -3404,12 +3415,11 @@ const FRUIT_CUES = {
     const R = fruitRider('grapefruit', d, size), scar = R.at(0.5, 0.27);
     return pores(R, size, seed, 26) + ringAt(scar, size * 0.03, size * 0.014) + inkDot(scar, size * 0.008, 0.8);
   },
-  // Mango: the stem nub on the high shoulder, and the line of the cheek.
+  // Mango: a short stem on the wide shoulder (the blush and the green
+  // there are its wash, FRUIT_WASH).
   mango: (d, size) => {
-    const R = fruitRider('mango', d, size), nub = R.edge(-Math.PI / 2 - 0.75);
-    const cheek = [R.at(0.2, 0.6), R.at(0.42, 0.5), R.at(0.68, 0.55), R.at(0.82, 0.66)];
-    return `<path d="${lineD([nub, [nub[0] - size * 0.025, nub[1] - size * 0.04]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>` +
-      `<path d="${smoothOpenPath(cheek)}" stroke-opacity="0.5"/>`;
+    const R = fruitRider('mango', d, size), nub = R.edge(-Math.PI / 2 - 0.85);
+    return `<path d="${lineD([nub, [nub[0] - size * 0.02, nub[1] - size * 0.045]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>`;
   },
   // Avocado: pebbled skin, and a blunt stem cap.
   avocado: (d, size, seed) => {
@@ -3515,17 +3525,11 @@ const FRUIT_CUES = {
     const glints = CHERRY_ROUNDS.map(([cx, cy, r]) => `<path d="${smoothOpenPath([R.at(cx - r * 0.6, cy - r * 0.1), R.at(cx - r * 0.45, cy - r * 0.45), R.at(cx - r * 0.1, cy - r * 0.6)])}" stroke-opacity="0.35"/>`).join('');
     return roundEdges(R, CHERRY_ROUNDS, size) + stalks + glints;
   },
-  // Watermelon: dark stripes along the rind, browning with it.
-  watermelon: (d, size, seed, fraction) => {
-    const R = fruitRider('watermelon', d, size), color = natureColor('#2F6B3A', fraction || 0);
-    return [-0.75, -0.38, 0, 0.38, 0.75].map((v, k) => {
-      const run = [];
-      for (let x = 0.1; x <= 0.9; x += 0.04){
-        const e = Math.sqrt(Math.max(0, 1 - ((x - 0.5) / 0.44) ** 2));
-        run.push(R.at(x, 0.63 + v * 0.28 * e * 0.92 + Math.sin(x * 22 + k) * 0.008 * e));
-      }
-      return `<path d="${smoothOpenPath(run)}" stroke="${color}" stroke-width="${f1(Math.max(1.5, size * 0.03))}" stroke-opacity="0.8"/>`;
-    }).join('');
+  // Watermelon: a short curled stem at the stem end (the bands are its
+  // wash, FRUIT_WASH).
+  watermelon: (d, size) => {
+    const R = fruitRider('watermelon', d, size), e = R.edge(-Math.PI / 2);
+    return `<path d="M ${f1(e[0])} ${f1(e[1])} q ${f1(size * 0.01)} ${f1(-size * 0.04)} ${f1(size * 0.05)} ${f1(-size * 0.05)}" stroke-width="${f1(Math.max(1.5, size * 0.014))}"/>`;
   },
   // Cantaloupe: the netting -- a loose, uneven mesh over the rind.
   cantaloupe: (d, size, seed) => {
@@ -3552,15 +3556,19 @@ const FRUIT_CUES = {
     return ringAt(R.at(0.14, 0.6), size * 0.012, size * 0.02, 0.7) + inkDot(R.at(0.86, 0.6), size * 0.01, 0.6) +
       `<path d="${smoothOpenPath(sheen)}" stroke-opacity="0.35"/>`;
   },
-  // Kiwi: fuzz all round the edge and over the skin, the stem end a dot.
+  // Kiwi: fuzz on the whole fruit's skin and edge, and its stem end (the
+  // cut face is its wash).
   kiwi: (d, size, seed) => {
     const R = fruitRider('kiwi', d, size), rand = seededRand(seed + 83), c = centroidOf(d);
-    const hairs = d.map(p => {
-      const dx = p[0] - c[0], dy = p[1] - c[1], l = Math.hypot(dx, dy) || 1, len = size * (0.015 + rand() * 0.02), tw = (rand() - 0.5) * 0.6;
+    const [fx, fy, frx, fry] = KIWI_PARTS[1];
+    const onFace = p => ((p[0] / size - fx) / frx) ** 2 + ((p[1] / size - fy) / fry) ** 2 < 1.05;
+    const hairs = d.filter((p, i) => !onFace(R.raw[i])).map(p => {
+      const dx = p[0] - c[0], dy = p[1] - c[1], l = Math.hypot(dx, dy) || 1, len = size * (0.012 + rand() * 0.016), tw = (rand() - 0.5) * 0.6;
       return `<path d="${lineD([p, [p[0] + (dx / l * Math.cos(tw) - dy / l * Math.sin(tw)) * len, p[1] + (dy / l * Math.cos(tw) + dx / l * Math.sin(tw)) * len]])}" stroke-opacity="0.6"/>`;
     }).join('');
-    const fuzz = R.scatter(rand, 20).map(p => { const a = rand() * Math.PI; return `<path d="${lineD([p, [p[0] + Math.cos(a) * size * 0.016, p[1] + Math.sin(a) * size * 0.016]])}" stroke-opacity="0.35"/>`; }).join('');
-    return hairs + fuzz + inkDot(R.at(0.16, 0.64), size * 0.014, 0.8);
+    const fuzz = R.scatter(rand, 40).filter((p, i) => !onFace(p) && p[0] > size * 0.55).slice(0, 14)
+      .map(p => { const a = rand() * Math.PI; return `<path d="${lineD([p, [p[0] + Math.cos(a) * size * 0.014, p[1] + Math.sin(a) * size * 0.014]])}" stroke-opacity="0.35"/>`; }).join('');
+    return hairs + fuzz + inkDot(R.at(0.89, 0.6), size * 0.012, 0.8);
   },
   // Coconut: fibre over the shell, hair at its edge, three eyes.
   coconut: (d, size, seed) => {
@@ -3618,6 +3626,54 @@ const FRUIT_CUES = {
     const R = fruitRider('lychee', d, size), rand = seededRand(seed + 97), k = size * 0.016;
     const knobs = R.scatter(rand, 26, 0.1).map(p => `<path d="${lineD([[p[0] - k, p[1] + k * 0.6], [p[0], p[1] - k * 0.6], [p[0] + k, p[1] + k * 0.6]])}" stroke-opacity="0.5"/>`).join('');
     return knobs + stalk(R.edge(-Math.PI / 2), size, 0.06, 0.02);
+  }
+};
+
+// Washes: second natural tones laid on a fruit's body, under its brown
+// spots and mold and clipped to its outline (clip), each decaying through
+// natureColor with the body -- a mango's blush and green shoulder, a
+// watermelon's dark bands, a cut kiwi's face.
+const FRUIT_WASH = {
+  mango: (d, size, seed, fraction, clip) => {
+    const R = fruitRider('mango', d, size), uid = clip.slice(5, -1) + '-w';
+    const blob = (p, rx, ry, hex, op, k) => `<radialGradient id="${uid}${k}"><stop offset="0" stop-color="${natureColor(hex, fraction)}" stop-opacity="${op}"/><stop offset="1" stop-color="${natureColor(hex, fraction)}" stop-opacity="0"/></radialGradient>` +
+      `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(rx * size)}" ry="${f1(ry * size)}" fill="url(#${uid}${k})"/>`;
+    return `<g clip-path="${clip}">` + blob(R.at(0.6, 0.5), 0.3, 0.22, '#c9553c', 0.5, 'b') + blob(R.at(0.2, 0.42), 0.17, 0.14, '#5aa45c', 0.65, 'g') + '</g>';
+  },
+  // Irregular dark bands from the stem end to the far end, like meridians
+  // on a globe: each band a strip between two longitudes whose width
+  // wanders along its length.
+  watermelon: (d, size, seed, fraction, clip) => {
+    const R = fruitRider('watermelon', d, size), rand = seededRand(seed + 53), color = natureColor('#2F6B3A', fraction);
+    const bands = [-1.2, -0.72, -0.25, 0.22, 0.7, 1.18].map(phi => {
+      const ph1 = rand() * 6, ph2 = rand() * 6, w = 0.15 + rand() * 0.05, edge = [[], []];
+      for (let i = 0; i <= 16; i++){
+        const t = (i / 16) * Math.PI, wob = 0.045 * Math.sin(t * 5 + ph1) + 0.03 * Math.sin(t * 9 + ph2);
+        [-1, 1].forEach((sd, k) => {
+          const lon = Math.max(-1.5, Math.min(1.5, phi + wob + sd * w * (0.75 + 0.25 * Math.sin(t * 4 + ph2))));
+          edge[k].push(R.at(0.5 + 0.39 * Math.sin(t) * Math.sin(lon), 0.57 - 0.355 * Math.cos(t)));
+        });
+      }
+      return `<path d="${smoothClosedPath([...edge[0], ...edge[1].reverse()])}" fill="${color}" fill-opacity="0.85"/>`;
+    }).join('');
+    return `<g clip-path="${clip}">${bands}</g>`;
+  },
+  // The cut face: green flesh drying back from the skin and browning, a
+  // pale core, a ring of black seeds, fine rays from the core.
+  kiwi: (d, size, seed, fraction) => {
+    const R = fruitRider('kiwi', d, size), rand = seededRand(seed + 31);
+    const [fx, fy, frx, fry] = KIWI_PARTS[1], dry = 0.86 - 0.12 * fraction;
+    const ring = (k, n = 18) => Array.from({length: n}, (_, i) => { const a = i / n * Math.PI * 2; return R.at(fx + Math.cos(a) * frx * k, fy + Math.sin(a) * fry * k); });
+    const flesh = `<path d="${smoothClosedPath(ring(dry))}" fill="${natureColor('#5fb85a', fraction)}" stroke="${INK_HEX}" stroke-width="${f1(Math.max(0.6, size * 0.005))}" stroke-opacity="0.6"/>`;
+    const rays = Array.from({length: 14}, (_, i) => { const a = i / 14 * Math.PI * 2;
+      return `<path d="${lineD([R.at(fx + Math.cos(a) * frx * 0.3, fy + Math.sin(a) * fry * 0.3), R.at(fx + Math.cos(a) * frx * dry * 0.85, fy + Math.sin(a) * fry * dry * 0.85)])}" stroke="${natureColor('#cfe3a8', fraction)}" stroke-width="${f1(Math.max(0.5, size * 0.004))}" fill="none"/>`; }).join('');
+    const core = `<path d="${smoothClosedPath(ring(0.3, 12))}" fill="${natureColor('#e8e7c6', fraction)}" stroke="none"/>`;
+    const seeds = Array.from({length: 16}, (_, i) => {
+      const a = i / 16 * Math.PI * 2 + (rand() - 0.5) * 0.15, k = 0.42 + rand() * 0.08;
+      const p = R.at(fx + Math.cos(a) * frx * k, fy + Math.sin(a) * fry * k);
+      return `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(size * 0.009)}" ry="${f1(size * 0.005)}" transform="rotate(${f1(a * 180 / Math.PI)} ${f1(p[0])} ${f1(p[1])})" fill="#1E1B18"/>`;
+    }).join('');
+    return flesh + rays + core + seeds;
   }
 };
 
@@ -3717,6 +3773,7 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
     <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
     ${under}
     <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
+    ${FRUIT_WASH[shape] ? FRUIT_WASH[shape](deformed, size, seed, fraction, `url(#${uid}-clip)`) : ''}
     <g>${spots}</g>
     ${under ? mold : ''}
     <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${strokes}</g>
