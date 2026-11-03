@@ -89,9 +89,14 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    (COLOR/state()); decay fraction drives only form and value -- darkening
    toward the drawer's brown, sag, mold, shrink. Position and color both
    come from leftAt()/pos()/state(), never a second "how urgent" math. */
-.fridgeview{padding:28px 0 8px}
-.fridgeview-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:18px}
-.fridgeview-head .spacer{flex:1}
+.allitems{margin-top:28px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.fridgeview{padding:12px 0 8px}
+.fridgeview-head{display:flex;align-items:baseline;gap:8px;color:var(--ink-2);padding:12px 4px;cursor:pointer;list-style:none}
+.fridgeview-head::-webkit-details-marker{display:none}
+.fridgeview-head::before{content:'+';width:1ch;color:var(--ink-3)}
+.allitems[open] > .fridgeview-head::before{content:'−'}
+.fridgeview-head:hover{color:var(--ink)}
+.fridgeview-head:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .fridge-shelf{position:relative;padding:4px 4px 0}
 /* One shelf per row: the items stand on its line, their labels hang in
    one band under it, stepping down a tier (--tier) only where two would
@@ -623,18 +628,19 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     <div class="rf-popover" id="rfPopover" hidden></div>
   </section>
 
-  <section class="fridgeview" id="fridgeview">
-    <div class="fridgeview-head mono">
-      <span>The fridge</span>
-      <span class="spacer"></span>
-      <span id="fridgeCount">—</span>
+  <!-- The line-art row: every item by name and days left, with Used and
+       Tossed under each. Closed by default on every load; while closed,
+       the illustrated fridge's popover is the way to act on an item. -->
+  <details class="allitems" id="allItems">
+    <summary class="fridgeview-head mono"><span>All items (<span id="fridgeCount">0</span>)</span></summary>
+    <section class="fridgeview" id="fridgeview">
+      <div class="fridge-shelf" id="fridgeShelf"></div>
+    </section>
+    <div class="fridge-drawer" id="fridgeDrawer" style="display:none">
+      <div class="fridge-drawer-label mono">Gone — toss to clear</div>
+      <div class="fridge-drawer-items" id="fridgeDrawerItems"></div>
     </div>
-    <div class="fridge-shelf" id="fridgeShelf"></div>
-  </section>
-  <div class="fridge-drawer" id="fridgeDrawer" style="display:none">
-    <div class="fridge-drawer-label mono">Gone — toss to clear</div>
-    <div class="fridge-drawer-items" id="fridgeDrawerItems"></div>
-  </div>
+  </details>
 
   <section class="hero">
     <h1 id="headline">—</h1>
@@ -3907,7 +3913,10 @@ function renderFridgeView(){
   const drawerItems = document.getElementById('fridgeDrawerItems');
   const day = today();
 
-  document.getElementById('fridgeCount').textContent = fridge.length ? fridge.length + (fridge.length === 1 ? ' item' : ' items') : '—';
+  document.getElementById('fridgeCount').textContent = fridge.length;
+  // Laid out from real widths and label boxes, which a closed section
+  // doesn't have: it's drawn when opened (the toggle listener below).
+  if (!document.getElementById('allItems').open) return;
 
   if (!fridge.length){
     shelf.style.height = '';
@@ -5500,6 +5509,7 @@ document.getElementById('entry').addEventListener('blur', () => {
   renderSuggestions();
 });
 window.addEventListener('resize', () => { renderChart(); renderFridgeView(); });
+document.getElementById('allItems').addEventListener('toggle', renderFridgeView);
 initVoice();
 initSettings();
 initReceipt();

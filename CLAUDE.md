@@ -187,8 +187,11 @@ restock count undone). Past-date items sit in the crisper, whose drawer
 front reads "N past date · Toss all"; Toss all asks right there ("Toss N
 past date? Toss N · Cancel") before anything counts as waste.
 
-The line-art "The fridge" section follows and does the job the list used
-to: every item drawn by the same food drawings (foodShapeMarkupLine,
+The line-art row follows, collapsed under an "All items (N)" toggle that
+is closed on every load (a <details>, so it opens from the keyboard).
+While it's closed, the illustrated fridge's popover is the way to act on
+an item, and the crisper's Toss all still works. Opened, it does the job
+the list used to: every item drawn by the same food drawings (foodShapeMarkupLine,
 natureColor, fridgeCatOf/fridgeShapeOf), on shelves by urgency, with its
 name and days left in its urgency colour, and Used and Tossed as small
 text buttons under each. Tapping a drawing opens the same popover. On a
