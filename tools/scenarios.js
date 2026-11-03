@@ -1593,6 +1593,104 @@ async function projectionHeadlineScenario(browser) {
   await page.context().close();
 }
 
+// The phone's real data: saved by the version live on origin/main at
+// 5243994 (pinned -- origin/main moves when this branch is pushed). Drives
+// that version to build a realistic state: FOODS entries since split,
+// renamed or removed (cheese, lettuce, carrots, "Onion, cut"), milk and
+// avocados from before they asked for a date (avocados were a custom item
+// then), another custom item, past-date items, a toss and a Used in the
+// ledger, and restock entries (one tapped twice). Then loads that exact
+// blob into the current code: nothing lost, nothing counted as waste, every
+// item drawn in both views, and every item's days left exactly what the
+// old version said -- matched by record id, not by name.
+const PHONE_COMMIT = '5243994';
+async function phoneDataScenario(browser) {
+  console.log(`\n--- PHONE DATA: ${PHONE_COMMIT} saved state into current code ---`);
+  const oldHtml = execSync(`git show ${PHONE_COMMIT}:index.html`, { cwd: ROOT, maxBuffer: 1024 * 1024 * 20 });
+  const PORT_OLD = 8971;
+  const oldServer = await new Promise(resolve => {
+    const srv = http.createServer((req, res) => { res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }); res.end(oldHtml); });
+    srv.listen(PORT_OLD, () => resolve(srv));
+  });
+  const old = await (await browser.newContext()).newPage();
+  const oldErrors = [];
+  old.on('pageerror', e => oldErrors.push(e.message));
+  await old.goto(`http://localhost:${PORT_OLD}/`, { waitUntil: 'domcontentloaded' });
+  await old.evaluate(() => localStorage.clear());
+  await old.reload({ waitUntil: 'domcontentloaded' });
+  await old.waitForSelector('#headline');
+  await old.fill('#entry', 'cheese 10d, lettuce 3d, carrot 20d, onion 4d, milk 3d, avocados 2d, dragonfruit, ' +
+    'spinach 9d, chicken 4d, tomato 1d, eggs, yogurt 20d, mushroom 2d');
+  await old.click('#addbtn');
+  await old.waitForTimeout(200);
+  // restock milk from its chip (count 2), toss the yogurt, cook tonight's dish
+  await old.evaluate(() => { const b = [...document.querySelectorAll('#restock button')].find(x => x.textContent.trim() === 'Milk'); if (b) b.click(); });
+  await old.waitForTimeout(100);
+  await old.evaluate(() => { const id = fridge.find(i => i.key === 'yogurt').id; document.querySelector(`[data-toss="${id}"]`).click(); });
+  await old.waitForTimeout(100);
+  // Used on the tomato (the "rescued" ledger); cooking would use up the
+  // very items this check is about
+  await old.evaluate(() => { const id = fridge.find(i => i.key === 'tomato').id; document.querySelector(`[data-used="${id}"]`).click(); });
+  await old.waitForTimeout(100);
+  const blob = await old.evaluate(() => localStorage.getItem('perishable.v1'));
+  const before = await old.evaluate(() => ({
+    left: Object.fromEntries(fridge.map(it => [it.id, left(it)])),
+    keys: Object.fromEntries(fridge.map(it => [it.id, it.key])),
+    ledger: {...ledger}, standingTotal: Object.values(standing).reduce((a, s) => a + s.count, 0),
+    standingKeys: Object.keys(standing)
+  }));
+  if (oldErrors.length) throw new Error(`${PHONE_COMMIT} threw while building state: ${JSON.stringify(oldErrors)}`);
+  await old.context().close();
+  oldServer.close();
+  const saved = JSON.parse(blob);
+  const ids = Object.keys(before.left).map(Number);
+  console.log(`${PHONE_COMMIT}: ${ids.length} items`, JSON.stringify(Object.values(before.keys)), 'ledger', JSON.stringify(before.ledger));
+  for (const k of ['cheese', 'lettuce', 'carrot', 'onion', 'milk', '_c_avocados', '_c_dragonfruit'])
+    if (!Object.values(before.keys).includes(k)) throw new Error(`the old state should hold a ${k} item`);
+  if (!ids.some(id => before.left[id] < 0)) throw new Error('the old state should hold past-date items');
+  if (!(before.ledger.wasteG > 0 && before.ledger.savedG > 0)) throw new Error('the old state should have a toss and a Used in the ledger');
+
+  // Load that exact blob into the current code, at phone width.
+  const page = await (await browser.newContext({ viewport: { width: 390, height: 1400 } })).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(b => { localStorage.clear(); localStorage.setItem('perishable.v1', b); }, blob);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => ({
+    left: Object.fromEntries(fridge.map(it => [it.id, left(it)])),
+    names: Object.fromEntries(fridge.map(it => [it.id, food(it).en])),
+    ledger: {...ledger}, standingTotal: Object.values(standing).reduce((a, s) => a + s.count, 0),
+    standingLabels: Object.keys(standing).map(k => labelOf(k)),
+    drawn: [...document.querySelectorAll('#rfUnit [data-rf-item]')].map(b => +b.dataset.rfItem).sort((a, b) => a - b)
+  }));
+  console.log('current:', JSON.stringify(after.names));
+  expectEqual('every record kept (ids)', Object.keys(after.left).map(Number).sort((a, b) => a - b), ids.sort((a, b) => a - b));
+  for (const id of ids) expectEqual(`#${id} ${before.keys[id]} -> ${after.names[id]} days left`, after.left[id], before.left[id]);
+  expectEqual('ledger unchanged (nothing counted as waste)', after.ledger, before.ledger);
+  expectEqual('restock counts kept', after.standingTotal, before.standingTotal);
+  if (after.standingLabels.some(l => !l)) throw new Error('a restock entry lost its name');
+  expectEqual('every item drawn in the illustrated fridge', after.drawn, ids);
+  // every item shows in the row too, with the old days left
+  await openRow(page);
+  const row = await page.$$eval('#allItems [data-fridge-item]', bs => bs.map(b => {
+    const days = b.closest('.fridge-item').querySelector('.fridge-days').textContent.trim();
+    const m = days.match(/^(\d+)d( gone)?$/);
+    return [+b.dataset.fridgeItem, days === 'today' ? 0 : m ? (m[2] ? -m[1] : +m[1]) : days];
+  }));
+  expectEqual('every item in the row', row.map(r => r[0]).sort((a, b) => a - b), ids);
+  for (const [id, d] of row) expectEqual(`#${id} row shows`, d, before.left[id]);
+  // a reload changes nothing (migration runs once)
+  await page.reload(); await page.waitForSelector('#headline');
+  expectEqual('stable across a reload', await page.evaluate(() => Object.fromEntries(fridge.map(it => [it.id, left(it)]))), after.left);
+  expectEqual('ledger still unchanged', await page.evaluate(() => ({...ledger})), before.ledger);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.screenshot({ path: path.join(OUT, 'phone-data.png'), fullPage: true });
+  await page.context().close();
+}
+
 // The popover carries what the list used to: Est. weight, and a quiet
 // Remove for an item logged by mistake -- out of the fridge, no waste, its
 // restock count undone. Days are "1 day", never "1 days", anywhere.
@@ -1865,6 +1963,7 @@ async function ripenessScenario(browser) {
   await popoverDetailsScenario(browser);
   await allItemsScenario(browser);
   await projectionHeadlineScenario(browser);
+  await phoneDataScenario(browser);
 
   await browser.close();
   server.close();
