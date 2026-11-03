@@ -757,18 +757,18 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
    DEFAULT_BASE_HEX.
    ============================================================ */
 const FOODS = {
-  spinach:    {en:'Spinach',        shelf:7, fk:291, g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
+  spinach:    {en:'Spinach',        aliases:['baby spinach'], shelf:7, fk:291, g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
   leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
   romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', base:'#6aa86f'},
   milk:       {en:'Milk',           shelf:7, fk:27, pkgDate:true, g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
-  yogurt:     {en:'Yogurt',         shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
+  yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
   chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
   beef:       {en:'Ground beef',    shelf:2, fk:43, g:450, usd:7.20, cat:'protein', base:'#91473b'},
   bacon:      {en:'Bacon',          shelf:7, fk:79, g:340, usd:6.00, cat:'protein', base:'#c76b60'},
   egg:        {en:'Eggs',           shelf:35, fk:21, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
   tofu:       {en:'Tofu',           shelf:7, fk:168, g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
   onion:      {en:'Onion',          aliases:['onions','yellow onion','white onion','red onion','sweet onion'], shelf:30, fk:294, store:'pantry', g:150, usd:0.80, cat:'veg', shape:'onion', base:'#d4a070'},
-  scallion:   {en:'Scallion',       shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  scallion:   {en:'Scallion',       aliases:['scallions','green onion','green onions','spring onion'], shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
   garlic:     {en:'Garlic',         shelf:30, fk:285, store:'pantry', g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
   ginger:     {en:'Ginger',         shelf:21, fk:286, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
   tomato:     {en:'Tomato',         shelf:7, fk:306, estimated:true, note:'FoodKeeper keeps tomatoes at room temperature until ripe and gives no refrigerator figure', g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
@@ -1053,12 +1053,12 @@ const FK_TABLE = [
 [64,"Pork (loin chops, boneless)","loin chop",5,"R",1],
 [65,"Pork (crown roast - small)","crown roast - small|crown roast",5,"R",1],
 [66,"Pork (crown roast - large)","crown roast - large|crown roast",5,"R",1],
-[67,"Pork (tenderloin)","",5,"R",1],
+[67,"Pork (tenderloin)","pork tenderloin",5,"R",1],
 [69,"Pork (tenderloin medallions or loin cubes)","tenderloin medallion|loin cube",5,"R",1],
 [70,"Goat (tender whole cuts (legs, ribs, shoulder, loin))","tender whole cut|whole cut",5,"R",1],
 [71,"Goat (less tender whole cuts (stew meat, riblets, shanks))","less tender whole cut|stew meat|riblet|whole cut|less tender",5,"R",1],
 [72,"Pork (ribs)","",5,"R",1],
-[73,"Pork (ground)","",2,"R",1],
+[73,"Pork (ground)","ground pork",2,"R",1],
 [74,"Pork (shoulder)","",5,"R",1],
 [75,"Pork (loin, cubes)","",5,"R",1],
 [76,"Venison (round, rump, loin, or rib roast)","rib roast",5,"R",1],
@@ -1091,7 +1091,7 @@ const FK_TABLE = [
 [110,"Jerky (homemade)","",60,"R",4],
 [113,"Chicken (whole)","",2,"R",5],
 [114,"Turkey (whole)","",2,"R",5],
-[115,"Ground turkey or chicken","",2,"R",5],
+[115,"Ground turkey or chicken","ground chicken",2,"R",5],
 [116,"Chicken parts (breast halves, bone-in)","breast halve",2,"R",5],
 [117,"Chicken parts (breast halves, boneless)","breast halve",2,"R",5],
 [118,"Chicken parts (legs or thighs)","thigh",2,"R",5],
@@ -1159,7 +1159,7 @@ const FK_TABLE = [
 [192,"Luncheon meat or poultry (pre-packaged)","pre packaged",14,"R",8],
 [193,"Soup, stews","",4,"R",8],
 [194,"Casseroles","",4,"R",8],
-[195,"Commercial bread products (including pan breads, flat breads, rolls, and buns)","pan bread|flat bread|bun",18,"P",13],
+[195,"Commercial bread products (including pan breads, flat breads, rolls, and buns)","pan bread|flat bread|bun|pita|naan",18,"P",13],
 [245,"Tube cans (of biscuits, rolls, pizza dough, etc.)","pizza dough",null,"pkg",14],
 [246,"Ready-to-bake pie crust","ready to bake pie crust",null,"pkg",14],
 [247,"Cookie dough","",null,"pkg",14],
@@ -1171,13 +1171,13 @@ const FK_TABLE = [
 [253,"Berries (blackberries, boysenberries, currant)","blackberry|boysenberry|currant",6,"R",15],
 [254,"Blueberries","",14,"R",15],
 [255,"Cherimoya","",4,"ripe",15],
-[256,"Citrus fruit (lemon, lime, orange, grapefruit, tangerines, clementines)","lime|grapefruit|tangerine|clementine",21,"R",15],
+[256,"Citrus fruit (lemon, lime, orange, grapefruit, tangerines, clementines)","lime|grapefruit|tangerine|clementine|mandarin",21,"R",15],
 [258,"Coconuts (fresh)","",21,"R",15],
 [259,"Cranberries","",60,"R",15],
 [260,"Dates","",360,"R",15],
 [261,"Grapes","",7,"R",15],
 [262,"Guava","",4,"ripe",15],
-[263,"Kiwi fruit","",6,"ripe",15],
+[263,"Kiwi fruit","kiwi",6,"ripe",15],
 [264,"Melons","",14,"R",15],
 [265,"Papaya, mango, feijoa, passionfruit, casaha melon","",7,"R",15],
 [266,"Peaches, nectarines, plums, pears, sapote","",5,"ripe",15],
@@ -1216,7 +1216,7 @@ const FK_TABLE = [
 [299,"Radishes","",14,"R",16],
 [300,"Rhubarb","",7,"R",16],
 [301,"Rutabagas","",21,"R",16],
-[302,"Squash (summer and zucchini)","",5,"R",16],
+[302,"Squash (summer and zucchini)","summer squash|yellow squash",5,"R",16],
 [303,"Squash (winter)","",42,"P",16],
 [304,"Tamarind","",180,"R",16],
 [305,"Taro","",3,"R",16],
@@ -1300,8 +1300,8 @@ const FK_TABLE = [
 [511,"Rosemary","",21,"R",16],
 [512,"Chives","",21,"R",16],
 [513,"Thyme","",21,"R",16],
-[514,"Turkey (pre-packaged, luncheon/deli meat)","luncheon deli meat",14,"R",8],
-[515,"Ham (pre-packaged, luncheon/deli meat)","luncheon deli meat",14,"R",8],
+[514,"Turkey (pre-packaged, luncheon/deli meat)","luncheon deli meat|deli turkey|sliced turkey",14,"R",8],
+[515,"Ham (pre-packaged, luncheon/deli meat)","luncheon deli meat|deli ham|sliced ham",14,"R",8],
 [516,"Salami (pre-packaged, luncheon/deli meat)","luncheon deli",14,"R",8],
 [517,"Chicken (pre-packaged, luncheon/deli meat)","",14,"R",8],
 [518,"Canadian bacon (whole)","",14,"R",8],
@@ -4403,11 +4403,19 @@ function stripModifiers(q){
 }
 
 const FK_BY_ID = new Map(FK_TABLE.map(r => [r[0], r]));
-// A FoodKeeper item that exactly one FOODS entry already stands for is
-// that entry; matching it never makes a second, plainer copy.
+// A FoodKeeper item that one FOODS entry stands for -- the only entry
+// citing it, and the item's own name is one of that entry's names -- is
+// that entry; matching it never makes a second, plainer copy. An item
+// that groups several foods (#265 "Papaya, mango, feijoa...", #146 Fatty
+// fish) is not redirected: "papaya" is not Mango, "tuna" is not Salmon.
 const FK_TO_FOODS = (() => {
   const seen = new Map();
   for (const k in FOODS) if (FOODS[k].fk != null) seen.set(FOODS[k].fk, seen.has(FOODS[k].fk) ? null : k);
+  const own = k => new Set([FOODS[k].en, FOODS[k].en.split(',')[0], k].concat(FOODS[k].aliases || []).map(normName));
+  for (const [id, k] of seen){
+    const r = FK_TABLE.find(x => x[0] === id);
+    if (k && (!r || !own(k).has(normName(r[1].split(' (')[0])))) seen.set(id, null);
+  }
   return seen;
 })();
 const fkKey = id => FK_TO_FOODS.get(id) || ('_fk_' + id);

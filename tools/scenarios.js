@@ -1130,6 +1130,29 @@ async function noFalseMatchScenario(browser) {
   await page.context().close();
 }
 
+// A FoodKeeper entry that covers several species never redirects to one
+// FOODS food; the hand-kept aliases in the import script catch store names.
+async function handAliasScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- HAND ALIASES: kiwi is Kiwi fruit; papaya is not Mango, tuna is not Salmon ---');
+  const got = await page.evaluate(() => Object.fromEntries(
+    ['kiwi', 'mandarins', 'ground pork', 'deli turkey', 'yellow squash', 'green onions', 'papaya', 'tuna', 'parsnips', 'buns']
+      .map(t => { const r = resolveName(t); return [t, r.keys.length === 1 ? r.keys[0] : r.keys]; })));
+  console.log(JSON.stringify(got));
+  expectEqual('kiwi', got['kiwi'], '_fk_263');
+  expectEqual('mandarins', got['mandarins'], '_fk_256');
+  expectEqual('ground pork', got['ground pork'], '_fk_73');
+  expectEqual('deli turkey', got['deli turkey'], '_fk_514');
+  expectEqual('yellow squash', got['yellow squash'], '_fk_302');
+  expectEqual('green onions', got['green onions'], 'scallion');
+  expectEqual('papaya', got['papaya'], '_fk_265');
+  expectEqual('tuna', got['tuna'], '_fk_146');
+  expectEqual('parsnips', got['parsnips'], '_fk_279');
+  expectEqual('buns', got['buns'], '_fk_195');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // Equal matches ask; nothing goes in until the person picks.
 async function ambiguousScenario(browser) {
   const { page, errors } = await freshPage(browser);
@@ -1365,9 +1388,9 @@ async function editDateScenario(browser) {
   await page.route('**/index.html', async route => {
     const res = await route.fetch();
     const body = (await res.text())
-      .replace("spinach:    {en:'Spinach',        shelf:7,", "spinach:    {en:'Spinach',        shelf:3,")
-      .replace("yogurt:     {en:'Yogurt',         shelf:14,", "yogurt:     {en:'Yogurt',         shelf:30,")
-      .replace("tofu:       {en:'Tofu',           shelf:7,", "tofu:       {en:'Tofu',           shelf:2,");
+      .replace(/(\n  spinach: +\{en:'Spinach',[^\n]*?shelf:)7,/, '$13,')
+      .replace(/(\n  yogurt: +\{en:'Yogurt',[^\n]*?shelf:)14,/, '$130,')
+      .replace(/(\n  tofu: +\{en:'Tofu',[^\n]*?shelf:)7,/, '$12,');
     await route.fulfill({ response: res, body });
   });
   await page.reload();
@@ -1456,6 +1479,7 @@ async function ripenessScenario(browser) {
   await dishFixtureScenario(browser);
   await editDateScenario(browser);
   await ripenessScenario(browser);
+  await handAliasScenario(browser);
 
   await browser.close();
   server.close();
