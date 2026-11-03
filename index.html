@@ -1934,6 +1934,11 @@ const INK_HEX = '#141817'; // --ink: the line-art exploration's stroke color
 // because tools/mushroom-study.js's side-by-side comparison still calls it.)
 const DEFAULT_BASE_HEX = '#C9BFAE'; // a custom (typed/voice/receipt) item has no FOODS.base
 function foodBaseColor(it){ return food(it).base || DEFAULT_BASE_HEX; }
+// What a body is filled with at a decay fraction: the base drifting
+// toward brown (natureColor), except packaging, which keeps its colour.
+function foodBodyColor(it, frac){
+  return PACKAGED_SHAPES[fridgeShapeOf(it)] ? foodBaseColor(it) : natureColor(foodBaseColor(it), frac);
+}
 function hexLerp(hexA, hexB, t){
   const a = hexToRgb(hexA), b = hexToRgb(hexB);
   const tt = Math.max(0, Math.min(1, t));
@@ -2345,6 +2350,13 @@ function catOutlinePoints(shape, s){
   }
 }
 const BOXY_SHAPES = {dairy:1, cooked:1, generic:1, tofu:1, carton:1, wedge:1};
+// Packaging seen from outside: the tub, the deli container, the sealed
+// packet and the carton. The food inside is out of sight, so the body
+// keeps its own colour and outline -- no browning, sag, shrivel, shrink
+// or brown spots. Decay shows only in small signs on the package
+// (packageSigns): the lid bulges, a little mold at the seam, the label
+// fades.
+const PACKAGED_SHAPES = {dairy:1, cooked:1, generic:1, carton:1};
 
 // ---- The category silhouettes: what a food with no drawing of its own
 // is drawn as, one per decay category, so an unfamiliar item still reads
@@ -3135,12 +3147,14 @@ function wrappedTray(deformed, size){
 }
 // Cooked: the lid, sitting on the (possibly shrunken) rim, and the
 // contents' line seen through the clear side.
-function containerLid(deformed, size){
+function containerLid(deformed, size, seed, fraction = 0){
   const [tl, tr, br, bl] = deformed;
-  const lid = [[tl[0] - size * 0.04, tl[1]], [tr[0] + size * 0.04, tr[1]],
-    [tr[0] + size * 0.04, tr[1] - size * 0.08], [tl[0] - size * 0.04, tl[1] - size * 0.08]];
+  const bulge = packageBulge(fraction, size);
+  const lt = [tl[0] - size * 0.04, tl[1] - size * 0.08], rt = [tr[0] + size * 0.04, tr[1] - size * 0.08];
+  const lidD = `M ${f1(tl[0] - size * 0.04)} ${f1(tl[1])} L ${f1(tr[0] + size * 0.04)} ${f1(tr[1])} L ${f1(rt[0])} ${f1(rt[1])} ` +
+    `Q ${f1((lt[0] + rt[0]) / 2)} ${f1(rt[1] - bulge * 2)} ${f1(lt[0])} ${f1(lt[1])} Z`;
   const a = rfLerp(tl, bl, 0.35), b = rfLerp(tr, br, 0.35), m = rfLerp(a, b, 0.5);
-  return `<path d="${polyD(lid)}" fill="${TRAY_HEX}"/>
+  return `<path d="${lidD}" fill="${TRAY_HEX}"/>
     <path d="M ${f1(a[0])} ${f1(a[1])} Q ${f1(m[0])} ${f1(m[1] - size * 0.04)} ${f1(b[0])} ${f1(b[1])}" stroke-opacity="0.6"/>`;
 }
 // No match: the packet's sealed top.
@@ -3161,7 +3175,70 @@ const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: t
 // in front of it.
 const UNDERLAYS = {chicken: chickenTrayBack, tofu: tofuTrayBack, eggs: eggCartonLid, protein: proteinTrayBack};
 
+// The three signs on a package, each small. Bulge: from half-decayed the
+// lid domes (tub, deli container) or the sides puff (packet, carton).
+// Seam mold: a few pale dots where lid meets body, from MOLD_START. Label:
+// a printed panel in --ink-3 that fades as the fraction climbs.
+const LABEL_HEX = '#8B9491';
+const packageBulge = (fraction, size) => Math.max(0, (fraction - 0.5) / 0.5) * size * 0.06;
+function bulgedOutline(shape, pts, fraction, size){
+  const b = packageBulge(fraction, size);
+  if (!b) return pts;
+  const mid = (a, c, dx, dy) => [(a[0] + c[0]) / 2 + dx, (a[1] + c[1]) / 2 + dy];
+  if (shape === 'dairy') return [pts[0], mid(pts[0], pts[1], 0, -b), ...pts.slice(1)];
+  if (shape === 'generic' || shape === 'carton'){
+    // sides: generic right is 1->2 and left 3->0; carton right 1->2, left 7->0
+    const [r0, r1, l0, l1] = shape === 'generic' ? [1, 2, 3, 0] : [1, 2, 7, 0];
+    const out = pts.slice();
+    out.splice(r1, 0, mid(pts[r0], pts[r1], b * 0.7, 0));
+    out.splice(l0 + 2, 0, mid(pts[l0], pts[l1], -b * 0.7, 0));
+    return out;
+  }
+  return pts;
+}
+function packageSigns(shape, pts, fraction, size, seed){
+  const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
+  const op = (0.55 * (1 - 0.75 * fade)).toFixed(2), lineOp = (0.7 * (1 - 0.6 * fade)).toFixed(2);
+  const panel = q => `<path d="${polyD(q)}" fill="${LABEL_HEX}" fill-opacity="${op}" stroke="${INK_HEX}" stroke-opacity="${lineOp}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>`;
+  const band = (a, b, c, d, t0, t1) => [rfLerp(a, b, t0), rfLerp(c, d, t0), rfLerp(c, d, t1), rfLerp(a, b, t1)];
+  let label = '', seam = null;
+  if (shape === 'dairy'){
+    const [, , lipR, bodyR, botR, botL, bodyL, lipL] = pts;
+    label = panel(band(bodyL, botL, bodyR, botR, 0.28, 0.62));
+    seam = [lipL, lipR];
+  } else if (shape === 'cooked'){
+    const [tl, tr, br, bl] = pts;
+    const l = band(rfLerp(tl, tr, 0.3), rfLerp(bl, br, 0.3), rfLerp(tl, tr, 0.7), rfLerp(bl, br, 0.7), 0.5, 0.82);
+    label = panel(l);
+    seam = [tl, tr];
+  } else if (shape === 'generic'){
+    const [tl, tr, br, bl] = pts;
+    label = panel(band(rfLerp(tl, tr, 0.18), rfLerp(bl, br, 0.18), rfLerp(tl, tr, 0.82), rfLerp(bl, br, 0.82), 0.35, 0.7));
+    seam = [rfLerp(tl, bl, 0.1), rfLerp(tr, br, 0.1)];
+  } else if (shape === 'carton'){
+    const [bl, br, rs, , , , , ls] = pts;
+    const sideTop = rfLerp(ls, rs, 0.8), sideBot = rfLerp(bl, br, 0.8);
+    label = panel(band(rfLerp(ls, sideTop, 0.12), rfLerp(bl, sideBot, 0.12), rfLerp(ls, sideTop, 0.9), rfLerp(bl, sideBot, 0.9), 0.25, 0.62));
+    seam = [ls, rs];
+  }
+  let mold = '';
+  if (seam && fraction > MOLD_START){
+    const rand = seededRand(seed + 999);
+    const growT = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
+    const count = Math.round(3 + growT * 7);
+    const at = 0.12 + rand() * 0.2;
+    for (let i = 0; i < count; i++){
+      const p = rfLerp(seam[0], seam[1], at + (rand() - 0.3) * 0.18 * (0.5 + growT));
+      const r = size * (0.008 + rand() * 0.008);
+      // outlined in --ink-3 so the pale mold reads on a pale tub
+      mold += `<circle cx="${f1(p[0] + (rand() - 0.5) * size * 0.02)}" cy="${f1(p[1] + rand() * size * 0.025)}" r="${f1(r)}" fill="${MOLD_HEX}" stroke="${LABEL_HEX}" stroke-width="${Math.max(0.4, size * 0.003).toFixed(2)}"/>`;
+    }
+  }
+  return {label, mold};
+}
+
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
+  if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed);
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
   const uid = 'fline' + (fridgeShapeCounter++);
@@ -3187,6 +3264,22 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
     ${under ? mold : ''}
     <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${strokes}</g>
     ${under ? '' : mold}
+  </svg>`;
+}
+
+// A package: rigid outline (bulged only), its own colour, its identity
+// cue, then the label and the seam mold on top.
+function packagedMarkupLine(shape, color, fraction, size, seed){
+  const pts = catOutlinePoints(shape, size);
+  const path = straightClosedPath(bulgedOutline(shape, pts, fraction, size));
+  const strokeW = Math.max(1, size * 0.008).toFixed(2);
+  const signs = packageSigns(shape, pts, fraction, size, seed);
+  const cue = (IDENTITY_CUES[shape] || genericIdentityLines)(pts, size, seed, fraction);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
+    ${signs.label}
+    <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${cue}</g>
+    ${signs.mold}
   </svg>`;
 }
 
@@ -3238,11 +3331,12 @@ function buildShelfItem(p, day){
   const f = food(it);
   const cat = fridgeCatOf(it);
   const frac = decayFraction(it, day);
-  const shownSize = Math.max(18, Math.round(size * (1 - frac * 0.22 * cat.shrink)));
+  const shrink = PACKAGED_SHAPES[fridgeShapeOf(it)] ? 0 : cat.shrink;
+  const shownSize = Math.max(18, Math.round(size * (1 - frac * 0.22 * shrink)));
   // Body color is this food's own base tone, decaying (natureColor);
   // urgency lives only on the label now, via the same state()/COLOR
   // lookup the list and legend use.
-  const color = natureColor(foodBaseColor(it), frac);
+  const color = foodBodyColor(it, frac);
   const labelColor = COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
@@ -3264,8 +3358,8 @@ function buildDrawerItem(it, day){
   const f = food(it);
   const cat = fridgeCatOf(it);
   const frac = 1;
-  const size = Math.round(76 * (1 - 0.18 * cat.shrink));
-  const color = natureColor(foodBaseColor(it), frac);
+  const size = Math.round(76 * (1 - 0.18 * (PACKAGED_SHAPES[fridgeShapeOf(it)] ? 0 : cat.shrink)));
+  const color = foodBodyColor(it, frac);
   const labelColor = COLOR[state(d)]; // always 'gone' here, same lookup as everywhere else
   const shapeStyle = `width:${size}px;height:${size}px`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
@@ -3568,7 +3662,7 @@ function rfBuildFoodItem(it, day, u, z, named){
   const gone = d < 0;
   const frac = gone ? 1 : decayFraction(it, day);
   const px = Math.round(u * RF.PX);
-  const color = natureColor(foodBaseColor(it), frac);
+  const color = foodBodyColor(it, frac);
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
   const dayLabel = gone ? 'gone' : shortLeft(it, d);

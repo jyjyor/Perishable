@@ -4,7 +4,9 @@
 // cooked, and the plain packet for an item that matched nothing), each
 // through the real foodShapeMarkupLine() at five decay fractions, at study
 // size and at the line-art shelf's smallest size (44px), in the neutral
-// fallback base and in one FOODS food's own base.
+// fallback base and in one FOODS food's own base. The packaged shapes
+// (dairy tub, cooked container, packet, carton) keep their colour and
+// outline; their decay is the bulge, the seam mold and the fading label.
 //
 // Run: node tools/category-shapes-study.js
 // Output: tools/screenshots/category-shapes-study.png
@@ -53,13 +55,14 @@ function serve() {
       ['dairy', 'Sour cream', FOODS.sourcream.base, FALLBACK_BASE.dairy],
       ['protein', 'Salmon', FOODS.salmon.base, FALLBACK_BASE.protein],
       ['cooked', 'Hummus', FOODS.hummus.base, FALLBACK_BASE.cooked],
-      ['generic', 'No match', DEFAULT_BASE_HEX, DEFAULT_BASE_HEX]
+      ['generic', 'No match', DEFAULT_BASE_HEX, DEFAULT_BASE_HEX],
+      ['carton', 'Milk', FOODS.milk.base, FALLBACK_BASE.dairy]
     ];
     const fracs = [0, 0.35, 0.6, 0.85, 1];
     const cell = (shape, base, frac, size, seed) => {
-      const c = FRIDGE_CAT[shape];
+      const c = FRIDGE_CAT[shape] || FRIDGE_CAT.dairy;
       return `<div style="display:flex;align-items:flex-end;justify-content:center;width:${Math.max(size, 60)}px">` +
-        foodShapeMarkupLine(shape, natureColor(base, frac), frac, c.sag, c.mold, c.wrinkle, size, seed) + '</div>';
+        foodShapeMarkupLine(shape, PACKAGED_SHAPES[shape] ? base : natureColor(base, frac), frac, c.sag, c.mold, c.wrinkle, size, seed) + '</div>';
     };
     const html = rows.map(([shape, food, base, neutral], r) => `
       <div style="display:flex;align-items:flex-end;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)">

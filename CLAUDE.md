@@ -140,6 +140,11 @@ decay drawn in line as much as in colour — wrinkles that multiply,
 brown discoloration that appears before mold does, an outline that
 shrivels inward as it shrinks rather than stretching or twisting. A
 field-guide specimen plate, not a cartoon or an illustration style.
+Packaging is the exception (PACKAGED_SHAPES: the dairy tub, the deli
+container, the sealed packet, the carton): the food is out of sight, so
+the package keeps its own colour and rigid outline, and decay shows only
+in small signs on it -- a bulging lid, a little mold at the seam, a
+label that fades.
 
 Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
