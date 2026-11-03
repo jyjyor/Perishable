@@ -1288,27 +1288,48 @@ const MIXED_18 = [
   ['rotisserie', 3], ['beets', 1], ['bread', 15], ['_fk_427', 1, 10, null, 'Almond milk'], ['spinach', 9],
   ['shrimp', 1], ['chickenthigh', 0], ['_c_potatochips', 0, 60, {en: 'Potato chips', g: 450, usd: 2.99, estWeight: true}]
 ];
+async function seedMixed18(page) {
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(items => {
+    const d = new Date(), T = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+    const fridge = [], standing = {};
+    items.forEach(([key, ago, shelf, custom, name], i) => {
+      const it = {id: i + 1, key, bought: T - ago, custom: custom || null};
+      if (name) it.name = name;
+      if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
+      fridge.push(it);
+      standing[key] = {count: 1, lastBought: T - ago, custom: custom || null, ...(name ? {name} : {})};
+    });
+    localStorage.setItem('perishable.v1', JSON.stringify({schema: 3, fridge, standing,
+      ledger: {wasteG: 0, wasteUSD: 0, savedG: 0}, uid: items.length, startedAt: T - 15, lastVisit: T}));
+  }, MIXED_18);
+  await page.reload();
+}
+
+// The 18-item fixture has chicken thighs and a rotisserie chicken, milk
+// and onion: chicken thighs fill a dish's "chicken", so Tonight has a dish.
+async function dishFixtureScenario(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await seedMixed18(page);
+  await page.waitForSelector('#headline');
+  console.log('\n--- DISHES: the 18-item fixture has a dish tonight ---');
+  const h2 = (await page.textContent('#tonight h2')).trim();
+  const chips = await page.$$eval('#tonight .chip', els => els.map(e => e.textContent.trim()));
+  console.log('tonight:', h2, JSON.stringify(chips));
+  expectEqual('tonight dish', h2, 'Creamy chicken spinach rice');
+  if (!chips.some(c => /^(Rotisserie chicken|Chicken thighs) · \d+d$/.test(c))) throw new Error('chicken should be filled by the thighs or the rotisserie chicken');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
 async function mixedFridgeScenario(browser) {
   console.log('\n--- MIXED 18: both fridges, desktop and phone ---');
   for (const [w, tag] of [[1280, 'desktop'], [390, 'phone']]) {
     const page = await (await browser.newContext({ viewport: { width: w, height: 1400 } })).newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
-    await page.goto(`http://localhost:${PORT}/index.html`);
-    await page.evaluate(items => {
-      const d = new Date(), T = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
-      const fridge = [], standing = {};
-      items.forEach(([key, ago, shelf, custom, name], i) => {
-        const it = {id: i + 1, key, bought: T - ago, custom: custom || null};
-        if (name) it.name = name;
-        if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
-        fridge.push(it);
-        standing[key] = {count: 1, lastBought: T - ago, custom: custom || null, ...(name ? {name} : {})};
-      });
-      localStorage.setItem('perishable.v1', JSON.stringify({schema: 3, fridge, standing,
-        ledger: {wasteG: 0, wasteUSD: 0, savedG: 0}, uid: items.length, startedAt: T - 15, lastVisit: T}));
-    }, MIXED_18);
-    await page.reload();
+    await seedMixed18(page);
     await page.waitForSelector('#headline');
     await page.waitForTimeout(1300);
     const names = await page.$$eval('#fridgeShelf .fridge-label', els => els.map(e => e.childNodes[0].textContent.trim()));
@@ -1355,6 +1376,7 @@ async function mixedFridgeScenario(browser) {
   await receiptNewItemsScenario(browser);
   await restockNoWasteScenario(browser);
   await mixedFridgeScenario(browser);
+  await dishFixtureScenario(browser);
 
   await browser.close();
   server.close();

@@ -1620,11 +1620,25 @@ function urgency(d){
 // would be owned, and what would recommend/near-miss, on a simulated future
 // day against a working copy of the fridge" using the exact same logic that
 // already governs today -- not a parallel implementation of it.
+// A dish ingredient is filled by its own FOODS entry or by the same
+// ingredient in another form -- not a substitute (that's SUBS, offered
+// when something is missing) but the thing itself: thighs or a rotisserie
+// chicken are chicken in a chicken dish.
+const DISH_FILLS = {
+  chicken: ['chickenthigh', 'rotisserie'],
+  tomato: ['cherrytomato'],
+  leaflettuce: ['romaine']
+};
+const FILLS_FOR = {};
+Object.entries(DISH_FILLS).forEach(([need, keys]) => keys.forEach(k => (FILLS_FOR[k] = FILLS_FOR[k] || []).push(need)));
+
 function haveAt(sourceFridge, day){
   const have = {};
   sourceFridge.forEach(it => {
     if (leftAt(it, day) < 0) return; // never recommend cooking something already past date
-    if (!have[it.key] || leftAt(it, day) < leftAt(have[it.key], day)) have[it.key] = it;
+    [it.key, ...(FILLS_FOR[it.key] || [])].forEach(k => {
+      if (!have[k] || leftAt(it, day) < leftAt(have[k], day)) have[k] = it;
+    });
   });
   return have;
 }
@@ -3864,7 +3878,7 @@ function buildDishCard(r, day = today()){
       const d = leftAt(r.have[k], day);
       const risky = state(d) !== 'fresh';
       const style = risky ? ` style="border-color:${COLOR[state(d)]};color:${COLOR[state(d)]}"` : '';
-      return `<span class="chip use"${style}>${FOODS[k].en} · ${d}d</span>`;
+      return `<span class="chip use"${style}>${food(r.have[k]).en} · ${d}d</span>`;
     }
     if (swap && swap.key === k) return `<span class="chip use">${swap.label} (swap)</span>`;
     return `<span class="chip" style="border-color:var(--turn);color:var(--turn)">${FOODS[k].en} — missing</span>`;
@@ -3877,7 +3891,7 @@ function buildDishCard(r, day = today()){
   const atRisk = atRiskMatches(r, day);
   const atRiskSorted = atRisk.slice().sort((a,b) => leftAt(r.have[a], day) - leftAt(r.have[b], day));
   const usesUpHTML = atRisk.length
-    ? `<p class="dish-usesup">Uses up ${joinWords(atRiskSorted.map(k => `${FOODS[k].en} (${leftAt(r.have[k], day)}d)`))} before ${atRisk.length === 1 ? 'it turns' : 'they turn'}.</p>`
+    ? `<p class="dish-usesup">Uses up ${joinWords(atRiskSorted.map(k => `${food(r.have[k]).en} (${leftAt(r.have[k], day)}d)`))} before ${atRisk.length === 1 ? 'it turns' : 'they turn'}.</p>`
     : '';
 
   // Two totals: "all matched" (what the near-miss tier's plain ownership
