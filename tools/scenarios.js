@@ -997,6 +997,250 @@ async function splitEntriesScenario(browser) {
   await page.context().close();
 }
 
+// ---------- FoodKeeper fallback, matching and dates (Part B step 5) ----------
+// Each drives the real controls: #entry/#addbtn, the add preview's
+// selects and date inputs, the receipt review, the restock chips and the
+// illustrated fridge's popover.
+
+async function freshPage(browser) {
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => localStorage.setItem('perishable.key', 'test-key'));
+  await page.reload();
+  await page.waitForSelector('#headline');
+  return { page, errors };
+}
+async function typeEntry(page, text) {
+  await page.fill('#entry', text);
+  await page.click('#addbtn');
+  await page.waitForTimeout(120);
+}
+const previewOpen = page => page.$eval('#voicePreview', el => el.style.display !== 'none' && !!el.querySelector('.receipt-row'));
+function readReview(page, box) {
+  return page.$$eval(`${box} .receipt-row`, els => els.map(el => ({
+    name: (el.querySelector('.entry-name') || el.querySelector('input[type=text]')).textContent.trim() ||
+          (el.querySelector('input[type=text]') || {}).value,
+    flag: el.classList.contains('unresolved') ? 'no match / choice' : el.classList.contains('needs-date') ? 'needs date' : '',
+    match: (el.querySelector('.match') || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim(),
+    options: [...el.querySelectorAll('.entry-pick option')].slice(1).map(o => o.textContent)
+  })));
+}
+function readInventory(page) {
+  return page.$$eval('#rows .row', els => els.map(e => ({
+    name: e.querySelector('.name').childNodes[0].textContent.trim(),
+    left: e.querySelector('.left').textContent.trim(),
+    g: e.querySelector('.meta').textContent.trim()
+  })));
+}
+const isoIn = (page, n) => page.evaluate(n => new Date((today() + n - DAY_OFFSET) * 86400000).toISOString().slice(0, 10), n);
+async function popoverText(page, key) {
+  const id = await page.evaluate(k => fridge.find(i => i.key === k).id, key);
+  await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
+  await page.waitForTimeout(80);
+  const text = (await page.textContent('#rfPopover')).replace(/\s+/g, ' ').trim();
+  await page.click('.rf-head');
+  return text;
+}
+function expectRow(rows, name, left, g) {
+  const r = rows.find(x => x.name === name);
+  if (!r) throw new Error(`no inventory row "${name}" in ${JSON.stringify(rows)}`);
+  expectEqual(`${name} days left`, r.left, left);
+  if (g) expectEqual(`${name} weight`, r.g, g);
+}
+
+// A food only FoodKeeper knows gets FoodKeeper's days, the generic
+// fallback's estimated weight (≈, its decay category's FOODS median), and
+// goes straight in when nothing needs asking.
+async function fkOnlyScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FOODKEEPER ONLY: an item outside FOODS gets FoodKeeper days ---');
+  await typeEntry(page, 'plums, chicken salad 1d');
+  if (await previewOpen(page)) throw new Error('both match one FoodKeeper item with days; nothing should be asked');
+  const rows = await readInventory(page);
+  console.log('inventory:', JSON.stringify(rows));
+  const med = await page.evaluate(() => [CAT_MEDIANS.soft.g, CAT_MEDIANS.cooked.g]);
+  expectRow(rows, 'Peaches, nectarines, plums, pears, sapote', '5 days', `≈${med[0]} g`);   // #266, 5
+  expectRow(rows, 'Chicken salad', '3 days', `≈${med[1]} g`);                               // #418, 4, bought 1 day ago
+  await page.waitForTimeout(900);
+  const pop = await popoverText(page, '_fk_266');
+  console.log('popover:', pop);
+  if (!pop.includes('FoodKeeper #266')) throw new Error('popover should name FoodKeeper #266 as the source');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// FOODS aliases and receipt words: whole-name matches straight in.
+async function aliasScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- ALIASES: alias and store words resolve to the FOODS entry ---');
+  await typeEntry(page, 'romaine hearts, yams, pico de gallo, ks organic large eggs');
+  if (await previewOpen(page)) throw new Error('every name is an exact FOODS alias; nothing should be asked');
+  const rows = await readInventory(page);
+  console.log('inventory:', JSON.stringify(rows.map(r => r.name + ' ' + r.left)));
+  expectRow(rows, 'Romaine lettuce', '14 days');
+  expectRow(rows, 'Sweet potatoes', '21 days');
+  expectRow(rows, 'Fresh salsa', '7 days');
+  expectRow(rows, 'Eggs', '35 days');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// One generic word never carries a longer name.
+async function noFalseMatchScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- NO FALSE MATCH: apple juice is not Apple, almond milk is not Milk ---');
+  await typeEntry(page, 'apple juice, chicken salad, almond milk, potato chips');
+  if (!(await previewOpen(page))) throw new Error('almond milk and potato chips need answers; the preview should open');
+  const rows = await readReview(page, '#voicePreview');
+  rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
+  const byName = n => rows.find(r => r.name === n);
+  const expectMatch = (n, src, not) => {
+    const r = byName(n);
+    if (!r.match.includes(src)) throw new Error(`${n} should match ${src}: ${r.match}`);
+    if (r.match.includes(not)) throw new Error(`${n} matched ${not}`);
+  };
+  expectMatch('Apple juice (fresh squeezed)', 'FoodKeeper #537', 'matched Apple ·');
+  expectMatch('Chicken salad', 'FoodKeeper #418', 'Chicken breast');
+  expectMatch('Almond milk', 'FoodKeeper #427', 'matched Milk ·');
+  expectEqual('almond milk flag', byName('Almond milk').flag, 'needs date');
+  expectEqual('potato chips flag', byName('Potato chips').flag, 'no match / choice');
+  if (!byName('Potato chips').match.includes('no shelf-life data')) throw new Error('potato chips should say no shelf-life data');
+  const keys = await page.evaluate(() => ['apple juice', 'chicken salad', 'almond milk', 'potato chips'].map(t => resolveName(t).keys));
+  if (keys.flat().some(k => ['apple', 'chicken', 'milk', 'potato'].includes(k))) throw new Error('a generic FOODS key matched: ' + JSON.stringify(keys));
+  await page.click('#voiceDiscard');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Equal matches ask; nothing goes in until the person picks.
+async function ambiguousScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- AMBIGUOUS: "cheese" and "tortillas" ask which one ---');
+  await typeEntry(page, 'cheese, tortillas');
+  const rows = await readReview(page, '#voicePreview');
+  rows.forEach(r => console.log(' ', r.name, '|', r.flag, '|', r.options.join(' / ')));
+  expectEqual('cheese options', rows[0].options, ['Hard cheese (FOODS)', 'Shredded cheese (FOODS)', 'Soft cheese (FOODS)']);
+  expectEqual('tortilla options', rows[1].options, ['Flour tortillas (FOODS)', 'Corn tortillas (FOODS)']);
+  if (!(await page.$eval('#voiceAdd', b => b.disabled))) throw new Error('Add should be blocked while a choice is open');
+  await page.click('#addbtn');   // the other Add path refuses too
+  if ((await readInventory(page)).length) throw new Error('nothing should be added before the choices are made');
+  await page.selectOption('#voicePreview .entry-pick[data-idx="0"]', 'softcheese');
+  await page.selectOption('#voicePreview .entry-pick[data-idx="1"]', 'corntortilla');
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  const inv = await readInventory(page);
+  console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
+  expectRow(inv, 'Soft cheese', '14 days');
+  expectRow(inv, 'Corn tortillas', '90 days');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// No match: no default; blocked until a use-by date is given, then that
+// date is what the item keeps.
+async function noMatchScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- NO MATCH: cannot be saved without a date ---');
+  await typeEntry(page, 'potato chips 2d');
+  const [row] = await readReview(page, '#voicePreview');
+  console.log(' ', row.name, '|', row.flag, '|', row.match);
+  if (!(await page.$eval('#voiceAdd', b => b.disabled))) throw new Error('Add should be blocked with no date');
+  await page.click('#addbtn');
+  await page.waitForTimeout(80);
+  expectEqual('fridge after refused add', (await readInventory(page)).length, 0);
+  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 28));
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  const inv = await readInventory(page);
+  console.log('inventory:', JSON.stringify(inv));
+  expectRow(inv, 'Potato chips', '28 days');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('perishable.v1')).fridge[0]);
+  expectEqual('saved shelf (use-by minus purchase)', [saved.shelf, saved.shelfFrom, saved.key], [30, 'date', '_c_potatochips']);
+  await page.waitForTimeout(900);
+  const pop = await popoverText(page, '_c_potatochips');
+  if (!pop.includes('date given at entry')) throw new Error('popover should say the date was given at entry: ' + pop);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// A receipt of new staples: FOODS additions, a FoodKeeper-only line, two
+// package/ripeness dates, and a choice; then restocking a package-date
+// item asks again.
+async function receiptNewItemsScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- RECEIPT: new foods, dates and a choice ---');
+  await page.evaluate(() => {
+    window.__receiptApiOverride = async () => ({
+      date: null,
+      items: [
+        {raw: 'KS ORG STRAWBERRIES 2LB', expanded: 'Kirkland organic strawberries', quantity: 1, is_food: true},
+        {raw: 'ROTISSERIE CHKN', expanded: 'Rotisserie chicken', quantity: 1, is_food: true},
+        {raw: 'AVOCADO HASS 5CT', expanded: 'Avocados', quantity: 1, is_food: true},
+        {raw: 'DAISY SOUR CRM', expanded: 'Sour cream', quantity: 1, is_food: true},
+        {raw: 'MISSION TORTILLA', expanded: 'Tortillas', quantity: 1, is_food: true},
+        {raw: 'PLUMS', expanded: 'Plums', quantity: 1, is_food: true},
+        {raw: 'KS SALMON FILLET', expanded: 'Salmon fillet', quantity: 1, is_food: true}
+      ]
+    });
+  });
+  const fixturePath = path.join(require('os').tmpdir(), 'perishable-receipt-fixture-2.jpg');
+  fs.writeFileSync(fixturePath, FIXTURE_JPEG);
+  await page.setInputFiles('#receiptFile', fixturePath);
+  await page.waitForSelector('#receiptPreview .receipt-row');
+  const rows = await readReview(page, '#receiptPreview');
+  rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
+  expectEqual('flags', rows.map(r => r.flag), ['', '', 'needs date', 'needs date', 'no match / choice', '', '']);
+  if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
+  if (!rows[2].match.includes('about 4 days after it ripens')) throw new Error('avocados should carry the ripeness hint');
+  if (!rows[5].match.includes('FoodKeeper #266')) throw new Error('plums should match FoodKeeper #266');
+  if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked');
+
+  await page.fill('#receiptPreview .entry-date[data-idx="2"]', await isoIn(page, 6));
+  await page.fill('#receiptPreview .entry-date[data-idx="3"]', await isoIn(page, 21));
+  await page.selectOption('#receiptPreview .entry-pick[data-idx="4"]', 'flourtortilla');
+  await page.fill('#receiptPreview .entry-date[data-idx="4"]', await isoIn(page, 30));
+  await page.click('#receiptConfirm');
+  await page.waitForTimeout(150);
+  fs.unlinkSync(fixturePath);
+
+  const inv = await readInventory(page);
+  console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
+  expectRow(inv, 'Strawberries', '3 days');
+  expectRow(inv, 'Rotisserie chicken', '4 days');
+  expectRow(inv, 'Avocados', '6 days');
+  expectRow(inv, 'Sour cream', '21 days');
+  expectRow(inv, 'Flour tortillas', '30 days');
+  expectRow(inv, 'Peaches, nectarines, plums, pears, sapote', '5 days');
+  expectRow(inv, 'Salmon', '2 days');
+
+  await page.waitForTimeout(900);
+  const popSour = await popoverText(page, 'sourcream');
+  const popAvo = await popoverText(page, 'avocado');
+  const popStraw = await popoverText(page, 'strawberry');
+  console.log('popovers:', [popSour, popAvo, popStraw].map(t => t.replace(/^.*Shelf life/, '')).join(' / '));
+  if (!popSour.includes('package date')) throw new Error('sour cream popover should say package date');
+  if (!popAvo.includes('about 4 days after it ripens')) throw new Error('avocado popover should carry its hint');
+  if (!popStraw.includes('FoodKeeper #481')) throw new Error('strawberry popover should name #481');
+
+  await page.click('[data-restock="sourcream"]');
+  await page.waitForTimeout(100);
+  const heading = await page.textContent('#voicePreview > div:first-child');
+  console.log('restock sour cream:', heading.trim());
+  if (!/needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the date');
+  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 25));
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  const after = await readInventory(page);
+  expectEqual('sour cream rows after restock', after.filter(r => r.name === 'Sour cream').length, 1);
+  expectRow(after, 'Sour cream', '25 days');
+  await page.screenshot({ path: path.join(OUT, 'scn-receipt-new-foods.png'), fullPage: true });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -1023,6 +1267,12 @@ async function splitEntriesScenario(browser) {
   await realFridgeReducedMotionScenario(browser);
   await realFridgeClosedCountScenario(browser);
   await realFridgeItemTapScenario(browser);
+  await fkOnlyScenario(browser);
+  await aliasScenario(browser);
+  await noFalseMatchScenario(browser);
+  await ambiguousScenario(browser);
+  await noMatchScenario(browser);
+  await receiptNewItemsScenario(browser);
 
   await browser.close();
   server.close();
