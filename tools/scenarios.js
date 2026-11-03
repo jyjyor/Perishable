@@ -557,6 +557,7 @@ async function migrationScenario(browser) {
   await livePage.fill('#entry', 'spinach, milk, chicken, onion, dragonfruit, garlic 5d');
   await livePage.click('#addbtn');
   await livePage.waitForTimeout(150);
+  await openList(livePage);
   const tossBtn = await livePage.$('[data-toss]');
   if (tossBtn) await tossBtn.click();
   await livePage.waitForTimeout(100);
@@ -1025,6 +1026,8 @@ function readReview(page, box) {
     options: [...el.querySelectorAll('.entry-pick option')].slice(1).map(o => o.textContent)
   })));
 }
+// The list sits collapsed under "All items (N)"; open it before clicking in it.
+const openList = page => page.evaluate(() => { const d = document.getElementById('allItems'); if (d) d.open = true; });
 function readInventory(page) {
   return page.$$eval('#rows .row', els => els.map(e => ({
     name: e.querySelector('.name').childNodes[0].textContent.trim(),
@@ -1486,10 +1489,43 @@ async function editBoughtScenario(browser) {
   await page.context().close();
 }
 
+// The list: below the fridge, collapsed under "All items (N)" by default,
+// with Used, Tossed and Edit unchanged once open; the summary is a real
+// <details> toggle, so a keyboard opens it.
+async function allItemsScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- ALL ITEMS: collapsed below the fridge, closed by default ---');
+  await typeEntry(page, 'spinach, chicken breast, salmon');
+  await page.waitForTimeout(300);
+  const info = await page.evaluate(() => {
+    const d = document.getElementById('allItems');
+    const rf = document.getElementById('rf');
+    return { open: d.open, summary: d.querySelector('summary').textContent.trim(),
+             below: rf.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false,
+             next: rf.nextElementSibling === d };
+  });
+  info.rowsVisible = await page.isVisible('#rows .row');
+  expectEqual('closed by default', info.open, false);
+  expectEqual('summary', info.summary, 'All items (3)');
+  expectEqual('directly below the fridge', info.next, true);
+  expectEqual('rows hidden while closed', info.rowsVisible, false);
+  await page.focus('#allItems summary');
+  await page.keyboard.press('Enter');
+  expectEqual('opens from the keyboard', await page.$eval('#allItems', d => d.open), true);
+  for (const sel of ['#rowsEdit', '[data-used]', '[data-toss]']) if (!(await page.isVisible(sel))) throw new Error(sel + ' should show in the open list');
+  await page.click('[data-used]');
+  await page.waitForTimeout(100);
+  expectEqual('summary counts down', (await page.textContent('#allItems summary')).trim(), 'All items (2)');
+  // stays closed across a reload
+  await page.reload(); await page.waitForSelector('#headline');
+  expectEqual('closed after reload', await page.$eval('#allItems', d => d.open), false);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // Used and Tossed from the fridge's popover run the list's own code: the
 // same ledger change, item for item. Undo puts back the same record and
 // takes the same amounts off the ledger.
-const openList = page => page.evaluate(() => { const d = document.getElementById('allItems'); if (d) d.open = true; });
 async function popoverUseScenario(browser) {
   console.log('\n--- POPOVER: Used and Tossed match the list; Undo restores ---');
   const run = async via => {
@@ -1581,6 +1617,7 @@ async function editDateScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- EDIT DATES: a date I set survives a FOODS change ---');
   await typeEntry(page, 'spinach, yogurt, tofu');
+  await openList(page);
   await page.click('#rowsEdit');
   await page.fill('.row-date[data-date="1"]', await isoIn(page, 10));
   await page.waitForTimeout(100);
@@ -1645,6 +1682,7 @@ async function ripenessScenario(browser) {
   await page.waitForTimeout(100);
   expectEqual('restock uses the remembered choice', await page.evaluate(() => fridge.find(i => i.key === 'banana').ripening), true);
 
+  await openList(page);
   await page.click('[data-ripe]');
   await page.waitForTimeout(100);
   inv = await readInventory(page);
@@ -1702,6 +1740,7 @@ async function ripenessScenario(browser) {
   await editBoughtScenario(browser);
   await goneTossScenario(browser);
   await popoverUseScenario(browser);
+  await allItemsScenario(browser);
 
   await browser.close();
   server.close();

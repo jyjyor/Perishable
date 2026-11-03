@@ -442,6 +442,17 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 
 /* ---------- inventory ---------- */
 
+.allitems{margin-top:8px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.allitems > summary{
+  cursor:pointer;padding:12px 4px;color:var(--ink-2);list-style:none;display:flex;align-items:center;gap:8px;
+}
+.allitems > summary::-webkit-details-marker{display:none}
+.allitems > summary::before{content:'+';width:1ch;color:var(--ink-3)}
+.allitems[open] > summary::before{content:'−'}
+.allitems > summary:hover{color:var(--ink)}
+.allitems > summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.allitems .inv-head{margin:0 0 6px}
+.allitems #rows{padding-bottom:12px}
 .inv{margin-top:64px;border-top:1px solid var(--ink);padding-top:20px}
 .inv-head{display:flex;align-items:baseline;gap:16px;color:var(--ink-2);margin-bottom:14px}
 .inv-head .spacer{flex:1}
@@ -603,6 +614,28 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
     <div class="rf-popover" id="rfPopover" hidden></div>
   </section>
 
+  <!-- The list: every item by name, for finding one fast, acting on
+       several at once, and for keyboard and screen-reader use. Closed by
+       default; the fridge above is the main view. -->
+  <details class="allitems" id="allItems">
+    <summary class="mono">All items (<span id="count">0</span>)</summary>
+    <div class="inv-head mono">
+      <span class="spacer"></span>
+      <button class="ghost" id="rowsEdit">Edit</button>
+      <button class="ghost" id="clearGone" style="display:none"></button>
+    </div>
+
+    <div class="missing" id="clearConfirm" style="display:none;border-left-color:var(--crit);margin-bottom:20px">
+      <div id="clearSummary"></div>
+      <div class="sub" style="margin-top:10px">
+        <button class="solid" id="clearConfirmBtn">Toss all</button>
+        <button id="clearCancelBtn">Cancel</button>
+      </div>
+    </div>
+
+    <div id="rows"></div>
+  </details>
+
   <section class="hero">
     <h1 id="headline">—</h1>
     <p id="subline"></p>
@@ -620,26 +653,10 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   <section class="tonight projected" id="dayAfter" style="display:none"></section>
 
   <section class="inv">
-    <div class="inv-head mono">
-      <span>In the fridge</span>
-      <span class="spacer"></span>
-      <button class="ghost" id="rowsEdit">Edit</button>
-      <button class="ghost" id="clearGone" style="display:none"></button>
-      <span id="count">—</span>
-    </div>
-
-    <div class="missing" id="clearConfirm" style="display:none;border-left-color:var(--crit);margin-bottom:20px">
-      <div id="clearSummary"></div>
-      <div class="sub" style="margin-top:10px">
-        <button class="solid" id="clearConfirmBtn">Toss all</button>
-        <button id="clearCancelBtn">Cancel</button>
-      </div>
-    </div>
 
     <div class="mono" style="color:var(--ink-2);margin-bottom:10px">Restocked <button class="ghost" id="restockEdit" style="margin-left:6px">Edit</button></div>
     <div class="rescue" id="restock"></div>
 
-    <div id="rows" style="margin-top:26px"></div>
 
     <div class="mono" style="color:var(--ink-2);margin-top:26px;margin-bottom:10px">Something new or unusual</div>
     <div class="add">
@@ -1797,7 +1814,7 @@ function buildDayProjections(){
 function render(){
   document.getElementById('date').textContent = fmtDate(today());
   document.getElementById('dayCount').textContent = 'Day ' + (today() - startedAt + 1);
-  document.getElementById('count').textContent = fridge.length + (fridge.length === 1 ? ' item' : ' items');
+  document.getElementById('count').textContent = fridge.length;
   document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
   document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
@@ -3668,6 +3685,7 @@ function renderRealFridge(){
   if (gone.length) document.getElementById('rfTossAll').onclick = e => {
     e.stopPropagation();
     clearConfirmOpen = true;
+    document.getElementById('allItems').open = true;
     render();
     document.getElementById('clearConfirm').scrollIntoView({block: 'center', behavior: 'smooth'});
   };
