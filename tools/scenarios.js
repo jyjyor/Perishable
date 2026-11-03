@@ -1377,6 +1377,64 @@ async function mixedFridgeScenario(browser) {
   }
 }
 
+// The decay line with the 18-item fixture: one baseline, Today / 72 h /
+// 1 week / 3 weeks, past items on the dashed stub; one label per day up to
+// a week, in its urgency colour, never crossing the line, another label or
+// another label's stem; one line on desktop, at most two on a phone; dots
+// only past a week; the legend on one line.
+async function decayLineScenario(browser) {
+  console.log('\n--- DECAY LINE: one label per day, nothing crosses ---');
+  for (const [w, tag] of [[1280, 'desktop'], [390, 'phone']]) {
+    const page = await (await browser.newContext({ viewport: { width: w, height: 1400 } })).newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => {
+      const box = el => { const b = el.getBoundingClientRect(); return {left: b.left, right: b.right, top: b.top, bottom: b.bottom, text: el.textContent}; };
+      const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      const chart = document.getElementById('chart');
+      const labels = [...chart.querySelectorAll('.blab')].map(box);
+      const stems = [...chart.querySelectorAll('.stem')].map(box);
+      const line = chart.querySelector('.axis').getBoundingClientRect().top;
+      const legend = document.querySelector('.chart-legend');
+      const days = [...new Set(fridge.map(it => left(it)).filter(d => d <= 7).map(d => d < 0 ? 'past' : d))];
+      return {
+        labels: labels.map(l => l.text), heights: labels.map(l => l.bottom - l.top),
+        overlap: labels.flatMap((a, i) => labels.slice(i + 1).filter(b => hit(a, b)).map(b => [a.text, b.text]))[0] || null,
+        crossesLine: labels.find(l => l.bottom > line) || null,
+        stemThrough: stems.flatMap(s => labels.filter(l => hit({...s, left: s.left + 0.1, right: s.right - 0.1, top: s.top + 0.5, bottom: s.bottom}, l)).map(l => l.text))[0] || null,
+        overflow: labels.find(l => l.right > chart.getBoundingClientRect().right + 0.5) || null,
+        days: days.length, ticks: [...chart.querySelectorAll('.tl')].map(t => t.textContent),
+        dots: chart.querySelectorAll('.dot').length, items: fridge.length,
+        legendLines: Math.round(legend.offsetHeight / parseFloat(getComputedStyle(legend).lineHeight || 16)),
+        legendH: legend.offsetHeight, legendW: legend.scrollWidth, legendBox: legend.clientWidth,
+        vlines: chart.querySelectorAll('.g').length,
+        ticksOverlap: (() => { const t = [...chart.querySelectorAll('.tl')].map(box);
+          return t.flatMap((a, i) => t.slice(i + 1).filter(b => hit(a, b)).map(b => [a.text, b.text]))[0] || null; })()
+      };
+    });
+    console.log(`${tag}:`, JSON.stringify(r.labels));
+    expectEqual(`${tag} ticks`, r.ticks, ['Today', '72 h', '1 week', '3 weeks', 'past']);
+    expectEqual(`${tag} one label per day`, r.labels.length, r.days);
+    expectEqual(`${tag} a dot per item`, r.dots, r.items);
+    expectEqual(`${tag} no vertical gridlines`, r.vlines, 0);
+    if (r.ticksOverlap) throw new Error(`${tag}: axis marks overlap: ${JSON.stringify(r.ticksOverlap)}`);
+    if (r.overlap) throw new Error(`${tag}: labels overlap: ${JSON.stringify(r.overlap)}`);
+    if (r.crossesLine) throw new Error(`${tag}: a label crosses the line: ${JSON.stringify(r.crossesLine)}`);
+    if (r.stemThrough) throw new Error(`${tag}: a stem runs through a label: ${r.stemThrough}`);
+    if (r.overflow) throw new Error(`${tag}: a label runs past the edge: ${JSON.stringify(r.overflow)}`);
+    const maxLines = tag === 'phone' ? 2 : 1;
+    if (r.heights.some(h => h > 15 * maxLines + 1)) throw new Error(`${tag}: a label is more than ${maxLines} line(s): ${JSON.stringify(r.heights)}`);
+    if (r.legendW > r.legendBox + 1 || r.legendH > 20) throw new Error(`${tag}: legend is not one line: ${JSON.stringify([r.legendW, r.legendBox, r.legendH])}`);
+    const b = await page.$eval('#chart', el => { const r = el.getBoundingClientRect(); return { y: r.top + scrollY, h: r.height }; });
+    await page.screenshot({ path: path.join(OUT, `decay-line-${tag}.png`), fullPage: true, clip: { x: 0, y: b.y - 16, width: w, height: b.h + 70 } });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
+  }
+}
+
 // A date set by hand (list Edit mode or the popover) is stored on the
 // item: changing the FOODS value and reloading leaves it alone, while an
 // unedited item follows the new value.
@@ -1460,6 +1518,12 @@ async function ripenessScenario(browser) {
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
+  // ONLY=decayLineScenario node tools/scenarios.js runs just that one.
+  if (process.env.ONLY){
+    await eval(process.env.ONLY)(browser);
+    await browser.close(); server.close();
+    return;
+  }
 
   await scenario(browser, 'ALL FRESH', 'spinach, milk, chicken, onion', 'scn-fresh.png');
   await scenario(browser, 'ALL PAST DATE', 'spinach 10d, milk 12d, chicken 10d', 'scn-gone.png');
@@ -1495,6 +1559,7 @@ async function ripenessScenario(browser) {
   await editDateScenario(browser);
   await ripenessScenario(browser);
   await handAliasScenario(browser);
+  await decayLineScenario(browser);
 
   await browser.close();
   server.close();

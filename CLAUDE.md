@@ -162,7 +162,12 @@ sits large and lit at the front, safe things recede smaller and dimmer,
 the way looking into a real fridge does before you've read a single
 number. The decay line follows directly after, a 21-day horizon on a
 square-root scale, every item pinned at its expiry — it still carries the
-dates, now that the fridge carries the feeling. Both read from the same
+dates, now that the fridge carries the feeling. One baseline, no
+gridlines: Today, 72 h, 1 week, 3 weeks marked under it, past-date items
+on a short dashed stub left of Today, Today to 72 h drawn heavier in
+plum. One label per day up to a week ("2 days · Strawberries, salmon"),
+in that day's urgency colour, never crossing the line or each other;
+further out is a dot only. Both read from the same
 shelf-life math (leftAt, pos) and must never disagree with each other.
 
 A second, literal illustration of a fridge (door, shelves, crisper, the
