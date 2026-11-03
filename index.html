@@ -252,6 +252,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 .rf-unit.open .rf-door-inside,.rf-unit.open .rf-door-edge{cursor:pointer}
 .rf-unit.open:has(.rf-handle:focus-visible) .rf-door-inside{outline:2px solid var(--ink);outline-offset:-4px}
 
+.rf-pop-acts{display:flex;gap:6px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
 .rf-popover{
   position:fixed;z-index:40;background:var(--paper);border:1px solid var(--ink);
   padding:12px 14px;width:220px;color:var(--ink-2);
@@ -516,6 +517,12 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
   z-index:20;
 }
 .toast.on{opacity:1}
+.toast.on.has-undo{pointer-events:auto}
+.toast .toast-undo{
+  margin-left:12px;padding:2px 8px;font:inherit;letter-spacing:inherit;
+  background:transparent;color:var(--paper);border:1px solid var(--ink-3);
+}
+.toast .toast-undo:hover{background:var(--ink-2);border-color:var(--paper)}
 
 @media (max-width:720px){
   body{padding:0 16px 80px}
@@ -675,7 +682,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============================================================
@@ -3706,14 +3713,19 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
-    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${d < 0 ? `
-    <button type="button" class="ghost rf-pop-toss">Toss</button>` : ''}`;
+    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}
+    <div class="rf-pop-acts">
+      <button type="button" class="ghost rf-pop-used">Used</button>
+      <button type="button" class="ghost rf-pop-tossed">Tossed</button>
+    </div>`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
   pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
   pop.querySelector('.rf-pop-bought').onchange = e => { rfHidePopover(); setBought(id, e.target.value); };
   if (it.ripening) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
-  if (d < 0) pop.querySelector('.rf-pop-toss').onclick = () => { rfHidePopover(); useItem(id, true); };
+  // the list's own Used/Tossed (useItem), not a copy
+  pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
+  pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
   const r = anchorEl.getBoundingClientRect();
   const popW = pop.offsetWidth || 220;
   let left = r.left + r.width / 2 - popW / 2;
@@ -4253,6 +4265,9 @@ function renderRows(){
 
 /* ---------- actions ---------- */
 
+// Used or Tossed, from the list or the fridge's popover -- both call this.
+// The toast offers Undo for a few seconds: it puts the same record back
+// where it was and takes the same amounts back off the ledger.
 function useItem(id, tossed){
   const i = fridge.findIndex(x => x.id === id);
   if (i < 0) return;
@@ -4261,11 +4276,17 @@ function useItem(id, tossed){
   if (tossed){
     ledger.wasteG += f.g;
     ledger.wasteUSD += f.usd;
-    toast('Tossed ' + f.en.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone');
   } else {
     ledger.savedG += f.g;
   }
   fridge.splice(i, 1);
+  const msg = tossed ? 'Tossed ' + f.en.toLowerCase() + ' · $' + f.usd.toFixed(2) + ' gone' : 'Used ' + f.en.toLowerCase();
+  toast(msg, () => {
+    if (fridge.some(x => x.id === it.id)) return;
+    if (tossed){ ledger.wasteG -= f.g; ledger.wasteUSD -= f.usd; } else ledger.savedG -= f.g;
+    fridge.splice(Math.min(i, fridge.length), 0, it);
+    render();
+  });
   render();
 }
 
@@ -5331,12 +5352,21 @@ function selectSuggestion(i){
 }
 
 let toastTimer;
-function toast(msg){
+// undo: optional; shows an Undo button and keeps the toast up a little
+// longer. Undo runs once, then the toast goes.
+function toast(msg, undo){
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.classList.toggle('has-undo', !!undo);
+  if (undo){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-undo'; b.textContent = 'Undo';
+    b.onclick = () => { clearTimeout(toastTimer); t.classList.remove('on', 'has-undo'); undo(); };
+    t.append(' ', b);
+  }
   t.classList.add('on');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+  toastTimer = setTimeout(() => t.classList.remove('on', 'has-undo'), undo ? 6000 : 2600);
 }
 
 /* ---------- wire up ---------- */

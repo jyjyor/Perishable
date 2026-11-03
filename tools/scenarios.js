@@ -1486,18 +1486,77 @@ async function editBoughtScenario(browser) {
   await page.context().close();
 }
 
-// A gone item: no tag under it; Toss is in its popover and counts as
+// Used and Tossed from the fridge's popover run the list's own code: the
+// same ledger change, item for item. Undo puts back the same record and
+// takes the same amounts off the ledger.
+const openList = page => page.evaluate(() => { const d = document.getElementById('allItems'); if (d) d.open = true; });
+async function popoverUseScenario(browser) {
+  console.log('\n--- POPOVER: Used and Tossed match the list; Undo restores ---');
+  const run = async via => {
+    const { page, errors } = await freshPage(browser);
+    await typeEntry(page, 'spinach, chicken breast, salmon');
+    await page.waitForTimeout(900);
+    const ids = await page.evaluate(() => Object.fromEntries(fridge.map(i => [i.key, i.id])));
+    const ledgers = [await page.evaluate(() => ({...ledger}))];
+    for (const [key, tossed] of [['spinach', false], ['chicken', true]]) {
+      if (via === 'list'){
+        await openList(page);
+        await page.click(`[data-${tossed ? 'toss' : 'used'}="${ids[key]}"]`);
+      } else {
+        await page.$eval(`[data-rf-item="${ids[key]}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+        await page.click(`#rfPopover .rf-pop-${tossed ? 'tossed' : 'used'}`);
+        if (!(await page.$eval('#rfPopover', p => p.hidden))) throw new Error('the popover should close');
+      }
+      await page.waitForTimeout(100);
+      ledgers.push(await page.evaluate(() => ({...ledger})));
+    }
+    const toastText = await page.textContent('#toast');
+    const left = await page.evaluate(() => fridge.map(i => i.key));
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    return { page, ids, ledgers, toastText, left };
+  };
+  const list = await run('list'), pop = await run('popover');
+  console.log('list:', JSON.stringify(list.ledgers.slice(1)), ' popover:', JSON.stringify(pop.ledgers.slice(1)));
+  expectEqual('same ledger after Used and Tossed', pop.ledgers, list.ledgers);
+  if (!(pop.ledgers[1].savedG > 0 && pop.ledgers[2].wasteG > 0)) throw new Error('Used should count saved, Tossed waste');
+  expectEqual('items gone from the fridge', pop.left, ['salmon']);
+  if (!/Tossed chicken breast/.test(pop.toastText) || !/Undo/.test(pop.toastText)) throw new Error('toast: ' + pop.toastText);
+  if (/!|great|nice|well done/i.test(pop.toastText)) throw new Error('no celebration: ' + pop.toastText);
+
+  // Undo the toss, then Used + Undo from the popover again.
+  const page = pop.page;
+  const before = await page.evaluate(id => JSON.stringify(fridge.find(i => i.id === id)), pop.ids.salmon);
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo restores the ledger', await page.evaluate(() => ({...ledger})), pop.ledgers[1]);
+  expectEqual('Undo restores the item', await page.evaluate(() => fridge.map(i => i.key).sort()), ['chicken', 'salmon']);
+  await page.$eval(`[data-rf-item="${pop.ids.salmon}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  await page.click('#rfPopover .rf-pop-used');
+  await page.waitForTimeout(100);
+  if (!(await page.textContent('#toast')).startsWith('Used salmon')) throw new Error('toast should say Used salmon');
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo restores the same record', await page.evaluate(id => JSON.stringify(fridge.find(i => i.id === id)), pop.ids.salmon), before);
+  expectEqual('ledger back to after the first Used', await page.evaluate(() => ({...ledger})), pop.ledgers[1]);
+  expectEqual('drawn again', await page.$$eval(`[data-rf-item="${pop.ids.salmon}"]`, e => e.length), 1);
+  // a second Undo does nothing
+  await page.evaluate(() => document.querySelector('#toast .toast-undo') && document.querySelector('#toast .toast-undo').click());
+  expectEqual('Undo once only', await page.evaluate(() => fridge.length), 2);
+  await list.page.context().close(); await page.context().close();
+}
+
+// A gone item: no tag under it; Tossed is in its popover and counts as
 // waste; the drawer front's Toss all opens the list's confirmation.
 async function goneTossScenario(browser) {
   const { page, errors } = await freshPage(browser);
-  console.log('\n--- GONE: Toss in the popover, Toss all on the drawer front ---');
+  console.log('\n--- GONE: Tossed in the popover, Toss all on the drawer front ---');
   await typeEntry(page, 'spinach 10d, chicken 12d, tofu');
   if (await previewOpen(page)) await answerPreview(page);
   await page.waitForTimeout(900);
   expectEqual('drawer front', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date · Toss all');
   const spinach = await page.evaluate(() => fridge.find(i => i.key === 'spinach').id);
   await page.$eval(`[data-rf-item="${spinach}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
-  await page.click('#rfPopover .rf-pop-toss');
+  await page.click('#rfPopover .rf-pop-tossed');
   await page.waitForTimeout(100);
   const s = await page.evaluate(() => ({ n: fridge.length, waste: ledger.wasteG }));
   expectEqual('spinach tossed', s.n, 2);
@@ -1642,6 +1701,7 @@ async function ripenessScenario(browser) {
   await decayLineScenario(browser);
   await editBoughtScenario(browser);
   await goneTossScenario(browser);
+  await popoverUseScenario(browser);
 
   await browser.close();
   server.close();
