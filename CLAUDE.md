@@ -40,11 +40,16 @@ consumer food app.
        There is no default shelf life.
      - A refrigerator number FoodKeeper says "applies to ripe fruit"
        counts from ripeness, not purchase (avocados, bananas, peaches,
-       pears, plums, pineapple, kiwi, apricots...): ask for a date at
-       entry, hinted "about N days after it ripens".
+       pears, plums, kiwi, apricots...; ripens:true). At entry the
+       person picks "Ripe" (clock starts at purchase) or "Not ripe yet"
+       (no countdown, no decay, labelled ripening, until "It's ripe"
+       starts the clock that day); their last choice per food is the
+       default. Pineapple is the exception: sold ripe, it counts from
+       purchase (FROM_PURCHASE in the import script).
   Changing a FOODS number moves the expiry of items already saved under
-  it (records store the purchase day; only a date the person gave is
-  stored on the record). Nothing counts as waste unless the person tosses
+  it (records store the purchase day). A date the person gives -- a
+  package date at entry, or one set later in the list's Edit mode or
+  the popover -- is stored on the record and never recomputed. Nothing counts as waste unless the person tosses
   it: a past-date item stays in the drawer until they act on it.
   6. Matches: the same food, or the same species under a generic
      FoodKeeper entry. A different species or variety is not a match.

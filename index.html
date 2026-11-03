@@ -784,9 +784,9 @@ const FOODS = {
   apple:      {en:'Apple',          shelf:42, fk:248, g:182, usd:0.75, cat:'soft', shape:'apple', base:'#b53e30'},
   // Banana: kept out of the fridge, but FoodKeeper's pantry guidance is
   // "when ripe", not a number, so the rule falls back to its refrigerator
-  // figure -- which FoodKeeper says applies to ripe fruit, so it asks for
-  // a date (see avocado).
-  banana:     {en:'Banana',         shelf:3, fk:251, pkgDate:true, dateHint:'about 3 days after it ripens', g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
+  // figure -- which FoodKeeper says applies to ripe fruit, so it ripens
+  // (see avocado).
+  banana:     {en:'Banana',         shelf:3, fk:251, ripens:true, g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
   hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
   shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
   softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
@@ -847,17 +847,20 @@ const FOODS = {
   blueberry:     {en:'Blueberries',       aliases:['blueberry'], shelf:14, fk:254, g:510, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#4b5f9e'},
   raspberry:     {en:'Raspberries',       aliases:['raspberry'], shelf:3, fk:482, g:340, usd:5.99, estPrice:true, cat:'soft', plural:true, base:'#c8403f'},
   grapes:        {en:'Grapes',            aliases:['red grapes','green grapes','seedless grapes'], shelf:7, fk:261, g:1800, usd:7.99, estPrice:true, cat:'soft', plural:true, base:'#9ec25a'},
-  // FoodKeeper's 3-4 days is for ripe fruit in the refrigerator; its
-  // counter guidance is "when ripe". A Costco bag is bought hard, so the
-  // app asks for a date instead of counting 4 days from purchase.
-  avocado:       {en:'Avocados',          aliases:['avocado','hass avocado'], shelf:4, fk:250, store:'pantry', pkgDate:true, dateHint:'about 4 days after it ripens', g:1000, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#5b8a3a'},
+  // ripens: FoodKeeper's refrigerator number is for ripe fruit (its
+  // counter guidance is "when ripe"), so at entry the person says "Ripe"
+  // (the clock starts at purchase) or "Not ripe yet" (no countdown, no
+  // decay, labelled ripening, until they tap "It's ripe"). Their last
+  // choice per food is the next default.
+  avocado:       {en:'Avocados',          aliases:['avocado','hass avocado'], shelf:4, fk:250, store:'pantry', ripens:true, g:1000, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#5b8a3a'},
   orange:        {en:'Oranges',           aliases:['orange','navel orange','navel oranges','cara cara orange'], shelf:21, fk:256, g:3600, usd:9.99, estPrice:true, cat:'soft', plural:true, base:'#e48a2c'},
   // #266 is "Peaches, nectarines, plums, pears, sapote": one entry for
-  // both. Its 3-5 days is for ripe fruit, so these ask for a date (see
-  // avocado), as do pineapple and banana.
-  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, pkgDate:true, dateHint:'about 5 days after it ripens', g:1800, usd:8.99, estPrice:true, cat:'soft', plural:true, base:'#f0a868'},
-  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, pkgDate:true, dateHint:'about 5 days after it ripens', g:1800, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#c9cf6a'},
-  pineapple:     {en:'Pineapple',         shelf:7, fk:267, pkgDate:true, dateHint:'about 7 days after it ripens', g:1600, usd:2.99, estPrice:true, cat:'soft', base:'#e3c55a'},
+  // both. Its 3-5 days is for ripe fruit, so these ripen (see avocado).
+  peach:         {en:'Peaches',           aliases:['peach','nectarine','nectarines'], shelf:5, fk:266, ripens:true, g:1800, usd:8.99, estPrice:true, cat:'soft', plural:true, base:'#f0a868'},
+  pear:          {en:'Pears',             aliases:['pear','bartlett pear','bosc pear'], shelf:5, fk:266, ripens:true, g:1800, usd:6.99, estPrice:true, cat:'soft', plural:true, base:'#c9cf6a'},
+  // FoodKeeper's 7 days is "for ripe fruit", but a store pineapple is
+  // already as ripe as it gets: it counts from purchase.
+  pineapple:     {en:'Pineapple',         shelf:7, fk:267, g:1600, usd:2.99, estPrice:true, cat:'soft', base:'#e3c55a'},
   // #495 counts from purchase (DOP), whole: pantry 1-2 days "or until
   // ripe", refrigerator 3-4. Not a cut value, and not on the pantry list.
   watermelon:    {en:'Watermelon',        aliases:['seedless watermelon'], shelf:4, fk:495, g:7000, usd:6.99, estPrice:true, cat:'soft', base:'#e2584a'},
@@ -1178,7 +1181,7 @@ const FK_TABLE = [
 [264,"Melons","",14,"R",15],
 [265,"Papaya, mango, feijoa, passionfruit, casaha melon","",7,"R",15],
 [266,"Peaches, nectarines, plums, pears, sapote","",5,"ripe",15],
-[267,"Pineapple","",7,"ripe",15],
+[267,"Pineapple","",7,"R",15],
 [268,"Plantains","",5,"ripe",15],
 [269,"Pomegranate","",90,"R",15],
 [270,"Artichokes, whole","",14,"R",16],
@@ -1591,9 +1594,23 @@ const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : fo
 // A record can carry its own shelf (days from purchase): a printed package
 // date, or a value pinned by a migration. Otherwise the food's own.
 const shelfOf = it => it.shelf != null ? it.shelf : food(it).shelf;
-const leftAt = (it, day) => shelfOf(it) - (day - it.bought);
+// The clock starts at purchase, or on the day a ripening item was marked
+// ripe (ripeOn). A ripening item has no countdown and no decay: it stays
+// at its full shelf life until then.
+const clockStart = it => it.ripeOn != null ? it.ripeOn : it.bought;
+const leftAt = (it, day) => it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
 // The day an item goes, as an epoch day, and as YYYY-MM-DD for a date input.
-const expiryOf = it => it.bought + shelfOf(it);
+const expiryOf = it => it.ripening ? today() + shelfOf(it) : clockStart(it) + shelfOf(it);
+function markRipe(id){
+  const it = fridge.find(x => x.id === id);
+  if (!it || !it.ripening) return;
+  delete it.ripening;
+  it.ripeOn = today();
+  toast(food(it).en + ': clock started, ' + shelfOf(it) + ' days');
+  render();
+}
+// What an item's days-left reads as, short: "ripening", "today", "3d".
+const shortLeft = (it, d) => it.ripening ? 'ripening' : d === 0 ? 'today' : d + 'd';
 const isoOfDay = day => new Date((day - DAY_OFFSET) * 86400000).toISOString().slice(0, 10);
 // A date the person sets is stored on the item (shelf counted from its
 // purchase) and never recomputed from FOODS -- the same as a package date
@@ -1602,7 +1619,8 @@ function setUseBy(id, iso){
   const it = fridge.find(x => x.id === id);
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
-  it.shelf = day - it.bought;
+  if (it.ripening){ delete it.ripening; it.ripeOn = today(); }
+  it.shelf = day - clockStart(it);
   it.shelfFrom = 'date';
   it.crossed = false;
   toast(food(it).en + ' now goes ' + fmtDate(day));
@@ -1656,7 +1674,7 @@ Object.entries(DISH_FILLS).forEach(([need, keys]) => keys.forEach(k => (FILLS_FO
 function haveAt(sourceFridge, day){
   const have = {};
   sourceFridge.forEach(it => {
-    if (leftAt(it, day) < 0) return; // never recommend cooking something already past date
+    if (leftAt(it, day) < 0 || it.ripening) return; // never recommend cooking something past date, or not ripe yet
     [it.key, ...(FILLS_FOR[it.key] || [])].forEach(k => {
       if (!have[k] || leftAt(it, day) < leftAt(have[k], day)) have[k] = it;
     });
@@ -3227,7 +3245,7 @@ function buildShelfItem(p, day){
   const labelColor = COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
-  const dayLabel = d === 0 ? 'today' : d + 'd';
+  const dayLabel = shortLeft(it, d);
   const itemStyle = `left:${x}px;z-index:${p.z}`;
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
   return `<div class="fridge-item" style="${itemStyle}">
@@ -3551,7 +3569,7 @@ function rfBuildFoodItem(it, day, u, z){
   const color = natureColor(foodBaseColor(it), frac);
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
-  const dayLabel = gone ? `${Math.abs(d)}d gone` : d === 0 ? 'today' : d + 'd';
+  const dayLabel = gone ? `${Math.abs(d)}d gone` : shortLeft(it, d);
   // The tag is this item's label in CLAUDE.md's sense: name and days left
   // in the urgency bucket's colour, the same state()/COLOR lookup as the
   // list, the decay line and the line-art fridge.
@@ -3714,7 +3732,7 @@ function rfShowPopover(id, anchorEl){
   const day = today();
   const f = food(it);
   const d = leftAt(it, day);
-  const leftLabel = d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
+  const leftLabel = it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
     : d === 0 ? 'last day' : `${d} ${d === 1 ? 'day' : 'days'} left`;
   const statusName = {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
   const pop = document.getElementById('rfPopover');
@@ -3724,10 +3742,12 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
-    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${isoOfDay(expiryOf(it))}"></label>`;
+    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}"></label>${it.ripening ? `
+    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}`;
   pop.hidden = false;
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
   pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
+  if (it.ripening) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
   const r = anchorEl.getBoundingClientRect();
   const popW = pop.offsetWidth || 220;
   let left = r.left + r.width / 2 - popW / 2;
@@ -4242,8 +4262,9 @@ function renderRows(){
       <div class="bars" style="color:${COLOR[st]}">${bars}</div>
       <div class="name">${f.en}${(f.estimated || (it.custom && it.shelf == null)) ? '<small>shelf life estimated</small>' : ''}${it.crossed ? '<small class="mono" style="color:var(--turn);display:inline-block">crossed between visits</small>' : ''}${editingRows ? `<small class="mono row-edit"><label>use by <input type="date" class="row-date" data-date="${it.id}" value="${isoOfDay(expiryOf(it))}"></label> <span style="cursor:pointer;text-decoration:underline" data-remove="${it.id}">remove</span></small>` : ''}</div>
       <div class="meta">${f.estWeight ? '≈' : ''}${Math.round(f.g)} g</div>
-      <div class="left" style="color:${COLOR[st]}">${d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
-      <div class="btns">
+      <div class="left" style="color:${COLOR[st]}">${it.ripening ? 'ripening' : d < 0 ? Math.abs(d)+'d past' : d===0 ? 'today' : d+' days'}</div>
+      <div class="btns">${it.ripening ? `
+        <button class="ghost" data-ripe="${it.id}">It's ripe</button>` : ''}
         <button class="ghost" data-used="${it.id}">Used</button>
         <button class="ghost" data-toss="${it.id}">Tossed</button>
       </div>
@@ -4254,6 +4275,7 @@ function renderRows(){
   box.querySelectorAll('[data-toss]').forEach(b => b.onclick = () => useItem(+b.dataset.toss, true));
   box.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeFridgeItem(+b.dataset.remove));
   box.querySelectorAll('.row-date').forEach(inp => inp.onchange = () => setUseBy(+inp.dataset.date, inp.value));
+  box.querySelectorAll('[data-ripe]').forEach(b => b.onclick = () => markRipe(+b.dataset.ripe));
 }
 
 /* ---------- actions ---------- */
@@ -4483,8 +4505,8 @@ function fkFood(id){
   const cat = fkDecayCat(FK_CATEGORIES[r[5]]);
   const m = CAT_MEDIANS[cat];
   const f = {en: r[1], shelf: r[3], fk: id, src: 'FoodKeeper', g: m.g, usd: m.usd, estWeight: true,
-             cat, base: FALLBACK_BASE[cat], pkgDate: r[4] === 'pkg' || r[4] === 'ripe'};
-  if (r[4] === 'ripe') f.dateHint = 'about ' + r[3] + ' days after it ripens';
+             cat, base: FALLBACK_BASE[cat], pkgDate: r[4] === 'pkg'};
+  if (r[4] === 'ripe') f.ripens = true;
   if (r[4] === 'P') f.store = 'pantry';
   fkCache.set(id, f);
   return f;
@@ -4523,12 +4545,14 @@ function sourceOf(key){
 // Where an item's shelf life comes from, for the popover.
 function shelfSourceOf(it){
   const f = food(it);
+  if (it.ripening) return 'ripening: FoodKeeper #' + f.fk + ' counts ' + f.shelf + ' days from when it is ripe';
   if (it.shelf != null && it.shelfFrom === 'date')
-    return (f.pkgDate && !f.dateHint ? 'package date' : 'date given at entry' + (f.dateHint ? ' (' + f.dateHint + ')' : ''))
+    return (f.pkgDate ? 'package date' : 'date given at entry')
       + (FOODS[it.key] || it.custom ? '' : ' · FoodKeeper #' + f.fk + ' “' + foodOf(it.key).en + '”');
   if (it.custom) return 'estimated';
   if (it.shelf != null) return 'kept from when it was saved' + (f.fk != null ? ' (now FoodKeeper #' + f.fk + ')' : '');
   if (f.estimated) return 'estimated' + (f.note ? ' — ' + f.note : '');
+  if (it.ripeOn != null) return 'FoodKeeper #' + f.fk + ', counted from the day it was marked ripe';
   return 'FoodKeeper #' + f.fk + (FOODS[it.key] ? '' : ' “' + foodOf(it.key).en + '” (not in FOODS; weight and price estimated)');
 }
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -4550,6 +4574,12 @@ function rematchEntry(e, name){
   const next = entryFor(name, e.age);
   Object.assign(e, {options: next.options, suggestions: next.suggestions, key: next.key, label: next.label, date: ''});
 }
+// A food whose number counts from ripeness: the entry carries "ripe" or
+// "unripe", defaulting to the person's last choice for that food.
+const ripensKey = key => !!(key && foodOf(key) && foodOf(key).ripens);
+const lastRipeChoice = key => (standing[key] && standing[key].ripe) || 'ripe';
+// Whether typed entry has to stop at the preview for this entry.
+const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key);
 // What still stands between an entry and the fridge; null when it can go in.
 function entryNeeds(e){
   if (!e.key && e.options.length > 1) return 'choice';
@@ -4559,7 +4589,8 @@ function entryNeeds(e){
 // The fridge record an entry becomes, bought on `bought` (an epoch day).
 function entryRecord(e, bought){
   const shelf = needsDate(e.key) ? parseReceiptDate(e.date) - bought : null;
-  if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw))};
+  if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
+    ripe: ripensKey(e.key) ? (e.ripe || lastRipeChoice(e.key)) : null};
   const name = e.label.trim() || e.raw || 'Item';
   const m = CAT_MEDIANS.all;
   return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf};
@@ -4586,10 +4617,15 @@ function entryMatchMarkup(e, i, kind){
         esc(foodOf(k).en) + ' (' + (FOODS[k] ? 'FOODS' : 'FoodKeeper #' + foodOf(k).fk) + ')</option>').join('') +
       '</select>');
   }
+  if (ripensKey(e.key)){
+    const choice = e.ripe || lastRipeChoice(e.key);
+    const opt = (v, text) => '<label><input type="radio" class="entry-ripe" name="ripe-' + kind + '-' + i + '" data-kind="' + kind +
+      '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
+    bits.push('<span>counts from ripeness:</span>' + opt('ripe', 'Ripe') + opt('unripe', 'Not ripe yet'));
+  }
   if (need !== 'choice' && needsDate(e.key)){
-    const hint = e.key && foodOf(e.key).dateHint;
-    if (need === 'pkgdate') bits.push('<span class="why">' + (hint ? 'needs a use-by date: ' + hint : 'needs the date printed on the package') + '</span>');
-    bits.push('<label>' + (e.key && !hint ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
+    if (need === 'pkgdate') bits.push('<span class="why">needs the date printed on the package</span>');
+    bits.push('<label>' + (e.key ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + esc(e.date) + '"></label>');
   }
   return '<div class="match">' + bits.join('') + '</div>';
@@ -4606,6 +4642,9 @@ function wireEntryControls(box, entries, rerender){
       e.label = e.key ? entryLabel(e.key, e.raw) : cleanName(e.raw);
       rerender();
     };
+  });
+  box.querySelectorAll('.entry-ripe').forEach(r => {
+    r.onchange = () => { entries[+r.dataset.idx].ripe = r.value; rerender(); };
   });
   box.querySelectorAll('.entry-date').forEach(inp => {
     inp.onchange = () => { entries[+inp.dataset.idx].date = inp.value; rerender(); };
@@ -4645,12 +4684,15 @@ function restock(key, shelf){
   if (existing){
     existing.bought = today();
     existing.crossed = false;
+    delete existing.ripeOn;
+    if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
     delete existing.shelfFrom;
     if (shelf != null){ existing.shelf = shelf; existing.shelfFrom = 'date'; }
   } else {
     const it = {id:++uid, key, bought:today(), custom: entry.custom || null};
     if (entry.name) it.name = entry.name;
+    if (ripensKey(key) && lastRipeChoice(key) === 'unripe') it.ripening = true;
     if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
     fridge.push(it);
     if (fridge.some(x => x.key === key && left(x) < 0)) msg += ' · the old one stays in the drawer until you toss it';
@@ -4762,8 +4804,10 @@ function commitItems(entries){
       const it = {id: ++uid, key: rec.key, bought, custom: rec.custom};
       if (rec.name) it.name = rec.name;
       if (rec.shelf != null){ it.shelf = rec.shelf; it.shelfFrom = 'date'; }
+      if (rec.ripe === 'unripe') it.ripening = true;
       fridge.push(it);
       touchStanding(rec.key, rec.custom, rec.name);
+      if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       added++;
     }
   });
@@ -4777,7 +4821,7 @@ function commitItems(entries){
 // needs no date; otherwise the preview asks first.
 function addEntry(text){
   const entries = parseText(text);
-  if (entries.every(e => !entryNeeds(e))){
+  if (entries.every(e => !entryAsks(e))){
     document.getElementById('entry').value = '';
     commitItems(entries);
   } else {
@@ -5077,8 +5121,10 @@ function confirmReceipt(){
       const item = {id: ++uid, key: rec.key, bought, custom: rec.custom};
       if (rec.name) item.name = rec.name;
       if (rec.shelf != null){ item.shelf = rec.shelf; item.shelfFrom = 'date'; }
+      if (rec.ripe === 'unripe') item.ripening = true;
       fridge.push(item);
       touchStanding(rec.key, rec.custom, rec.name);
+      if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       added++;
     }
   });

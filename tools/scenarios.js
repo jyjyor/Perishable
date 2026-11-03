@@ -1077,13 +1077,11 @@ async function fkOnlyScenario(browser) {
   console.log('popover:', pop);
   if (!/^× Blackberries/.test(pop)) throw new Error('popover title should be the typed name');
   if (!pop.includes('FoodKeeper #253 “Berries (blackberries, boysenberries, currant)”')) throw new Error('popover source should name #253 and its title');
-  // A value FoodKeeper counts from ripeness asks for a date, with the hint.
-  await typeEntry(page, 'kiwi fruit, bananas');
-  const ripe = await readReview(page, '#voicePreview');
-  ripe.forEach(r => console.log(' ', r.name, '|', r.flag, '|', r.match));
-  expectEqual('ripeness flags', ripe.map(r => r.flag), ['needs date', 'needs date']);
-  if (!ripe[0].match.includes('about 6 days after it ripens') || !ripe[1].match.includes('about 3 days after it ripens'))
-    throw new Error('kiwi and bananas should carry their ripeness hints');
+  // A FoodKeeper-only food counted from ripeness offers Ripe / Not ripe yet.
+  await typeEntry(page, 'kiwi fruit');
+  const [kiwi] = await readReview(page, '#voicePreview');
+  console.log(' ', kiwi.name, '|', kiwi.flag || 'ok', '|', kiwi.match);
+  if (!kiwi.match.includes('Ripe') || !kiwi.match.includes('Not ripe yet')) throw new Error('kiwi should offer the ripeness choice');
   await page.click('#voiceDiscard');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -1209,19 +1207,18 @@ async function receiptNewItemsScenario(browser) {
   await page.waitForSelector('#receiptPreview .receipt-row');
   const rows = await readReview(page, '#receiptPreview');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
-  expectEqual('flags', rows.map(r => r.flag), ['', '', 'needs date', 'needs date', 'no match / choice', 'needs date', '']);
+  expectEqual('flags', rows.map(r => r.flag), ['', '', '', 'needs date', 'no match / choice', '', '']);
   expectEqual('scanned names, cleaned', rows.map(r => r.name),
     ['Strawberries', 'Rotisserie chicken', 'Avocados', 'Sour cream', 'Tortillas', 'Plums', 'Salmon']);
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
-  if (!rows[2].match.includes('about 4 days after it ripens')) throw new Error('avocados should carry the ripeness hint');
-  if (!rows[5].match.includes('FoodKeeper #266') || !rows[5].match.includes('about 5 days after it ripens')) throw new Error('plums should match FoodKeeper #266 and ask from ripeness');
+  if (!rows[2].match.includes('Not ripe yet')) throw new Error('avocados should offer the ripeness choice');
+  if (!rows[5].match.includes('FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FoodKeeper #266 and offer the ripeness choice');
   if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked');
 
-  await page.fill('#receiptPreview .entry-date[data-idx="2"]', await isoIn(page, 6));
+  await page.check('#receiptPreview .entry-ripe[data-idx="2"][value="unripe"]');
   await page.fill('#receiptPreview .entry-date[data-idx="3"]', await isoIn(page, 21));
   await page.selectOption('#receiptPreview .entry-pick[data-idx="4"]', 'flourtortilla');
   await page.fill('#receiptPreview .entry-date[data-idx="4"]', await isoIn(page, 30));
-  await page.fill('#receiptPreview .entry-date[data-idx="5"]', await isoIn(page, 8));
   await page.click('#receiptConfirm');
   await page.waitForTimeout(150);
   fs.unlinkSync(fixturePath);
@@ -1230,10 +1227,10 @@ async function receiptNewItemsScenario(browser) {
   console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
   expectRow(inv, 'Strawberries', '3 days');
   expectRow(inv, 'Rotisserie chicken', '4 days');
-  expectRow(inv, 'Avocados', '6 days');
+  expectRow(inv, 'Avocados', 'ripening');
   expectRow(inv, 'Sour cream', '21 days');
   expectRow(inv, 'Flour tortillas', '30 days');
-  expectRow(inv, 'Plums', '8 days');
+  expectRow(inv, 'Plums', '5 days');
   expectRow(inv, 'Salmon', '2 days');
 
   await page.waitForTimeout(900);
@@ -1242,7 +1239,7 @@ async function receiptNewItemsScenario(browser) {
   const popStraw = await popoverText(page, 'strawberry');
   console.log('popovers:', [popSour, popAvo, popStraw].map(t => t.replace(/^.*Shelf life/, '')).join(' / '));
   if (!popSour.includes('package date')) throw new Error('sour cream popover should say package date');
-  if (!popAvo.includes('about 4 days after it ripens')) throw new Error('avocado popover should carry its hint');
+  if (!popAvo.includes('ripening')) throw new Error('avocado popover should say ripening: ' + popAvo);
   if (!popStraw.includes('FoodKeeper #481')) throw new Error('strawberry popover should name #481');
 
   await page.click('[data-restock="sourcream"]');
@@ -1385,6 +1382,43 @@ async function editDateScenario(browser) {
   await page.context().close();
 }
 
+// Ripeness: "Ripe" starts the clock at purchase; "Not ripe yet" holds it
+// (no countdown, no decay) until "It's ripe". The last choice per food is
+// the next default, restock included. Pineapple counts from purchase.
+async function ripenessScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- RIPENESS: Ripe / Not ripe yet / It\'s ripe ---');
+  await typeEntry(page, 'bananas, pineapple');
+  if (!(await previewOpen(page))) throw new Error('bananas should open the preview for the ripeness choice');
+  expectEqual('first-time default', await page.$eval('#voicePreview .entry-ripe:checked', r => r.value), 'ripe');
+  expectEqual('pineapple asks nothing', await page.$$eval('#voicePreview .entry-ripe[data-idx="1"]', r => r.length), 0);
+  if (await page.$eval('#voiceAdd', b => b.disabled)) throw new Error('a ripeness choice has a default; Add should be enabled');
+  await page.check('#voicePreview .entry-ripe[data-idx="0"][value="unripe"]');
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  let inv = await readInventory(page);
+  console.log('after adding:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
+  expectRow(inv, 'Banana', 'ripening');
+  expectRow(inv, 'Pineapple', '7 days');
+  const later = await page.evaluate(() => { const b = fridge.find(i => i.key === 'banana'); return [leftAt(b, today() + 10), decayFraction(b, today() + 10)]; });
+  expectEqual('ten days on, still no countdown or decay', later, [3, 0]);
+
+  await typeEntry(page, 'bananas');
+  expectEqual('remembered default', await page.$eval('#voicePreview .entry-ripe:checked', r => r.value), 'unripe');
+  await page.click('#voiceDiscard');
+  await page.click('[data-restock="banana"]');
+  await page.waitForTimeout(100);
+  expectEqual('restock uses the remembered choice', await page.evaluate(() => fridge.find(i => i.key === 'banana').ripening), true);
+
+  await page.click('[data-ripe]');
+  await page.waitForTimeout(100);
+  inv = await readInventory(page);
+  console.log('after It\'s ripe:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
+  expectRow(inv, 'Banana', '3 days');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -1421,6 +1455,7 @@ async function editDateScenario(browser) {
   await mixedFridgeScenario(browser);
   await dishFixtureScenario(browser);
   await editDateScenario(browser);
+  await ripenessScenario(browser);
 
   await browser.close();
   server.close();
