@@ -2157,6 +2157,38 @@ async function moreDrinksScenario(browser) {
   await page.context().close();
 }
 
+// Bottle labels are blank and pale. A printed date on the day of purchase
+// (shelf 0) once gave decayFraction 0/0 = NaN, so the label fill read
+// "#NaNNaNNaN" and SVG painted it black. Every drink in FOODS, each form,
+// at shelf 0 and at 0/50/100% of a 10-day date, drawn in the real fridge:
+// no NaN anywhere in the markup, no black fill.
+async function drinkLabelScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- DRINK LABELS: never black ---');
+  const res = await page.evaluate(() => {
+    const d = today();
+    const keys = Object.keys(FOODS).filter(k => FOODS[k].cat === 'drinks');
+    const out = [];
+    keys.forEach(k => [[0, 0], [10, 0], [10, 5], [10, 10]].forEach(([shelf, ago]) => {
+      for (const opened of [false, true]) {
+        if (opened && FOODS[k].opens == null) continue;
+        fridge = [{id: uid++, key: k, bought: d - ago, shelf, shelfFrom: 'date', opened: opened || undefined}];
+        render();
+        const html = document.getElementById('rfUnit').innerHTML + document.getElementById('panelKitchen').innerHTML;
+        const black = [...document.querySelectorAll('#rfUnit svg :is(rect, path, ellipse, circle, polygon), #panelKitchen svg :is(rect, path, ellipse, circle, polygon)')]
+          .filter(e => e.closest('[data-rf-item]') && getComputedStyle(e).fill === 'rgb(0, 0, 0)' && !e.closest('clipPath')).length;
+        if (html.includes('NaN') || black) out.push([k, shelf, ago, opened, html.includes('NaN'), black]);
+      }
+    }));
+    return {n: keys.length, bad: out};
+  });
+  console.log('drinks checked:', res.n, 'bad:', JSON.stringify(res.bad));
+  if (res.n < 20) throw new Error('expected every drink in FOODS, got ' + res.n);
+  if (res.bad.length) throw new Error('drink drawn with NaN or a black fill: ' + JSON.stringify(res.bad));
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 /* ---------- the freezer ---------- */
 
 // Opens an item's popover (wherever it's drawn) and leaves it open.
@@ -2917,6 +2949,7 @@ async function pageStructureScenario(browser) {
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),
+    () => drinkLabelScenario(browser),
     () => freezeScenario(browser),
     () => thawScenario(browser),
     () => cantFreezeScenario(browser),

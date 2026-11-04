@@ -2538,7 +2538,10 @@ function decayFraction(it, day){
   if (keeps(it)) return 0;
   const from = it.decayFrom || 0;
   if (it.frozen) return from;
-  const f = Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
+  // A shelf of 0 (a printed date on the day it was bought) is at its date
+  // already: fully decayed, not 0/0 -- NaN turned the label fill black.
+  const shelf = shelfOf(it);
+  const f = shelf > 0 ? Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelf)) : 1;
   return from + (1 - from) * f;
 }
 
