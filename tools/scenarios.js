@@ -1971,6 +1971,81 @@ async function ripenessScenario(browser) {
   await page.context().close();
 }
 
+// Drinks: beer asks for the printed date (no FoodKeeper entry); "wine"
+// asks red or white, then opened or unopened, an opened bottle counting
+// FoodKeeper's after-opening 3 days and an unopened red its pantry 5
+// years; vodka keeps (#539, "Indefinitely"): no countdown, no decay, out
+// of the headline, the decay line and the at-risk count, still in All
+// items with Used and Tossed, and a toss still reaches the ledger. On
+// desktop they stand in the door bins.
+async function drinksScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- DRINKS: beer, wine, vodka ---');
+  await typeEntry(page, 'beer, wine, vodka');
+  let rows = await readReview(page, '#voicePreview');
+  console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match, r.options])));
+  expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
+  expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
+  if (!rows[2].match.includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539: ' + rows[2].match);
+  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 120));
+  await page.dispatchEvent('#voicePreview .entry-date[data-idx="0"]', 'change');
+  await page.selectOption('#voicePreview .entry-pick[data-idx="1"]', 'redwine');
+  await page.waitForTimeout(80);
+  rows = await readReview(page, '#voicePreview');
+  if (!rows[1].match.includes('opened or unopened?')) throw new Error('red wine should ask opened or unopened: ' + rows[1].match);
+  expectEqual('unopened by default', await page.$eval('#voicePreview .entry-open[data-idx="1"]:checked', r => r.value), 'unopened');
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  await typeEntry(page, 'white wine');
+  await page.check('#voicePreview .entry-open[data-idx="0"][value="opened"]');
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+
+  let inv = await readInventory(page);
+  console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
+  expectRow(inv, 'Beer', '120 days');
+  expectRow(inv, 'Red wine', '1825 days');
+  expectRow(inv, 'White wine', '3 days');
+  expectRow(inv, 'Vodka', 'keeps');
+  const st = await page.evaluate(() => {
+    const v = fridge.find(i => i.key === 'vodka');
+    return {
+      vodkaLater: [leftAt(v, today() + 4000), decayFraction(v, today() + 4000)],
+      whiteOpened: !!fridge.find(i => i.key === 'whitewine').opened,
+      headline: document.getElementById('headline').textContent,
+      dots: document.querySelectorAll('#chart .dot').length,
+      atRisk: rfAtRiskCount(today()),
+      vodkaLabel: getComputedStyle([...document.querySelectorAll('#fridgeShelf .fridge-label')].find(l => l.textContent.startsWith('Vodka'))).color,
+      remembered: standing.whitewine.open,
+    };
+  });
+  console.log(JSON.stringify(st));
+  expectEqual('vodka: no countdown, no decay', st.vodkaLater, [null, 0]); // Infinity serializes as null
+  expectEqual('the opened white is opened', st.whiteOpened, true);
+  expectEqual('remembered choice', st.remembered, 'opened');
+  expectEqual('decay line leaves vodka out', st.dots, 3);
+  expectEqual('headline counts the opened white, not vodka', st.headline, '1 thing becomes waste within 72 hours.');
+  expectEqual('at-risk count: the white', st.atRisk, 1);
+  expectEqual('vodka\'s label is plain ink, no urgency colour', st.vodkaLabel, 'rgb(92, 102, 100)');
+
+  // In the door bins on desktop.
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.waitForTimeout(300);
+  const inBins = await page.evaluate(() => [1, 2, 3].flatMap(n => [...document.querySelectorAll(`#rfDoorBin${n} [data-rf-item]`)])
+    .map(b => fridge.find(i => i.id === +b.dataset.rfItem).key).sort());
+  expectEqual('door bins (the opened white is on the eye-level shelf: urgency wins)', inBins, ['beer', 'redwine', 'vodka']);
+
+  // Vodka in All items: Tossed reaches the ledger like anything else.
+  const before = await page.evaluate(() => ledger.wasteG);
+  const vid = await page.evaluate(() => fridge.find(i => i.key === 'vodka').id);
+  await openRow(page);
+  await page.$eval(`[data-fridge-tossed="${vid}"]`, b => b.click());
+  await page.waitForTimeout(100);
+  expectEqual('tossed vodka is waste', await page.evaluate(b => ledger.wasteG - b, before), 750);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // The top bar's Add: scrolls to Add food and puts the cursor in the
 // entry field. On a phone the bar is a thin sticky strip, so Add stays
 // one tap away from anywhere on the page.
@@ -2252,6 +2327,7 @@ async function pageStructureScenario(browser) {
     () => addButtonScenario(browser),
     () => kitchenScenario(browser),
     () => pageStructureScenario(browser),
+    () => drinksScenario(browser),
   ];
   let passed = 0;
   const failed = [];

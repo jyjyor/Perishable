@@ -1091,7 +1091,29 @@ const FOODS = {
   // no refrigerator one, so the printed date governs. "Tortillas" alone
   // asks which of these two.
   flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, base:'#e6d8b6'},
-  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, base:'#e2c97e'}
+  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, base:'#e2c97e'},
+  // Drinks: bottles, kept in the door bins (RF_DOOR_KEYS). Glass doesn't
+  // rot, so they are drawn as packages (BOTTLES): the bottle keeps its own
+  // colour and outline, and decay shows only as small signs -- the blank
+  // label fading, and an opened wine darkening toward brown. One bottle
+  // each, by weight of what's in it.
+  // Beer: FoodKeeper has no entry for beer at all, so there is no number
+  // to count by. The date printed on the bottle governs, asked at entry
+  // like milk's (pkgDate), and there is no fk.
+  beer:          {en:'Beer',              aliases:['beers','lager','ale','pale ale','ipa','pilsner','stout','bottle of beer','beer bottle'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the bottle', g:355, usd:1.99, estPrice:true, cat:'drinks', shape:'beer', base:'#7a4520'},
+  // #462 Red wine and #463 White wine give no refrigerator figure for an
+  // unopened bottle, only the pantry one (red 3-5 years, white 1-2): an
+  // unopened bottle counts by that, the upper end. Opened is asked at
+  // entry ("Opened" / "Unopened", the last choice per wine the default);
+  // an opened bottle counts by Refrigerate_After_Opening, 1-3 days, from
+  // the day it was bought (opens). "Wine" alone asks which.
+  redwine:       {en:'Red wine',          aliases:['wine','wines','red wines','bottle of wine','bottle of red'], shelf:1825, opens:3, fk:462, g:750, usd:14.99, estPrice:true, cat:'drinks', shape:'redwine', base:'#2f5d43'},
+  whitewine:     {en:'White wine',        aliases:['wine','wines','white wines','bottle of wine','bottle of white'], shelf:730, opens:3, fk:463, g:750, usd:12.99, estPrice:true, cat:'drinks', shape:'whitewine', base:'#2f5d43'},
+  // #539 Hard liquors: pantry "Indefinitely", no other figure -- no
+  // spoilage limit, so vodka keeps: no countdown, no decay, and it stays
+  // out of the headline, the decay line and every at-risk count (keeps).
+  // It is still in All items, with Used and Tossed, and in the ledger.
+  vodka:         {en:'Vodka',             aliases:['bottle of vodka'], shelf:null, keeps:true, fk:539, g:750, usd:19.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'}
 };
 
 const DISHES = [
@@ -1789,14 +1811,24 @@ function boot(){
 const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : foodOf(it.key));
 // A record can carry its own shelf (days from purchase): a printed package
 // date, or a value pinned by a migration. Otherwise the food's own.
-const shelfOf = it => it.shelf != null ? it.shelf : food(it).shelf;
+// An opened bottle of wine counts by FoodKeeper's after-opening figure
+// (FOODS[key].opens), the one place that column is read.
+const shelfOf = it => it.shelf != null ? it.shelf
+  : it.opened && food(it).opens != null ? food(it).opens : food(it).shelf;
+// A food FoodKeeper gives no spoilage limit (vodka: FOODS[key].keeps)
+// keeps: no countdown and no decay, and it is left out of the headline,
+// the decay line and every at-risk count (counted()). A Use by the person
+// sets on it is a date like any other, and the countdown starts.
+const keeps = it => !!food(it).keeps && it.shelf == null;
+const counted = list => list.filter(it => !keeps(it));
 // The clock starts at purchase, or on the day a ripening item was marked
 // ripe (ripeOn). A ripening item has no countdown and no decay: it stays
 // at its full shelf life until then.
 const clockStart = it => it.ripeOn != null ? it.ripeOn : it.bought;
-const leftAt = (it, day) => it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
-// The day an item goes, as an epoch day, and as YYYY-MM-DD for a date input.
-const expiryOf = it => it.ripening ? today() + shelfOf(it) : clockStart(it) + shelfOf(it);
+const leftAt = (it, day) => keeps(it) ? Infinity : it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
+// The day an item goes, as an epoch day, and as YYYY-MM-DD for a date
+// input; null for one that keeps.
+const expiryOf = it => keeps(it) ? null : it.ripening ? today() + shelfOf(it) : clockStart(it) + shelfOf(it);
 function markRipe(id){
   const it = fridge.find(x => x.id === id);
   if (!it || !it.ripening) return;
@@ -1806,7 +1838,7 @@ function markRipe(id){
   render();
 }
 // What an item's days-left reads as, short: "ripening", "today", "3d".
-const shortLeft = (it, d) => it.ripening ? 'ripening' : d === 0 ? 'today' : d + 'd';
+const shortLeft = (it, d) => keeps(it) ? 'keeps' : it.ripening ? 'ripening' : d === 0 ? 'today' : d + 'd';
 const isoOfDay = day => new Date((day - DAY_OFFSET) * 86400000).toISOString().slice(0, 10);
 // A date the person sets is stored on the item (shelf counted from its
 // purchase) and never recomputed from FOODS -- the same as a package date
@@ -1839,7 +1871,7 @@ function setBought(id, iso){
   if (it.ripeOn != null && it.ripeOn < day) it.ripeOn = day;
   if (fixed) it.shelf = useBy - clockStart(it);
   it.crossed = false;
-  toast(food(it).en + ' bought ' + fmtDate(day) + (it.ripening ? '' : ', goes ' + fmtDate(expiryOf(it))));
+  toast(food(it).en + ' bought ' + fmtDate(day) + (it.ripening || keeps(it) ? '' : ', goes ' + fmtDate(expiryOf(it))));
   render();
 }
 const left = it => leftAt(it, today());
@@ -1861,6 +1893,7 @@ const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh
 // date. The fridge view's only decay math; everything else (darken, sag,
 // shrink, mold) is this one number driving continuous CSS/SVG output.
 function decayFraction(it, day){
+  if (keeps(it)) return 0;
   return Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
 }
 
@@ -1961,7 +1994,7 @@ const nearMiss = () => nearMissAt(fridge, today(), skipped);
 // last day is that day is named together ("Chicken salad and rotisserie
 // chicken are on their last day."). With none, the most urgent of the rest.
 function factAt(day, sourceFridge){
-  let pool = sourceFridge || fridge;
+  let pool = counted(sourceFridge || fridge);
   if (day > today()){
     const before = pool.length;
     pool = pool.filter(it => leftAt(it, today()) >= 0);
@@ -2067,8 +2100,8 @@ function render(){
 }
 
 function renderHeadline(){
-  const gone = fridge.filter(it => left(it) < 0).length;
-  const soon = fridge.filter(it => left(it) >= 0 && left(it) <= 3).length;
+  const gone = counted(fridge).filter(it => left(it) < 0).length;
+  const soon = counted(fridge).filter(it => left(it) >= 0 && left(it) <= 3).length;
   const h = document.getElementById('headline');
   const p = document.getElementById('subline');
 
@@ -2122,6 +2155,8 @@ const FRIDGE_CAT = {
   dairy:   {shape:'dairy',   darken:1.1, sag:0.5, mold:1.3, shrink:0.5, wrinkle:0.1},
   protein: {shape:'protein', darken:1.3, sag:0.9, mold:0.8, shrink:0.9, wrinkle:0.25},
   cooked:  {shape:'cooked',  darken:1.0, sag:0.7, mold:1.2, shrink:0.8, wrinkle:0.2},
+  // bottles: glass holds its shape and colour (see BOTTLES)
+  drinks:  {shape:'generic', darken:0,   sag:0,   mold:0,   shrink:0,   wrinkle:0},
   generic: {shape:'generic', darken:1.0, sag:1.0, mold:1.0, shrink:1.0, wrinkle:0.2}
 };
 function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
@@ -2129,7 +2164,11 @@ function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
 // cap-and-stem, not soft produce's plain circle) -- falling back to its
 // category's default silhouette otherwise. Decay weights always come from
 // cat regardless; shape is a silhouette-only override.
-function fridgeShapeOf(it){ return food(it).shape || fridgeCatOf(it).shape; }
+function fridgeShapeOf(it){
+  const shape = food(it).shape || fridgeCatOf(it).shape;
+  // an opened bottle is drawn open: its own shape, the wine showing
+  return it.opened && BOTTLES[shape + 'Open'] ? shape + 'Open' : shape;
+}
 
 // Hue is the item's days-left bucket, state(d) -- the same lookup COLOR
 // uses everywhere else on the page. Fraction only blends that hue toward
@@ -3971,7 +4010,111 @@ function packageSigns(shape, pts, fraction, size, seed){
   return {label, mold};
 }
 
+// ---- Bottles (the drinks). Glass doesn't rot: the bottle keeps its own
+// colour and rigid outline, and decay is only small signs on it -- the
+// blank label fading (as on a package), and in an opened wine the wine
+// itself darkening toward brown (natureColor), seen through the glass.
+// No brand, no lettering. Each profile is the bottle's half-width down its
+// height, in units of the drawing's size, from the lip to the base; the
+// shoulder eases between its two rows.
+const BOTTLE_PROFILES = {
+  // a brown long-neck: crown cap, narrow neck, sloped shoulder
+  beer:  {rows: [[0.13, 0.040], [0.155, 0.036], [0.40, 0.042], [0.56, 0.105], [0.92, 0.105]], label: [0.62, 0.82], cap: 'crown'},
+  // a dark green wine bottle: cork, long neck, high round shoulder
+  wine:  {rows: [[0.10, 0.040], [0.125, 0.035], [0.34, 0.038], [0.45, 0.125], [0.93, 0.125]], label: [0.58, 0.83], cap: 'cork'},
+  // a tall clear bottle: screw cap, short neck, square shoulder
+  vodka: {rows: [[0.11, 0.046], [0.22, 0.046], [0.29, 0.118], [0.94, 0.118]], label: [0.47, 0.78], cap: 'screw'}
+};
+// level: where the drink comes to (an opened wine has been poured from).
+// Wine colours lean away from the plum urgency colour, as reds do.
+const BOTTLES = {
+  beer:          {p: 'beer'},
+  redwine:       {p: 'wine', liquid: '#8f2d22', level: 0.40},
+  redwineOpen:   {p: 'wine', liquid: '#8f2d22', level: 0.62, open: true},
+  whitewine:     {p: 'wine', liquid: '#dcc45a', level: 0.40},
+  whitewineOpen: {p: 'wine', liquid: '#dcc45a', level: 0.62, open: true},
+  vodka:         {p: 'vodka', clear: true, level: 0.25}
+};
+Object.keys(BOTTLES).forEach(k => { PACKAGED_SHAPES[k] = 1; });
+const BOTTLE_LABEL_HEX = '#ECE8DC', BOTTLE_FADED_HEX = '#C4C2B8', CAP_HEX = '#B4B9B6', CORK_HEX = '#C9A46A';
+function bottleOutline(prof, s){
+  const ease = t => (1 - Math.cos(Math.PI * t)) / 2;
+  const right = [];
+  prof.rows.forEach(([y, h], i) => {
+    const prev = prof.rows[i - 1];
+    if (prev && Math.abs(h - prev[1]) > 0.02){
+      for (let k = 1; k < 8; k++){
+        const t = k / 8;
+        right.push([0.5 + prev[1] + (h - prev[1]) * ease(t), prev[0] + (y - prev[0]) * t]);
+      }
+    }
+    right.push([0.5 + h, y]);
+  });
+  // the base's corners, a little rounded
+  const [by, bh] = prof.rows[prof.rows.length - 1];
+  right.splice(right.length - 1, 1, [0.5 + bh, by - 0.015], [0.5 + bh - 0.01, by]);
+  const left = right.slice().reverse().map(([x, y]) => [1 - x, y]);
+  return [...right, ...left].map(([x, y]) => [x * s, y * s]);
+}
+function bottleMarkupLine(shape, color, fraction, size, seed){
+  const b = BOTTLES[shape], prof = BOTTLE_PROFILES[b.p], s = size;
+  const pts = bottleOutline(prof, s);
+  const d = polyD(pts);
+  const sw = Math.max(1, s * 0.008).toFixed(2), thin = Math.max(0.6, s * 0.005).toFixed(2);
+  const uid = 'bottle' + (fridgeShapeCounter++);
+  const [ly, lh] = [prof.rows[0][0], prof.rows[0][1]];
+  const body = prof.rows[prof.rows.length - 1], bh = body[1], baseY = body[0];
+  const shoulderEnd = prof.rows[prof.rows.length - 2][0];
+  const X = u => f1(u * s), rect = (x0, y0, x1, y1, fill, extra = '') =>
+    `<rect x="${X(x0)}" y="${X(y0)}" width="${X(x1 - x0)}" height="${X(y1 - y0)}" fill="${fill}" stroke="${INK_HEX}" stroke-width="${thin}"${extra}/>`;
+  // the drink, through the glass (none shows through a brown beer bottle)
+  let drink = '';
+  if (b.liquid){
+    const c = b.open ? natureColor(b.liquid, fraction) : b.liquid;
+    drink = `<rect x="0" y="${X(b.level)}" width="${s}" height="${X(1 - b.level)}" fill="${c}" fill-opacity=".62" clip-path="url(#${uid}-clip)"/>
+      <line x1="${X(0.5 - 0.13)}" y1="${X(b.level)}" x2="${X(0.5 + 0.13)}" y2="${X(b.level)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}" clip-path="url(#${uid}-clip)"/>`;
+  } else if (b.clear){
+    drink = `<line x1="${X(0.5 - 0.05)}" y1="${X(b.level)}" x2="${X(0.5 + 0.05)}" y2="${X(b.level)}" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}" clip-path="url(#${uid}-clip)"/>
+      <line x1="${X(0.5 - bh + 0.012)}" y1="${X(baseY - 0.03)}" x2="${X(0.5 + bh - 0.012)}" y2="${X(baseY - 0.03)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
+  }
+  // the blank label, fading as the fraction climbs (packageSigns' timing):
+  // paper dulling toward grey, its edge going faint -- opaque, so the
+  // drink never shows through it
+  const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
+  const [l0, l1] = prof.label;
+  const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
+    ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`);
+  // glass: a highlight down the body and the neck
+  const hi = (x, y0, y1) => `<line x1="${X(x)}" y1="${X(y0)}" x2="${X(x)}" y2="${X(y1)}" stroke="#ffffff" stroke-opacity="${b.clear ? '.8' : '.45'}" stroke-width="${Math.max(1, s * 0.012).toFixed(2)}" stroke-linecap="round"/>`;
+  const shine = hi(0.5 - bh * 0.62, shoulderEnd + 0.03, l0 - 0.025) + hi(0.5 - bh * 0.62, l1 + 0.02, baseY - 0.05)
+    + hi(0.5 - lh * 0.45, ly + 0.05, Math.min(shoulderEnd - 0.08, ly + 0.2));
+  // lip ring and closure
+  const lip = `<line x1="${X(0.5 - lh)}" y1="${X(ly + 0.025)}" x2="${X(0.5 + lh)}" y2="${X(ly + 0.025)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+  let cap = '';
+  if (prof.cap === 'crown'){
+    const w = lh * 1.12, y0 = ly - 0.03;
+    const teeth = [];
+    for (let k = 0; k <= 6; k++) teeth.push([0.5 - w + (2 * w) * k / 6, ly + (k % 2 ? 0.006 : 0)]);
+    cap = `<path d="M ${X(0.5 - w)} ${X(y0)} L ${X(0.5 + w)} ${X(y0)} ${teeth.slice().reverse().map(([x, y]) => 'L ' + X(x) + ' ' + X(y)).join(' ')} Z" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`;
+  } else if (prof.cap === 'cork'){
+    // pulled and pushed back in, once it's been opened
+    const lift = b.open ? 0.035 : 0, w = lh * 0.82;
+    cap = rect(0.5 - w, ly - 0.03 - lift, 0.5 + w, ly + 0.012, CORK_HEX)
+      + `<line x1="${X(0.5 - w * 0.4)}" y1="${X(ly - 0.018 - lift)}" x2="${X(0.5 - w * 0.4)}" y2="${X(ly - 0.006 - lift)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+  } else if (prof.cap === 'screw'){
+    const w = lh * 1.08, y0 = ly - 0.06;
+    cap = rect(0.5 - w, y0, 0.5 + w, ly + 0.012, CAP_HEX)
+      + [0.25, 0.5, 0.75].map(t => `<line x1="${X(0.5 - w + 2 * w * t)}" y1="${X(y0 + 0.01)}" x2="${X(0.5 - w + 2 * w * t)}" y2="${X(ly)}" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${thin}"/>`).join('');
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <path d="${d}" fill="${color}" fill-opacity="${b.clear ? '.55' : '1'}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+    <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
+    ${drink}${label}${shine}${lip}${cap}
+  </svg>`;
+}
+
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
+  if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed);
   if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed);
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
@@ -4092,7 +4235,8 @@ function buildShelfItem(p, day){
   // urgency lives only on the label now, via the same state()/COLOR
   // lookup the list and legend use.
   const color = foodBodyColor(it, frac);
-  const labelColor = COLOR[state(d)];
+  // something that keeps has no urgency: plain ink, not the fresh colour
+  const labelColor = keeps(it) ? 'var(--ink-2)' : COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = shortLeft(it, d);
@@ -4196,7 +4340,7 @@ function onCounter(it){
 function inFridgeAt(it, day){ return leftAt(it, day) < 0 || !onCounter(it); }
 
 function rfAtRiskCount(day){
-  return fridge.filter(it => inFridgeAt(it, day)).filter(it => {
+  return counted(fridge).filter(it => inFridgeAt(it, day)).filter(it => {
     const d = leftAt(it, day);
     return d >= 0 && state(d) !== 'fresh';
   }).length;
@@ -4218,9 +4362,9 @@ const RF = {
   upperY: 280, eyeY: 418, edge: 12, crispTop: 476, crispBaseY: 498,
   bins: [60, 190, 320]
 };
-// Carton, tub and box items live in the door bins -- unless urgency has
+// Carton, tub, box and bottle items live in the door bins -- unless urgency has
 // already put them on the eye-level shelf, which always wins.
-const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt']);
+const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt', 'beer', 'redwine', 'whitewine', 'vodka']);
 // Must match the phone breakpoint in the .rf CSS, where the door only
 // opens to square and its bins can't be seen.
 const RF_PHONE = window.matchMedia('(max-width:720px)');
@@ -4386,11 +4530,16 @@ function rfDrawCabinet(){
 // today item is the largest thing in the drawing and a 28-day carrot one
 // of the smallest -- whatever their category. Gone items share one size.
 // In design px at the unit's full 600px width.
+// A bottle's drawing is a narrow upright sliver of its square, so its
+// square is drawn larger (BOTTLE_BOX) to carry the same visual weight as
+// a round fruit or a carton at the same urgency.
+const BOTTLE_BOX = 1.6;
 function rfUrgencyPx(it, day){
   const d = leftAt(it, day);
-  if (d < 0) return 82;
+  const k = BOTTLES[fridgeShapeOf(it)] ? BOTTLE_BOX : 1;
+  if (d < 0) return Math.round(82 * k);
   const frontness = 1 - pos(Math.max(0, d)) / 100;
-  return Math.round(60 + frontness * 110);
+  return Math.round((60 + frontness * 110) * k);
 }
 
 // Fits a row into the shelf's width: spaced out when there's room,
@@ -4586,18 +4735,19 @@ function rfShowPopover(id, anchorEl){
   const day = today();
   const f = food(it);
   const d = leftAt(it, day);
-  const leftLabel = it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
+  const leftLabel = keeps(it) ? 'keeps — no countdown' : it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
     : d === 0 ? 'last day' : `${d} ${d === 1 ? 'day' : 'days'} left`;
-  const statusName = {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
+  const statusName = keeps(it) ? 'Keeps' : {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
+  const statusColor = keeps(it) ? 'var(--ink-2)' : COLOR[state(d)];
   const pop = document.getElementById('rfPopover');
   pop.innerHTML = `<button type="button" class="rf-pop-close" aria-label="Close">×</button>
     <span class="rf-pop-name">${f.en}</span>
     <label class="rf-pop-row"><span>Bought</span><input type="date" class="rf-pop-bought" value="${isoOfDay(it.bought)}" max="${isoOfDay(it.shelfFrom === 'date' && !it.ripening ? Math.min(day, expiryOf(it)) : day)}"></label>
-    <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${COLOR[state(d)]}">${statusName}</span></div>
+    <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${statusColor}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <div class="rf-pop-row"><span>Est. weight</span><span class="rf-pop-weight">${estWeightOf(it)}</span></div>
-    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
+    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening || keeps(it) ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
@@ -4889,7 +5039,7 @@ function renderChart(){
   const PAST_W = phone ? 34 : 48, GAP = 10, RIGHT = 4, ROW = phone ? 36 : 21, LINE = 15;
   const x0 = PAST_W + GAP, span = W - x0 - RIGHT;
   const xAt = d => x0 + pos(d) / 100 * span;
-  const items = fridge.slice().sort((a, b) => left(a) - left(b));
+  const items = counted(fridge).sort((a, b) => left(a) - left(b));
   const add = (cls, style, html = '') => {
     const el = document.createElement('div');
     el.className = cls;
@@ -5518,7 +5668,8 @@ const MEDIAN_MIN = 3;
 const CAT_MEDIANS = (() => {
   const median = xs => { const v = xs.slice().sort((a, b) => a - b), m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   const of = list => ({g: median(list.map(f => f.g)), usd: +median(list.map(f => f.usd)).toFixed(2), n: list.length});
-  const all = Object.values(FOODS);
+  // drinks are bottles by liquid weight, not food: out of the medians
+  const all = Object.values(FOODS).filter(f => f.cat !== 'drinks');
   const out = {all: of(all)};
   for (const cat of Object.keys(FALLBACK_BASE)){
     const list = all.filter(f => f.cat === cat);
@@ -5566,7 +5717,7 @@ const entryLabel = (key, raw) => FOODS[key] ? FOODS[key].en : cleanName(raw);
 // FoodKeeper item without days, or anything unmatched, needs a date.
 function needsDate(key){
   const f = key && foodOf(key);
-  return !f || !!f.pkgDate || f.shelf == null;
+  return !f || (!f.keeps && (!!f.pkgDate || f.shelf == null));
 }
 function sourceOf(key){
   const f = foodOf(key);
@@ -5575,6 +5726,8 @@ function sourceOf(key){
 // Where an item's shelf life comes from, for the popover.
 function shelfSourceOf(it){
   const f = food(it);
+  if (keeps(it)) return 'keeps: FoodKeeper #' + f.fk + ' gives no limit (“Indefinitely”)';
+  if (it.opened && it.shelf == null && f.opens != null) return 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening';
   if (it.ripening) return 'ripening: ' + (f.fk != null ? 'FoodKeeper #' + f.fk : 'estimated') + ' counts ' + dayCount(f.shelf) + ' from when it is ripe';
   if (it.shelf != null && it.shelfFrom === 'date')
     return (f.pkgDate ? 'package date' : 'date given at entry')
@@ -5608,8 +5761,11 @@ function rematchEntry(e, name){
 // "unripe", defaulting to the person's last choice for that food.
 const ripensKey = key => !!(key && foodOf(key) && foodOf(key).ripens);
 const lastRipeChoice = key => (standing[key] && standing[key].ripe) || 'ripe';
+// A wine: "Opened" or "Unopened" at entry, the last choice the default.
+const opensKey = key => !!(key && foodOf(key) && foodOf(key).opens != null);
+const lastOpenChoice = key => (standing[key] && standing[key].open) || 'unopened';
 // Whether typed entry has to stop at the preview for this entry.
-const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key);
+const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key) || opensKey(e.key);
 // What still stands between an entry and the fridge; null when it can go in.
 function entryNeeds(e){
   if (!e.key && e.options.length > 1) return 'choice';
@@ -5620,7 +5776,8 @@ function entryNeeds(e){
 function entryRecord(e, bought){
   const shelf = needsDate(e.key) ? parseReceiptDate(e.date) - bought : null;
   if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
-    ripe: ripensKey(e.key) ? (e.ripe || lastRipeChoice(e.key)) : null};
+    ripe: ripensKey(e.key) ? (e.ripe || lastRipeChoice(e.key)) : null,
+    open: opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null};
   const name = e.label.trim() || e.raw || 'Item';
   const m = CAT_MEDIANS.all;
   return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf};
@@ -5653,6 +5810,12 @@ function entryMatchMarkup(e, i, kind){
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>counts from ripeness:</span>' + opt('ripe', 'Ripe') + opt('unripe', 'Not ripe yet'));
   }
+  if (opensKey(e.key)){
+    const choice = e.open || lastOpenChoice(e.key);
+    const opt = (v, text) => '<label><input type="radio" class="entry-open" name="open-' + kind + '-' + i + '" data-kind="' + kind +
+      '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
+    bits.push('<span>opened or unopened?</span>' + opt('unopened', 'Unopened') + opt('opened', 'Opened'));
+  }
   if (need !== 'choice' && needsDate(e.key)){
     if (need === 'pkgdate') bits.push('<span class="why">needs the date printed on the package</span>');
     bits.push('<label>' + (e.key ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
@@ -5675,6 +5838,9 @@ function wireEntryControls(box, entries, rerender){
   });
   box.querySelectorAll('.entry-ripe').forEach(r => {
     r.onchange = () => { entries[+r.dataset.idx].ripe = r.value; rerender(); };
+  });
+  box.querySelectorAll('.entry-open').forEach(r => {
+    r.onchange = () => { entries[+r.dataset.idx].open = r.value; rerender(); };
   });
   box.querySelectorAll('.entry-date').forEach(inp => {
     inp.onchange = () => { entries[+inp.dataset.idx].date = inp.value; rerender(); };
@@ -5716,6 +5882,7 @@ function restock(key, shelf){
     existing.crossed = false;
     delete existing.ripeOn;
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
+    if (opensKey(key) && lastOpenChoice(key) === 'opened') existing.opened = true; else delete existing.opened;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
     delete existing.shelfFrom;
     if (shelf != null){ existing.shelf = shelf; existing.shelfFrom = 'date'; }
@@ -5723,6 +5890,7 @@ function restock(key, shelf){
     const it = {id:++uid, key, bought:today(), custom: entry.custom || null};
     if (entry.name) it.name = entry.name;
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') it.ripening = true;
+    if (opensKey(key) && lastOpenChoice(key) === 'opened') it.opened = true;
     if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
     fridge.push(it);
     if (fridge.some(x => x.key === key && left(x) < 0)) msg += ' · the old one stays in the drawer until you toss it';
@@ -5835,9 +6003,11 @@ function commitItems(entries){
       if (rec.name) it.name = rec.name;
       if (rec.shelf != null){ it.shelf = rec.shelf; it.shelfFrom = 'date'; }
       if (rec.ripe === 'unripe') it.ripening = true;
+      if (rec.open === 'opened') it.opened = true;
       fridge.push(it);
       touchStanding(rec.key, rec.custom, rec.name);
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
+      if (rec.open) standing[rec.key].open = rec.open;
       added++;
     }
   });
@@ -6160,9 +6330,11 @@ function confirmReceipt(){
       if (rec.name) item.name = rec.name;
       if (rec.shelf != null){ item.shelf = rec.shelf; item.shelfFrom = 'date'; }
       if (rec.ripe === 'unripe') item.ripening = true;
+      if (rec.open === 'opened') item.opened = true;
       fridge.push(item);
       touchStanding(rec.key, rec.custom, rec.name);
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
+      if (rec.open) standing[rec.key].open = rec.open;
       added++;
     }
   });

@@ -19,8 +19,13 @@ consumer food app.
   foodkeeper.json, unmodified; tools/data/README.md says where it came
   from). Every FOODS entry carries its FoodKeeper id as fk. The rule:
   1. Column: refrigerator, counted from purchase -- DOP_Refrigerate, else
-     Refrigerate. Never the after-opening or after-thawing values; the app
-     counts from purchase and has no "opened" state.
+     Refrigerate. Never the after-thawing values, and never the
+     after-opening ones except for wine: entry asks "Opened" or
+     "Unopened" (the last choice per wine the default), and an opened
+     bottle counts Refrigerate_After_Opening from purchase (FOODS[key].
+     opens, it.opened). Unopened wine has no refrigerator figure, only a
+     pantry one, and counts by that (red #462 5 years, white #463 2).
+     Nothing else has an "opened" state.
   2. Foods usually kept out of the fridge use the pantry value instead
      (DOP_Pantry, else Pantry): bananas, potatoes, sweet potatoes, whole
      onions, garlic, tomatoes, winter squash, whole spaghetti squash,
@@ -43,7 +48,14 @@ consumer food app.
        it and in its note (figs, persimmons, Asian pears). With no
        credible source it stays out.
      - Anything that matches nothing needs a date before it can be saved.
-       There is no default shelf life.
+       There is no default shelf life. Beer is in FOODS for its drawing
+       and the door bins, but FoodKeeper has no beer entry, so it has no
+       fk and always asks for the printed date (pkgDate).
+     - No spoilage limit at all (FoodKeeper "Indefinitely": vodka, #539
+       Hard liquors): keeps:true. No countdown and no decay; left out of
+       the headline, the decay line and every at-risk count (counted()),
+       but in All items ("keeps", plain ink) with Used and Tossed, and in
+       the waste ledger. A Use by set in the popover starts a countdown.
      - A refrigerator number FoodKeeper says "applies to ripe fruit"
        counts from ripeness, not purchase (avocados, bananas, peaches,
        pears, plums, kiwi, apricots...; ripens:true). At entry the
@@ -162,7 +174,14 @@ Packaging is the exception (PACKAGED_SHAPES: the dairy tub, the deli
 container, the sealed packet, the carton): the food is out of sight, so
 the package keeps its own colour and rigid outline, and decay shows only
 in small signs on it -- a bulging lid, a little mold at the seam, a
-label that fades.
+label that fades. Bottles (the drinks category: BOTTLES, BOTTLE_PROFILES
+-- a brown long-neck beer with a crown cap, a dark green wine bottle with
+a cork, a tall clear vodka bottle with a screw cap) are packages too: the
+glass never changes, a blank plain label fades, and an opened wine shows
+its wine darkening toward brown through the glass. No brands, no
+lettering. Their square is drawn larger in the illustrated fridge
+(BOTTLE_BOX), since a bottle is a narrow sliver of it; they live in the
+door bins (RF_DOOR_KEYS) unless urgency puts them at eye level.
 
 Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
