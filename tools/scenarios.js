@@ -1979,8 +1979,11 @@ async function ripenessScenario(browser) {
 // items with Used and Tossed, and a toss still reaches the ledger.
 // Placement follows the shelf-life column: refrigerated drinks (beer, an
 // opened wine) in the door bins on desktop; room-temperature ones
-// (vodka, unopened wine) upright on the counter behind the bowl, never
-// in it. Guava (#262) counts from ripeness.
+// (spirits, unopened wine) upright on the counter behind the bowl, never
+// in it. Every spirit name keeps under #539; cream liqueur is #540 and
+// asks nothing; canned beer, hard cider and hard seltzer ask for the
+// printed date. Guava (#262) counts from ripeness.
+const FOODS_DRINK = new Set(['beer', 'cannedbeer', 'hardcider', 'hardseltzer', 'redwine', 'whitewine', 'creamliqueur', 'vodka', 'gin', 'rum', 'tequila', 'mezcal', 'baijiu', 'liquor', 'whiskey', 'bourbon', 'scotch', 'brandy', 'cognac']);
 async function drinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- DRINKS: beer, wine, vodka; guava ---');
@@ -2047,7 +2050,7 @@ async function drinksScenario(browser) {
   console.log('placed:', JSON.stringify(placed));
   expectEqual('door bins: beer (the opened white is on the eye-level shelf: urgency wins)', placed.bins, ['beer']);
   expectEqual('room-temperature drinks stand on the counter', placed.counter, ['redwine', 'vodka']);
-  expectEqual('no drink in the bowl', placed.bowl.filter(k => ['beer', 'redwine', 'whitewine', 'vodka'].includes(k)), []);
+  expectEqual('no drink in the bowl', placed.bowl.filter(k => FOODS_DRINK.has(k)), []);
 
   // Vodka in All items: Tossed reaches the ledger like anything else.
   const before = await page.evaluate(() => ledger.wasteG);
@@ -2056,6 +2059,18 @@ async function drinksScenario(browser) {
   await page.$eval(`[data-fridge-tossed="${vid}"]`, b => b.click());
   await page.waitForTimeout(100);
   expectEqual('tossed vodka is waste', await page.evaluate(b => ledger.wasteG - b, before), 750);
+
+  // The rest of the drinks: what each name matches, and what it asks.
+  await typeEntry(page, 'whisky, bourbon, scotch, rum, gin, tequila, mezcal, brandy, cognac, baijiu, liquor, spirits, cream liqueur, canned beer, hard cider, hard seltzer');
+  rows = await readReview(page, '#voicePreview');
+  const got = rows.map(r => [r.name, r.flag, (r.match.match(/FoodKeeper #\d+/) || ['none'])[0]]);
+  console.log(JSON.stringify(got));
+  const keepsNames = ['Whiskey', 'Bourbon', 'Scotch', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Baijiu', 'Liquor', 'Liquor'];
+  expectEqual('spirits: #539, nothing asked', got.slice(0, 12), keepsNames.map(n => [n, '', 'FoodKeeper #539']));
+  expectEqual('cream liqueur: #540, nothing asked', got[12], ['Cream liqueur', '', 'FoodKeeper #540']);
+  expectEqual('cans and cider: the printed date', got.slice(13).map(r => r[1]), ['needs date', 'needs date', 'needs date']);
+  const asks = await page.$$eval('#voicePreview .entry-open', r => r.length);
+  expectEqual('no opened question for any of these', asks, 0);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }

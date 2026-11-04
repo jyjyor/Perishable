@@ -1,11 +1,16 @@
 #!/usr/bin/env node
-// Drinks and guava study: the bottles (beer, red and white wine unopened
-// and opened, vodka) and guava, each at 0/50/100% of its shelf life at
-// study size, then fresh at the size the All items row gives it. Same
+// Drinks and guava study: every bottle form (BOTTLE_PROFILES) through a
+// drink that uses it -- beer, canned beer, red and white wine unopened and
+// opened, vodka, whiskey, cream liqueur -- and guava, each at 0/50/100% of
+// its shelf life at study size, then fresh at the size the All items row
+// gives it; then every drink in FOODS, fresh, side by side. Same
 // methodology as fruit-study.js: real fridge-item objects through
 // leftAt()/decayFraction() and foodShapeMarkupLine -- no separate drawing
-// path. Beer has no FoodKeeper number, so it is given a printed date (as
-// at entry); vodka keeps, so it never decays and every cell is the same.
+// path. Beer and cans have no FoodKeeper number, so they are given a
+// printed date (as at entry); spirits keep, so every cell is the same.
+// The sparkling, sake and small green forms have no FOODS entry yet
+// (FoodKeeper doesn't list those drinks): drawn straight from
+// foodShapeMarkupLine at each fraction, marked "form only".
 //
 // Run: node tools/drinks-guava-study.js
 // Output: tools/screenshots/drinks-guava-study.png
@@ -52,15 +57,26 @@ function serve() {
     const STUDY = 150;
     // [title, record extras]: what entry would store for each.
     const ROWS = [
-      ['Beer · printed date 120 days', {key: 'beer', shelf: 120, shelfFrom: 'date'}],
-      ['Red wine · unopened', {key: 'redwine'}],
-      ['Red wine · opened', {key: 'redwine', opened: true}],
-      ['White wine · opened', {key: 'whitewine', opened: true}],
-      ['Vodka · keeps', {key: 'vodka'}],
+      ['Long-neck · Beer · printed date 120 days', {key: 'beer', shelf: 120, shelfFrom: 'date'}],
+      ['Can · Canned beer · printed date 120 days', {key: 'cannedbeer', shelf: 120, shelfFrom: 'date'}],
+      ['Still wine · Red wine · unopened', {key: 'redwine'}],
+      ['Still wine · Red wine · opened', {key: 'redwine', opened: true}],
+      ['Still wine · White wine · opened', {key: 'whitewine', opened: true}],
+      ['Tall spirit · Vodka · keeps', {key: 'vodka'}],
+      ['Square · Whiskey · keeps', {key: 'whiskey'}],
+      ['Square · Cream liqueur', {key: 'creamliqueur'}],
+      ['Sparkling · form only', {form: 'sparkling'}],
+      ['Sake · form only', {form: 'sake'}],
+      ['Small green · form only', {form: 'smallgreen'}],
       ['Guava · ripe', {key: 'guava'}],
     ];
     let uid = 31000;
     function cellAt(extra, targetFraction, shelfSize){
+      if (extra.form){
+        const size = shelfSize ? 44 : STUDY;
+        const svg = foodShapeMarkupLine(extra.form, '#dbe6e8', targetFraction, 0, 0, 0, size, uid++);
+        return {svg, size, label: shelfSize ? `shelf size · ${size}px` : `${Math.round(targetFraction * 100)}% (drawn directly)`};
+      }
       const probe = {id: 0, bought: day, ...extra};
       const shelf = keeps(probe) ? 0 : shelfOf(probe);
       const age = shelfSize ? 0 : Math.round(targetFraction * shelf);
@@ -77,19 +93,30 @@ function serve() {
         <div style="height:${colSize}px;width:100%;display:flex;align-items:flex-end;justify-content:center">
           <div style="width:${cell.size}px;height:${cell.size}px">${cell.svg}</div></div>
         <div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;letter-spacing:.03em;color:#5C6664;text-align:center">${cell.label}</div></div>`;
+    const head = extra => extra.form ? 'no FOODS entry' : `${fridgeShapeOf({id: 0, bought: day, ...extra})} · ${shelfSourceOf({id: 0, bought: day, ...extra})}`;
     const card = ([title, extra]) => `<div style="border:1px solid #B5BFBB;background:#E6EAE8;padding:12px 14px">
-        <div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8B9491;margin-bottom:8px">${title} · ${fridgeShapeOf({id: 0, bought: day, ...extra})} · ${shelfSourceOf({id: 0, bought: day, ...extra})}</div>
+        <div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8B9491;margin-bottom:8px">${title} · ${head(extra)}</div>
         <div style="display:flex;gap:10px;align-items:flex-end">
           ${cellMarkup(cellAt(extra, 0), STUDY)}${cellMarkup(cellAt(extra, 0.5), STUDY)}${cellMarkup(cellAt(extra, 1), STUDY)}
           <div style="width:1px;align-self:stretch;background:#B5BFBB"></div>${cellMarkup(cellAt(extra, 0, true), 174)}
         </div></div>`;
 
+    const DRINKS = Object.keys(FOODS).filter(k => FOODS[k].cat === 'drinks');
+    const drinkCell = key => {
+      const it = {id: uid++, key, bought: day, ...(FOODS[key].pkgDate ? {shelf: 120, shelfFrom: 'date'} : {})};
+      const cat = fridgeCatOf(it);
+      const svg = foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 120, it.id);
+      return cellMarkup({svg, size: 120, label: FOODS[key].en}, 120).replace(/width:136px/, 'width:96px');
+    };
     const container = document.createElement('div');
     container.id = 'drinksStudy';
     container.style.cssText = 'position:absolute;top:0;left:0;background:#DCE1DF;padding:24px;z-index:9999;width:max-content';
     container.innerHTML = `<div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#141817;margin-bottom:14px">
         Drinks and guava -- 0/50/100% of shelf life at study size, then fresh at its own size on the All items shelf</div>
-      <div style="display:grid;grid-template-columns:repeat(2, max-content);gap:14px">${ROWS.map(card).join('')}</div>`;
+      <div style="display:grid;grid-template-columns:repeat(2, max-content);gap:14px">${ROWS.map(card).join('')}</div>
+      <div style="border:1px solid #B5BFBB;background:#E6EAE8;padding:12px 14px;margin-top:14px">
+        <div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8B9491;margin-bottom:8px">Every drink in FOODS, fresh, at 120px</div>
+        <div style="display:flex;gap:4px;align-items:flex-end;flex-wrap:wrap">${DRINKS.map(drinkCell).join('')}</div></div>`;
     document.body.appendChild(container);
     return {rows: ROWS.length};
   });

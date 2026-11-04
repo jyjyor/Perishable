@@ -48,11 +48,16 @@ consumer food app.
        it and in its note (figs, persimmons, Asian pears). With no
        credible source it stays out.
      - Anything that matches nothing needs a date before it can be saved.
-       There is no default shelf life. Beer is in FOODS for its drawing
-       and the door bins, but FoodKeeper has no beer entry, so it has no
-       fk and always asks for the printed date (pkgDate).
-     - No spoilage limit at all (FoodKeeper "Indefinitely": vodka, #539
-       Hard liquors): keeps:true. No countdown and no decay; left out of
+       There is no default shelf life. Beer, canned beer, hard cider and
+       hard seltzer are in FOODS for their drawings and placement, but
+       FoodKeeper lists none of them (#662 Apple cider is fresh juice),
+       so they have no fk and always ask for the printed date (pkgDate).
+       Cream liqueur is #540 (unopened, pantry 8 months, nothing asked).
+       Sparkling wine, rosé, sake, vermouth and soju have no FoodKeeper
+       entry and stay out of FOODS until decided.
+     - No spoilage limit at all (FoodKeeper "Indefinitely": #539 Hard
+       liquors -- vodka, gin, rum, tequila, mezcal, baijiu, whiskey,
+       bourbon, scotch, brandy, cognac, plain liquor/spirits): keeps:true. No countdown and no decay; left out of
        the headline, the decay line and every at-risk count (counted()),
        but in All items ("keeps", plain ink) with Used and Tossed, and in
        the waste ledger. A Use by set in the popover starts a countdown.
@@ -174,13 +179,14 @@ Packaging is the exception (PACKAGED_SHAPES: the dairy tub, the deli
 container, the sealed packet, the carton): the food is out of sight, so
 the package keeps its own colour and rigid outline, and decay shows only
 in small signs on it -- a bulging lid, a little mold at the seam, a
-label that fades. Bottles (the drinks category: BOTTLES, BOTTLE_PROFILES
--- a brown long-neck beer with a crown cap, a dark green wine bottle with
-a cork, a tall clear vodka bottle with a screw cap) are packages too: the
-glass never changes, a blank plain label fades, and an opened wine shows
-its wine darkening toward brown through the glass. No brands, no
-lettering. Their square is drawn larger in the illustrated fridge
-(BOTTLE_BOX), since a bottle is a narrow sliver of it. Refrigerated
+label that fades. Bottles and cans (the drinks category) are packages
+too, drawn from a few shared forms (BOTTLE_PROFILES: long-neck, can,
+still wine, sparkling with foil and wire cage, tall spirit, short square
+whiskey, small green, sake), told apart by glass and drink colour
+(BOTTLES): the glass never changes, a blank plain label fades, and an
+opened wine shows its wine darkening toward brown through the glass. No
+brands, no lettering. Their square is drawn larger in the illustrated
+fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it. Refrigerated
 drinks live in the door bins (toDoorBin) unless urgency puts them at eye
 level; room-temperature ones stand on the kitchen counter (see Kitchen).
 
@@ -241,10 +247,10 @@ store:'pantry' foods -- potatoes, onions, garlic, bread, whole melons,
 coconut -- plus bananas) and anything marked "Not ripe yet"; those leave
 the fridge shelves. A ripe avocado goes in the fridge; only an unripe one
 is in the bowl. Drinks never go in the bowl: one counted by a pantry
-figure (store:'pantry' -- vodka, unopened wine; drinkOnCounter) stands
-upright at the back of the counter behind the bowl; one counted in the
-refrigerator (beer, an opened wine) goes in the fridge's door bins, or
-the upper shelf on a phone. Counter food that tonight's dish uses is on the board,
+figure (store:'pantry' -- spirits, unopened wine, cream liqueur;
+drinkOnCounter) stands upright at the back of the counter behind the
+bowl; one counted in the refrigerator (beer, cans, an opened wine) goes
+in the fridge's door bins, or the upper shelf on a phone. Counter food that tonight's dish uses is on the board,
 not also in the bowl. More than three in the bowl (two on a phone) heap
 in two rows, drawn larger on a phone. On a phone the peek beside the
 fridge is the counter's edge: the kitchen's text is hidden (opacity)
