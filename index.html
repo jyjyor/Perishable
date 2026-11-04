@@ -444,20 +444,6 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 @media (max-width:720px) and (prefers-reduced-motion:reduce){
   #panelKitchen .kc-captions,#panelKitchen .projected{transition:none}
 }
-/* Wide screens: Fridge and Kitchen side by side, top-aligned, the fridge
-   first and the kitchen to its right beside the open door -- no tabs, no
-   swipe. The tab strip and the swipe area step out of the layout
-   (display:contents), so each tab becomes its panel's title over its own
-   column; initRooms drops the tab roles and the scroll handling here. */
-@media (min-width:1000px){
-  .rooms{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:24px;align-items:start}
-  .room-tabs,.rooms-track{display:contents}
-  .room-tab,.room-tab:hover{grid-row:1;justify-self:start;margin-top:30px;color:var(--ink);border-bottom-color:transparent;cursor:default}
-  #tabFridge,#panelFridge{grid-column:1}
-  #tabKitchen,#panelKitchen{grid-column:2}
-  .room{grid-row:2}
-  .rf-stage{justify-content:flex-start}
-}
 
 /* The counter: an illustrated object like the fridge, so it gets its own
    few flat tones, scoped to .kc-unit and never used elsewhere -- a pale
@@ -6138,19 +6124,13 @@ function renderKitchen(){
 
 // Tabs and the swipe area, kept in sync both ways: a swipe moves the
 // underline, a tab scrolls to its panel. Always opens on Fridge.
-// Below SIDE_BY_SIDE: tabs and one swipe area. At it and up: both panels
-// side by side (CSS), so no tabs -- each tab is its panel's title, a
-// heading, and nothing scrolls sideways.
-const SIDE_BY_SIDE = window.matchMedia('(min-width:1000px)');
 function initRooms(){
   const track = document.getElementById('roomsTrack');
-  const tablist = document.getElementById('roomTabs');
-  const tabs = [...document.querySelectorAll('#roomTabs .room-tab')];
+  const tabs = [...document.querySelectorAll('#roomTabs [role="tab"]')];
   const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  const side = () => SIDE_BY_SIDE.matches;
   let active = 0;
-  const fit = () => { track.style.height = side() ? '' : panels[active].offsetHeight + 'px'; };
+  const fit = () => { track.style.height = panels[active].offsetHeight + 'px'; };
   const mark = i => {
     active = i;
     tabs.forEach((t, j) => { t.setAttribute('aria-selected', j === i ? 'true' : 'false'); t.tabIndex = j === i ? 0 : -1; });
@@ -6163,9 +6143,8 @@ function initRooms(){
     fit();
     track.scrollTo({left: offsetOf(i), behavior: reduce.matches ? 'auto' : 'smooth'});
   };
-  tabs.forEach((t, i) => { t.onclick = () => { if (!side()) select(i); }; });
-  tablist.addEventListener('keydown', e => {
-    if (side()) return;
+  tabs.forEach((t, i) => { t.onclick = () => select(i); });
+  document.getElementById('roomTabs').addEventListener('keydown', e => {
     const i = tabs.indexOf(document.activeElement);
     if (i < 0) return;
     const n = {ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1}[e.key];
@@ -6175,7 +6154,6 @@ function initRooms(){
   });
   let settle;
   track.addEventListener('scroll', () => {
-    if (side()) return;
     if (track.scrollTop) track.scrollTop = 0; // a panel is never scrolled vertically inside the area
     const step = offsetOf(1) || 1;
     const i = Math.max(0, Math.min(tabs.length - 1, Math.round(track.scrollLeft / step)));
@@ -6184,30 +6162,14 @@ function initRooms(){
     settle = setTimeout(fit, 120);
   }, {passive: true});
   // Reaching something in the other panel by keyboard moves there too.
-  panels.forEach((p, i) => p.addEventListener('focusin', () => { if (!side() && i !== active) select(i); }));
+  panels.forEach((p, i) => p.addEventListener('focusin', () => { if (i !== active) select(i); }));
   // A resize keeps the active panel in place, not a scroll offset.
-  window.addEventListener('resize', () => { if (side()) return; track.scrollTo({left: offsetOf(active), behavior: 'instant'}); fit(); });
+  window.addEventListener('resize', () => { track.scrollTo({left: offsetOf(active), behavior: 'instant'}); fit(); });
   new ResizeObserver(fit).observe(panels[0]);
   new ResizeObserver(fit).observe(panels[1]);
-  // Side by side, the tabs are titles and the panels regions; back below
-  // the width, tabs again, on Fridge.
-  const layout = () => {
-    if (side()){
-      tablist.removeAttribute('role');
-      tabs.forEach(t => { t.setAttribute('role', 'heading'); t.setAttribute('aria-level', '2'); t.removeAttribute('aria-selected'); t.removeAttribute('tabindex'); t.tabIndex = -1; });
-      panels.forEach(p => { p.setAttribute('role', 'region'); p.classList.remove('away'); });
-      track.style.height = '';
-    } else {
-      tablist.setAttribute('role', 'tablist');
-      tabs.forEach(t => { t.setAttribute('role', 'tab'); t.removeAttribute('aria-level'); });
-      panels.forEach(p => p.setAttribute('role', 'tabpanel'));
-      track.scrollLeft = 0;
-      mark(0);
-      fit();
-    }
-  };
-  SIDE_BY_SIDE.addEventListener('change', layout);
-  layout();
+  track.scrollLeft = 0;
+  mark(0);
+  fit();
 }
 
 function renderFridgeView(){
