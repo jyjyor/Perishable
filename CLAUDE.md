@@ -344,7 +344,10 @@ Two fridge views, one after the other, from the same `fridge` array.
 
 The illustrated fridge opens the page: a literal drawing of a fridge
 (door, shelves, crisper, door bins, and the freezer compartment at the
-top). The freezer has its own door on the same right-hand hinge, closed
+top). On desktop it is capped at about a phone's size (--rf-w: 300 px
+wide, about 420 with the door open, never taller than about 80% of the
+window), so the whole fridge, freezer to crisper, fits on one screen and
+its line work, which scales with the drawing, stays light. The freezer has its own door on the same right-hand hinge, closed
 on every load, opened and closed by its handle (or its inside face once
 open); the door front carries a small count ("3 inside", "empty"),
 which opens it too when tapped.

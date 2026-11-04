@@ -165,7 +165,12 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    page palette: two body options (data-body) are kept side by side for
    review until one is chosen. */
 .rf{padding:30px 0 10px}
-.rf-stage{display:flex;justify-content:center;padding:4px 0 34px;--rf-w:min(600px,62vw)}
+/* On desktop the drawing is capped at about a phone's size: 300px
+   wide, about 420 with the door open, and never taller than about 80% of the
+   window (the unit is 360:640, so 45vh wide is 80vh tall). Scaled past that,
+   the whole fridge didn't fit on one screen and the line work, which
+   scales with the drawing, read heavy. The phone has its own size below. */
+.rf-stage{display:flex;justify-content:center;padding:4px 0 34px;--rf-w:min(300px,45vh)}
 .rf-unit{
   position:relative;width:var(--rf-w);aspect-ratio:360/640;
   /* The door opens past square, right of the hinge, so its inside (liner,
@@ -240,9 +245,10 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    (the line-art fridge below still draws with its own weights). */
 .rf-foodshape svg > path{stroke-width:2.5px}
 .rf-foodshape svg > g[stroke]{stroke-width:1.25px}
-/* On a phone the line is wider than the room left of the drawer's
+/* At a phone's size -- and the desktop drawing is capped at about that
+   (--rf-w) -- the line is wider than the room left of the drawer's
    handle, so it sits a little higher, clear of it. */
-@media (max-width:720px){ .rf-crisper-label{transform:translateY(-16px)} }
+.rf-crisper-label{transform:translateY(-16px)}
 .rf-crisper-label button{font-size:9px;padding:0 4px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .rf-crisper-label{
   position:absolute;z-index:4;display:flex;align-items:center;gap:6px;
