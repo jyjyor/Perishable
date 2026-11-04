@@ -129,8 +129,9 @@ consumer food app.
        freezer until the person thaws, uses or tosses it.
      - Freezing pauses decay, it doesn't undo it: the item keeps the
        decay it had when frozen (it.decayFrom), drawn under the frost.
-       After Thaw it carries on from that level and reaches 100% at the
-       thawed use-by date (decayFraction); it never jumps back to fresh.
+       After Thaw it carries on from that level and reaches its last-day
+       level at the thawed use-by date (decayFraction); it never jumps
+       back to fresh.
      - Entering frozen food: "frozen" in a typed or scanned name ("frozen
        shrimp"; a receipt line printed or expanded with it) puts it in the
        freezer, its freezer value counted from purchase; the entry
@@ -372,7 +373,12 @@ shows the Undo toast, and the item flies to its automatic spot (no fly
 under reduced motion). Mouse: press and drag. Touch: hold about 400 ms to
 pick up, so a tap still opens the popover and a swipe still scrolls or
 switches Fridge / Kitchen. Freeze and Thaw in the popover stay for the
-keyboard and screen readers. Past-date items sit in the crisper, whose drawer
+keyboard and screen readers. Placement follows days left: the crisper
+holds only items below 0 days. An item on its last day (0 days left,
+"today" on the decay line) is the most urgent food still worth saving and
+goes front and centre on the eye-level shelf, drawn visibly short of gone
+(decayFraction reaches LAST_DAY_DECAY, 0.75, on the last day and 1 only
+once the date has passed). Past-date items sit in the crisper, whose drawer
 front reads "N past date · Toss all"; Toss all asks right there ("Toss N
 past date? Toss N · Cancel") before anything counts as waste.
 

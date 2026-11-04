@@ -2717,29 +2717,30 @@ async function freezePausesDecayScenario(browser) {
   console.log('\n--- FREEZER: freezing pauses decay ---');
   await page.evaluate(() => { fridge = [{id: ++uid, key: 'chicken', bought: today() - 1, custom: null}]; render(); });
   const id = await page.evaluate(() => fridge[0].id);
-  const before = await page.evaluate(() => decayFraction(fridge[0], today()));
-  expectEqual('half decayed before freezing', before, 0.5);
+  // halfway through its shelf life; drawn at half the last-day level
+  const before = await page.evaluate(() => [rawDecay(fridge[0], today()), decayFraction(fridge[0], today())]);
+  expectEqual('half decayed before freezing', before, [0.5, 0.5 * 0.75]);
   await openPopover(page, id);
   await page.click('#rfPopover .rf-pop-freeze');
   await page.waitForTimeout(120);
   const frozen = await page.evaluate(() => { const it = fridge[0]; return [it.decayFrom, decayFraction(it, today()), decayFraction(it, today() + 200), decayFraction(it, today() + 400)]; });
-  expectEqual('frozen at 0.5, held there', frozen, [0.5, 0.5, 0.5, 0.5]);
-  // the freezer draws it at 0.5: the same colour the fridge drew it with
-  const colours = await page.evaluate(() => [foodBodyColor(fridge[0], 0.5), document.querySelector('#rfFzShelf [data-rf-item] svg').outerHTML.includes(foodBodyColor(fridge[0], 0.5))]);
+  expectEqual('frozen at 0.5, held there', frozen, [0.5, 0.375, 0.375, 0.375]);
+  // the freezer draws it as it was: the same colour the fridge drew it with
+  const colours = await page.evaluate(() => [foodBodyColor(fridge[0], 0.375), document.querySelector('#rfFzShelf [data-rf-item] svg').outerHTML.includes(foodBodyColor(fridge[0], 0.375))]);
   expectEqual('drawn half decayed under the frost', colours[1], true);
   await openPopover(page, id);
   await page.click('#rfPopover .rf-pop-thaw');
   await page.waitForTimeout(120);
-  const thawed = await page.evaluate(() => { const it = fridge[0]; return [!!it.thawed, left(it), decayFraction(it, today()), decayFraction(it, today() + 1), decayFraction(it, today() + 2)]; });
+  const thawed = await page.evaluate(() => { const it = fridge[0]; return [!!it.thawed, left(it), decayFraction(it, today()), decayFraction(it, today() + 1), decayFraction(it, today() + 2), decayFraction(it, today() + 3)]; });
   console.log(JSON.stringify(thawed));
-  expectEqual('thawed: continues from 0.5, 1 at the thawed use-by', thawed, [true, 2, 0.5, 0.75, 1]);
+  expectEqual('thawed: continues from where it was, last-day level at the thawed use-by, 1 only past it', thawed, [true, 2, 0.375, 0.5625, 0.75, 1]);
   // frozen again: held at the level it had then
   await openPopover(page, id);
   await page.evaluate(() => { fridge[0].clockFrom = today() - 1; render(); });
   await openPopover(page, id);
   await page.click('#rfPopover .rf-pop-freeze');
   await page.waitForTimeout(120);
-  expectEqual('frozen again at 0.75', await page.evaluate(() => [fridge[0].decayFrom, decayFraction(fridge[0], today() + 30)]), [0.75, 0.75]);
+  expectEqual('frozen again at 0.75', await page.evaluate(() => [fridge[0].decayFrom, decayFraction(fridge[0], today() + 30)]), [0.75, 0.5625]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -2956,6 +2957,67 @@ async function addButtonScenario(browser) {
     await page.screenshot({ path: path.join(OUT, `add-button-${name}.png`) });
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await ctx.close();
+  }
+}
+
+// The last day is not past date. The 18-item fixture plus a watermelon
+// and a canned beer on their last day (0 days left, "today" on the decay
+// line) and mushrooms past date: the crisper holds only what's below 0
+// days (the fixture's spinach and the mushrooms), and its front, the
+// headline and the decay line's past stub all agree on that; the two last-
+// day items are on the eye-level shelf, one of them front and center;
+// they're drawn visibly short of gone (decay at LAST_DAY_DECAY, not 1).
+// The next day (?day=1) they've crossed: crisper, fully decayed.
+const LAST_DAY_21 = [...MIXED_18, ['watermelon', 4], ['cannedbeer', 3, 3], ['mushroom', 12]];
+async function lastDayScenario(browser) {
+  console.log('\n--- LAST DAY: 0 days left is eye level, not the crisper ---');
+  for (const [w, tag] of [[1280, 'desktop'], [390, 'phone']]) {
+    const page = await (await browser.newContext({ viewport: { width: w, height: 1000 } })).newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, LAST_DAY_21);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const st = await page.evaluate(() => {
+      const where = it => { const el = document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`); return el ? el.closest('[id]').id : null; };
+      const byKey = k => fridge.find(it => it.key === k);
+      const eye = [...document.querySelectorAll('#rfShelfEye .rf-item')];
+      const row = document.getElementById('rfShelfEye').getBoundingClientRect(), mid = (row.left + row.right) / 2;
+      const centre = eye.map(e => { const r = e.getBoundingClientRect(); return [Math.abs((r.left + r.right) / 2 - mid), +e.querySelector('[data-rf-item]').dataset.rfItem]; }).sort((a, b) => a[0] - b[0])[0][1];
+      const svgOf = it => document.querySelector(`#rfUnit [data-rf-item="${it.id}"] svg`).outerHTML;
+      const wm = byKey('watermelon');
+      return {
+        left: ['watermelon', 'cannedbeer', 'mushroom', 'spinach'].map(k => left(byKey(k))),
+        place: ['watermelon', 'cannedbeer', 'mushroom', 'spinach'].map(k => where(byKey(k))),
+        crisper: [...document.querySelectorAll('#rfCrisperItems [data-rf-item]')].map(b => food(fridge.find(i => i.id === +b.dataset.rfItem)).en).sort(),
+        front: document.getElementById('rfCrisperLabel').textContent.replace(/\s+/g, ' ').trim(),
+        headline: document.getElementById('headline').textContent.trim(),
+        centre: food(fridge.find(i => i.id === centre)).en,
+        decay: ['watermelon', 'cannedbeer', 'mushroom'].map(k => decayFraction(byKey(k), today())),
+        drawnShort: svgOf(wm).includes(foodBodyColor(wm, LAST_DAY_DECAY)) && !svgOf(wm).includes(foodBodyColor(wm, 1)),
+      };
+    });
+    console.log(`${tag}:`, JSON.stringify(st));
+    expectEqual(`${tag}: days left`, st.left, [0, 0, -5, -2]);
+    expectEqual(`${tag}: last day on the eye-level shelf, past date in the crisper`, st.place, ['rfShelfEye', 'rfShelfEye', 'rfCrisperItems', 'rfCrisperItems']);
+    expectEqual(`${tag}: the crisper holds only past date`, st.crisper, ['Mushrooms', 'Spinach']);
+    expectEqual(`${tag}: drawer front`, st.front, '2 past date · Toss all');
+    if (!/^2 things are past date/.test(st.headline)) throw new Error(`${tag}: headline should count 2 past date, got "${st.headline}"`);
+    if (!['Watermelon', 'Canned beer'].includes(st.centre)) throw new Error(`${tag}: a last-day item should be front and center, got ${st.centre}`);
+    expectEqual(`${tag}: last day short of gone, past date gone`, st.decay, [0.75, 0.75, 1]);
+    expectEqual(`${tag}: the watermelon is drawn at its last-day level`, st.drawnShort, true);
+    await (await page.$('#rfUnit')).screenshot({ path: path.join(OUT, `last-day-${tag}.png`) });
+
+    // The next day the date has passed: the crisper, fully decayed.
+    await page.goto(`http://localhost:${PORT}/index.html?day=1`);
+    await page.waitForSelector('#headline');
+    const next = await page.evaluate(() => ['watermelon', 'cannedbeer'].map(k => {
+      const it = fridge.find(i => i.key === k);
+      return [left(it), document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`).closest('[id]').id, decayFraction(it, today())];
+    }));
+    expectEqual(`${tag}: a day later they're past date`, next, [[-1, 'rfCrisperItems', 1], [-1, 'rfCrisperItems', 1]]);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
   }
 }
 
@@ -3213,6 +3275,7 @@ async function pageStructureScenario(browser) {
     () => phoneDataScenario(browser),
     () => addButtonScenario(browser),
     () => kitchenScenario(browser),
+    () => lastDayScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),
