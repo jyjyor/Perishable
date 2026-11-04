@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Drinks study: the bottles (beer, red and white wine unopened
-// and opened, vodka), each at 0/50/100% of its shelf life at
+// Drinks and guava study: the bottles (beer, red and white wine unopened
+// and opened, vodka) and guava, each at 0/50/100% of its shelf life at
 // study size, then fresh at the size the All items row gives it. Same
 // methodology as fruit-study.js: real fridge-item objects through
 // leftAt()/decayFraction() and foodShapeMarkupLine -- no separate drawing
 // path. Beer has no FoodKeeper number, so it is given a printed date (as
 // at entry); vodka keeps, so it never decays and every cell is the same.
 //
-// Run: node tools/drinks-study.js
-// Output: tools/screenshots/drinks-study.png
+// Run: node tools/drinks-guava-study.js
+// Output: tools/screenshots/drinks-guava-study.png
 
 const { chromium } = require('playwright-core');
 const http = require('http');
@@ -57,6 +57,7 @@ function serve() {
       ['Red wine · opened', {key: 'redwine', opened: true}],
       ['White wine · opened', {key: 'whitewine', opened: true}],
       ['Vodka · keeps', {key: 'vodka'}],
+      ['Guava · ripe', {key: 'guava'}],
     ];
     let uid = 31000;
     function cellAt(extra, targetFraction, shelfSize){
@@ -87,17 +88,17 @@ function serve() {
     container.id = 'drinksStudy';
     container.style.cssText = 'position:absolute;top:0;left:0;background:#DCE1DF;padding:24px;z-index:9999;width:max-content';
     container.innerHTML = `<div style="font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#141817;margin-bottom:14px">
-        Drinks -- 0/50/100% of shelf life at study size, then fresh at its own size on the All items shelf</div>
+        Drinks and guava -- 0/50/100% of shelf life at study size, then fresh at its own size on the All items shelf</div>
       <div style="display:grid;grid-template-columns:repeat(2, max-content);gap:14px">${ROWS.map(card).join('')}</div>`;
     document.body.appendChild(container);
     return {rows: ROWS.length};
   });
 
   const el = await page.$('#drinksStudy');
-  await el.screenshot({ path: path.join(OUT, 'drinks-study.png') });
+  await el.screenshot({ path: path.join(OUT, 'drinks-guava-study.png') });
 
   if (errors.length) { console.log('console errors:', errors); process.exitCode = 1; }
-  console.log('Drinks study written to', path.join(OUT, 'drinks-study.png'), result);
+  console.log('Drinks and guava study written to', path.join(OUT, 'drinks-guava-study.png'), result);
 
   await browser.close();
   server.close();

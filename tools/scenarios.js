@@ -1977,16 +1977,17 @@ async function ripenessScenario(browser) {
 // years; vodka keeps (#539, "Indefinitely"): no countdown, no decay, out
 // of the headline, the decay line and the at-risk count, still in All
 // items with Used and Tossed, and a toss still reaches the ledger. On
-// desktop they stand in the door bins.
+// desktop they stand in the door bins. Guava (#262) counts from ripeness.
 async function drinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
-  console.log('\n--- DRINKS: beer, wine, vodka ---');
-  await typeEntry(page, 'beer, wine, vodka');
+  console.log('\n--- DRINKS: beer, wine, vodka; guava ---');
+  await typeEntry(page, 'beer, wine, vodka, guava');
   let rows = await readReview(page, '#voicePreview');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match, r.options])));
   expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
   expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
   if (!rows[2].match.includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539: ' + rows[2].match);
+  if (!rows[3].match.includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
   await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 120));
   await page.dispatchEvent('#voicePreview .entry-date[data-idx="0"]', 'change');
   await page.selectOption('#voicePreview .entry-pick[data-idx="1"]', 'redwine');
@@ -2007,6 +2008,7 @@ async function drinksScenario(browser) {
   expectRow(inv, 'Red wine', '1825 days');
   expectRow(inv, 'White wine', '3 days');
   expectRow(inv, 'Vodka', 'keeps');
+  expectRow(inv, 'Guava', '4 days');
   const st = await page.evaluate(() => {
     const v = fridge.find(i => i.key === 'vodka');
     return {
@@ -2023,9 +2025,9 @@ async function drinksScenario(browser) {
   expectEqual('vodka: no countdown, no decay', st.vodkaLater, [null, 0]); // Infinity serializes as null
   expectEqual('the opened white is opened', st.whiteOpened, true);
   expectEqual('remembered choice', st.remembered, 'opened');
-  expectEqual('decay line leaves vodka out', st.dots, 3);
+  expectEqual('decay line leaves vodka out', st.dots, 4);
   expectEqual('headline counts the opened white, not vodka', st.headline, '1 thing becomes waste within 72 hours.');
-  expectEqual('at-risk count: the white', st.atRisk, 1);
+  expectEqual('at-risk count: the white and the guava', st.atRisk, 2);
   expectEqual('vodka\'s label is plain ink, no urgency colour', st.vodkaLabel, 'rgb(92, 102, 100)');
 
   // In the door bins on desktop.
