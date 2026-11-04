@@ -3031,8 +3031,9 @@ async function lastDayScenario(browser) {
 // the count of counter items within 72 hours; All items still has all 20.
 const KITCHEN_20 = [...MIXED_18, ['banana', 1], ['avocado', 0, null, null, null, { ripening: true }]];
 async function kitchenScenario(browser) {
-  console.log('\n--- KITCHEN: Fridge and Kitchen tabs, counter food, desktop and phone ---');
-  for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
+  console.log('\n--- KITCHEN: Fridge and Kitchen tabs, counter food, narrow desktop and phone ---');
+  // Tabs and swipe are below 1000px; 900 is the narrow desktop.
+  for (const [tag, vp] of [['desktop', { width: 900, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport: vp });
     const page = await ctx.newPage();
     const errors = [];
@@ -3135,7 +3136,7 @@ async function kitchenScenario(browser) {
   }
 
   // Reduced motion: the tab switches without the smooth scroll.
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
+  const ctx = await browser.newContext({ viewport: { width: 900, height: 1000 }, reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await seedMixed18(page, KITCHEN_20);
   await page.waitForSelector('#headline');
@@ -3147,6 +3148,85 @@ async function kitchenScenario(browser) {
   console.log('reduced motion: scrollLeft right after the click', jump);
   if (jump < 50) throw new Error('with reduced motion the switch should be immediate, not a smooth scroll');
   await ctx.close();
+}
+
+// Wide screens (1000px and up): Fridge and Kitchen side by side, top-
+// aligned, the fridge first and the kitchen to its right, beside the open
+// door -- no tabs, no swipe. The tabs are titles (headings) over their
+// panels, the Kitchen count unchanged; the fridge is capped at about a
+// phone's size (about 420px with the door open, at most about 80% of the
+// window tall) and fits on one screen, freezer to crisper. Resizing below
+// 1000px brings the tabs back, on Fridge.
+async function sideBySideScenario(browser) {
+  console.log('\n--- SIDE BY SIDE: Fridge and Kitchen at 1280 and 1440 ---');
+  for (const vp of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }]) {
+    const tag = vp.width + 'px';
+    const ctx = await browser.newContext({ viewport: vp });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, KITCHEN_20);
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const st = await page.evaluate(() => {
+      const r = id => document.getElementById(id).getBoundingClientRect();
+      const u = document.getElementById('rfUnit');
+      let L = 1e9, R = -1e9, T = 1e9, B = -1e9;
+      u.querySelectorAll('svg, .rf-door, .rf-fz-door').forEach(e => { const b = e.getBoundingClientRect(); if (!b.width) return; L = Math.min(L, b.left); R = Math.max(R, b.right); T = Math.min(T, b.top); B = Math.max(B, b.bottom); });
+      const doorRight = document.getElementById('rfDoor').getBoundingClientRect().right;
+      return {
+        fridgeTop: Math.round(r('panelFridge').top), kitchenTop: Math.round(r('panelKitchen').top),
+        kitchenLeft: Math.round(r('panelKitchen').left), fridgeLeft: Math.round(r('panelFridge').left),
+        drawnRight: Math.round(Math.max(R, doorRight)), drawnW: Math.round(R - L), drawnH: Math.round(B - T),
+        kitchenVisible: r('kcUnit').width > 200 && r('kcUnit').right <= innerWidth,
+        titlesTop: [Math.round(r('tabFridge').top), Math.round(r('tabKitchen').top)],
+        roles: [document.getElementById('roomTabs').getAttribute('role'), document.getElementById('tabFridge').getAttribute('role'), document.getElementById('tabKitchen').getAttribute('aria-selected')],
+        scrollW: document.getElementById('roomsTrack').scrollWidth - document.getElementById('roomsTrack').clientWidth,
+        tabLine: getComputedStyle(document.getElementById('tabFridge')).borderBottomColor,
+        kitchen: document.getElementById('tabKitchen').textContent.trim(),
+        bowl: document.querySelectorAll('#kcBowlItems [data-rf-item], #kcBowlBack [data-rf-item]').length,
+      };
+    });
+    console.log(`${tag}:`, JSON.stringify(st));
+    expectEqual(`${tag}: panels top-aligned`, st.fridgeTop, st.kitchenTop);
+    expectEqual(`${tag}: titles in one row`, st.titlesTop[0], st.titlesTop[1]);
+    if (!(st.kitchenLeft > st.fridgeLeft && st.kitchenLeft >= st.drawnRight)) throw new Error(`${tag}: the kitchen should be right of the fridge's open door: ${JSON.stringify(st)}`);
+    if (st.kitchenLeft - st.drawnRight > 120) throw new Error(`${tag}: the kitchen should sit beside the door, ${st.kitchenLeft - st.drawnRight}px away`);
+    expectEqual(`${tag}: kitchen in view`, st.kitchenVisible, true);
+    expectEqual(`${tag}: no tabs`, st.roles, [null, 'heading', null]);
+    expectEqual(`${tag}: nothing to swipe`, st.scrollW, 0);
+    expectEqual(`${tag}: no underline`, st.tabLine, 'rgba(0, 0, 0, 0)');
+    expectEqual(`${tag}: the Kitchen count`, st.kitchen, 'Kitchen · 2');
+    if (st.drawnW < 380 || st.drawnW > 460) throw new Error(`${tag}: the open fridge should be about 420px wide, got ${st.drawnW}`);
+    if (st.drawnH > vp.height * 0.8 + 1) throw new Error(`${tag}: the fridge is taller than 80% of the window: ${st.drawnH}`);
+    // the whole fridge, freezer to crisper, on one screen
+    await page.$eval('#rfUnit', u => u.scrollIntoView({ block: 'start' }));
+    const fits = await page.$eval('#rfUnit', u => { const r = u.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+    expectEqual(`${tag}: the whole fridge fits on one screen`, fits, true);
+    await page.evaluate(() => scrollTo(0, 0));
+    // clicking a title does nothing
+    await page.click('#tabKitchen');
+    await page.waitForTimeout(300);
+    expectEqual(`${tag}: a title click doesn't scroll`, await page.$eval('#roomsTrack', t => t.scrollLeft), 0);
+    // counter food still opens the popover
+    await page.click('#kcBowlItems [data-rf-item]');
+    await page.waitForTimeout(100);
+    if (await page.$eval('#rfPopover', p => p.hidden)) throw new Error(`${tag}: tapping bowl food should open the popover`);
+    await page.mouse.click(2, 2);
+    await page.screenshot({ path: path.join(OUT, `side-by-side-${vp.width}.png`) });
+    await page.screenshot({ path: path.join(OUT, `side-by-side-${vp.width}-full.png`), fullPage: true });
+    // narrower than 1000: tabs again, on Fridge
+    await page.setViewportSize({ width: 900, height: 900 });
+    await page.waitForTimeout(300);
+    const narrow = await page.evaluate(() => [document.getElementById('roomTabs').getAttribute('role'),
+      [...document.querySelectorAll('#roomTabs .room-tab')].map(t => t.getAttribute('aria-selected')), document.getElementById('roomsTrack').scrollLeft]);
+    expectEqual(`${tag} -> 900px: tabs back, on Fridge`, narrow, ['tablist', ['true', 'false'], 0]);
+    await page.click('#tabKitchen');
+    await page.waitForTimeout(900);
+    if (await page.$eval('#roomsTrack', t => t.scrollLeft) < 50) throw new Error('900px: the Kitchen tab should scroll to its panel');
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
 }
 
 // The page in four parts -- Fridge / Kitchen, What's turning, Add food,
@@ -3166,7 +3246,7 @@ async function pageStructureScenario(browser) {
     await page.waitForTimeout(1300);
     const st = await page.evaluate(() => {
       const parts = [...document.querySelectorAll('.wrap > .part')];
-      const titleOf = p => p.querySelector('.part-title') || p.querySelector('[role=tab]');
+      const titleOf = p => p.querySelector('.part-title') || p.querySelector('.room-tab'); // a tab, or side by side a heading
       return {
         titles: parts.map(p => titleOf(p).textContent.trim()),
         fonts: parts.map(p => { const cs = getComputedStyle(titleOf(p)); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
@@ -3276,6 +3356,7 @@ async function pageStructureScenario(browser) {
     () => addButtonScenario(browser),
     () => kitchenScenario(browser),
     () => lastDayScenario(browser),
+    () => sideBySideScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),

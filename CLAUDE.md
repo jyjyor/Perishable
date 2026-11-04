@@ -316,6 +316,13 @@ under prefers-reduced-motion. The page always opens on Fridge; the area
 is as tall as the active panel; on a phone about 16 px of the other panel
 shows at the edge. Food and the fridge door are touch-action: pan-y, so a
 tap there never starts a swipe.
+On wide screens (1000 px and up, SIDE_BY_SIDE) there are no tabs and no
+swipe: Fridge and Kitchen sit side by side, top-aligned, the fridge first
+and the kitchen to its right beside the open door. The tab strip and the
+swipe area step out of the layout (display:contents), each tab becomes
+its panel's title (a heading, no underline, the Kitchen count unchanged),
+and initRooms leaves the scroll alone; below 1000 px the tabs come back,
+on Fridge.
 
 Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
 top, a cutting board and a bowl, nothing else. The board carries
