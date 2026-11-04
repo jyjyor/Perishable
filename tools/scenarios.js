@@ -2189,6 +2189,231 @@ async function drinkLabelScenario(browser) {
   await page.context().close();
 }
 
+/* ---------- dragging between fridge and freezer ---------- */
+
+// Touch through the browser's own input pipeline (CDP), so pointer
+// events, the long-press, scrolling and the swipe area behave as on a
+// phone -- not synthetic DOM events.
+async function touchPage(browser, phone) {
+  const ctx = await browser.newContext(phone ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } : { viewport: { width: 1280, height: 1300 }, hasTouch: true });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  const cdp = await ctx.newCDPSession(page);
+  return { page, errors, cdp };
+}
+const touch = (cdp, type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+async function touchPath(page, cdp, from, to, { hold = 0, steps = 8, stepMs = 16 } = {}) {
+  await touch(cdp, 'touchStart', from[0], from[1]);
+  if (hold) await page.waitForTimeout(hold);
+  for (let k = 1; k <= steps; k++) {
+    await touch(cdp, 'touchMove', from[0] + (to[0] - from[0]) * k / steps, from[1] + (to[1] - from[1]) * k / steps);
+    await page.waitForTimeout(stepMs);
+  }
+  await touch(cdp, 'touchEnd');
+}
+const centerOf = (page, sel) => page.$eval(sel, el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+// A point in the drawing's own coordinates (360 x 640), in the page.
+const rfPoint = (page, x, y) => page.evaluate(([x, y]) => { const r = document.getElementById('rfUnit').getBoundingClientRect(); return [r.left + x / RF.W * r.width, r.top + y / RF.H * r.height]; }, [x, y]);
+async function seedDrag(page) {
+  const ids = await page.evaluate(() => {
+    const t = today();
+    fridge = [
+      {id: ++uid, key: 'chicken', bought: t},                 // freezes: 270 days (FoodKeeper #117)
+      {id: ++uid, key: 'leaflettuce', bought: t},             // FoodKeeper: freezing not recommended
+      {id: ++uid, key: 'steak', bought: t - 9},               // past date
+      {id: ++uid, key: 'chicken', bought: t - 1, frozen: true, clockFrom: t - 1},     // thaws: The Big Thaw, 2 days
+      {id: ++uid, key: 'broccoli', bought: t - 3, frozen: true, clockFrom: t - 3},    // thaws only with a date
+    ];
+    render();
+    return fridge.map(i => i.id);
+  });
+  await page.waitForTimeout(1600); // the door's opening on load
+  return ids;
+}
+const recOf = (page, id) => page.evaluate(id => { const it = fridge.find(i => i.id === id); return it && {frozen: !!it.frozen, thawed: !!it.thawed, left: it.frozen ? null : left(it)}; }, id);
+const toastText = page => page.$eval('#toast', t => t.classList.contains('on') ? t.textContent : '');
+
+// Mouse: press and drag a fridge item onto the closed freezer. While it's
+// held there the freezer gets a quiet outline and its door opens a little;
+// let go, it's frozen (freezeItem's rules), the toast offers Undo, and
+// Undo puts the record back as it was. A plain click still opens the
+// popover.
+async function dragFreezeScenario(browser) {
+  const { page, errors } = await touchPage(browser, false);
+  console.log('\n--- DRAG: fridge item to the freezer (mouse) ---');
+  const [chk] = await seedDrag(page);
+  const fz = await rfPoint(page, 180, 66);
+  const from = await centerOf(page, `[data-rf-item="${chk}"]`);
+  await page.mouse.move(...from);
+  await page.mouse.down();
+  await page.mouse.move(from[0] + 20, from[1] - 20, { steps: 3 });
+  await page.mouse.move(...fz, { steps: 8 });
+  const mid = await page.evaluate(() => ({
+    zone: !document.querySelector('.rf-drop[data-zone="freezer"]').hidden,
+    over: document.querySelector('.rf-drop[data-zone="freezer"]').classList.contains('over'),
+    fridgeZone: !document.querySelector('.rf-drop[data-zone="fridge"]').hidden,
+    peek: document.getElementById('rfUnit').classList.contains('fz-peek'),
+    open: document.getElementById('rfUnit').classList.contains('fz-open'),
+    ghost: !!document.querySelector('.rf-drag-ghost')}));
+  console.log('mid-drag:', JSON.stringify(mid));
+  expectEqual('mid-drag over the closed freezer', mid, {zone: true, over: true, fridgeZone: false, peek: true, open: false, ghost: true});
+  await page.waitForTimeout(450); // the door's quarter-turn settles before the picture
+  await page.screenshot({ path: path.join(OUT, 'drag-freezer-desktop.png') });
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+  expectEqual('frozen by the drop', await recOf(page, chk), {frozen: true, thawed: false, left: null});
+  const t = await toastText(page);
+  if (!t.startsWith('Chicken breast frozen') || !t.includes('Undo')) throw new Error('toast: ' + t);
+  expectEqual('in the freezer, door open, no ghost', await page.evaluate(id => [!!document.querySelector(`#rfFzShelf [data-rf-item="${id}"]`), document.getElementById('rfUnit').classList.contains('fz-open'), !document.querySelector('.rf-drag-ghost'), document.getElementById('rfPopover').hidden], chk), [true, true, true, true]);
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo: back in the fridge as it was', await recOf(page, chk), {frozen: false, thawed: false, left: 2});
+  // a plain click still opens the popover
+  await page.click(`[data-rf-item="${chk}"]`);
+  await page.waitForTimeout(80);
+  expectEqual('click opens the popover', await page.$eval('#rfPopover', p => !p.hidden && p.querySelector('.rf-pop-name').textContent), 'Chicken breast');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Touch on a phone: hold about 400 ms, then drag a frozen item onto the
+// fridge. With FoodKeeper's thaw figure (The Big Thaw for raw chicken) it
+// thaws straight away with Undo; with none (broccoli) it goes back and the
+// popover asks for the date, as the Thaw button does -- and that date's
+// toast offers Undo too.
+async function dragThawScenario(browser) {
+  const { page, errors, cdp } = await touchPage(browser, true);
+  console.log('\n--- DRAG: freezer item to the fridge (touch, phone) ---');
+  const [, , , fzChk, fzBroc] = await seedDrag(page);
+  await page.click('#rfFzHandle');
+  await page.waitForTimeout(1100);
+  const shelf = await rfPoint(page, 180, 330);
+  await touchPath(page, cdp, await centerOf(page, `[data-rf-item="${fzChk}"]`), shelf, { hold: 520 });
+  await page.waitForTimeout(150);
+  expectEqual('thawed by the drop', await recOf(page, fzChk), {frozen: false, thawed: true, left: 2});
+  const t = await toastText(page);
+  if (!t.startsWith('Chicken breast thawed') || !t.includes('Undo')) throw new Error('toast: ' + t);
+  expectEqual('no popover after a drop', await page.$eval('#rfPopover', p => p.hidden), true);
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo: frozen again', await recOf(page, fzChk), {frozen: true, thawed: false, left: null});
+
+  await touchPath(page, cdp, await centerOf(page, `[data-rf-item="${fzBroc}"]`), shelf, { hold: 520 });
+  await page.waitForTimeout(150);
+  expectEqual('broccoli: still frozen, the date asked', await page.evaluate(id => [!!fridge.find(i => i.id === id).frozen, !document.getElementById('rfPopover').hidden, !document.querySelector('#rfPopover .rf-pop-thawask').hidden], fzBroc), [true, true, true]);
+  await page.fill('#rfPopover .rf-pop-thawdate', await isoIn(page, 3));
+  await page.dispatchEvent('#rfPopover .rf-pop-thawdate', 'change');
+  await page.waitForTimeout(120);
+  expectEqual('broccoli thawed by the date', await recOf(page, fzBroc), {frozen: false, thawed: true, left: 3});
+  if (!(await toastText(page)).includes('Undo')) throw new Error('date thaw after a drop should offer Undo');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Something FoodKeeper says doesn't freeze well, or past date: the
+// freezer shows no outline and its door stays shut; dropped there, the
+// item goes back and a one-line note says why. Nothing changes.
+async function dragRefusedScenario(browser) {
+  const { page, errors } = await touchPage(browser, false);
+  console.log('\n--- DRAG: can\'t go in the freezer ---');
+  const [, lettuce, steak] = await seedDrag(page);
+  const fz = await rfPoint(page, 180, 66);
+  for (const [id, note] of [[lettuce, 'FoodKeeper says Leaf lettuce doesn\'t freeze well'], [steak, 'is past date — it stays out of the freezer']]) {
+    const before = await recOf(page, id);
+    const from = await centerOf(page, `[data-rf-item="${id}"]`);
+    await page.mouse.move(...from);
+    await page.mouse.down();
+    await page.mouse.move(...fz, { steps: 10 });
+    expectEqual('no outline, no peek', await page.evaluate(() => [document.querySelector('.rf-drop[data-zone="freezer"]').hidden, document.getElementById('rfUnit').classList.contains('fz-peek')]), [true, false]);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    expectEqual('unchanged', await recOf(page, id), before);
+    const t = await toastText(page);
+    console.log('note:', t);
+    if (!t.includes(note) || t.includes('Undo')) throw new Error('note: ' + t);
+    expectEqual('back in place, popover closed', await page.evaluate(id => [!document.querySelector(`[data-rf-item="${id}"]`).classList.contains('rf-lifted'), !document.querySelector('.rf-drag-ghost'), document.getElementById('rfPopover').hidden], id), [true, true, true]);
+  }
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// On a phone a tap on food still opens the popover, a vertical swipe
+// that starts on food still scrolls the page, and a sideways swipe across
+// the fridge still switches to Kitchen -- none of them picks anything up.
+async function dragTouchGesturesScenario(browser) {
+  const { page, errors, cdp } = await touchPage(browser, true);
+  console.log('\n--- DRAG: tap and swipes on a phone ---');
+  const [chk] = await seedDrag(page);
+  const from = await centerOf(page, `[data-rf-item="${chk}"]`);
+  await touch(cdp, 'touchStart', ...from);
+  await page.waitForTimeout(60);
+  await touch(cdp, 'touchEnd');
+  await page.waitForTimeout(150);
+  expectEqual('tap opens the popover', await page.$eval('#rfPopover', p => !p.hidden && p.querySelector('.rf-pop-name').textContent), 'Chicken breast');
+  await page.evaluate(() => rfHidePopover());
+
+  const y0 = await page.evaluate(() => scrollY);
+  await touchPath(page, cdp, from, [from[0], from[1] - 260], { steps: 10, stepMs: 12 });
+  await page.waitForTimeout(500);
+  const scroll = await page.evaluate(() => [scrollY, !!document.querySelector('.rf-drag-ghost'), document.querySelectorAll('.rf-lifted').length]);
+  console.log('vertical swipe from food: scrollY', y0, '->', scroll[0]);
+  if (!(scroll[0] > y0 + 50)) throw new Error('a vertical swipe on food should scroll the page');
+  expectEqual('nothing picked up', scroll.slice(1), [false, 0]);
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(150);
+
+  const a = await rfPoint(page, 300, 250), b = await rfPoint(page, 10, 250);
+  await touchPath(page, cdp, a, [a[0] - 300, a[1]], { steps: 10, stepMs: 12 });
+  await page.waitForTimeout(900);
+  const tab = await page.evaluate(() => [document.getElementById('tabKitchen').getAttribute('aria-selected'), document.getElementById('roomsTrack').scrollLeft > 100, !!document.querySelector('.rf-drag-ghost'), fridge.filter(i => i.frozen).length]);
+  console.log('sideways swipe:', JSON.stringify(tab));
+  expectEqual('swipe switched to Kitchen, nothing moved', tab, ['true', true, false, 2]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// The phone picture of a drag held over the closed freezer.
+async function dragPhoneShotScenario(browser) {
+  const { page, errors } = await touchPage(browser, true);
+  console.log('\n--- DRAG: mid-drag picture, phone ---');
+  const [chk] = await seedDrag(page);
+  const cdp = await page.context().newCDPSession(page);
+  const from = await centerOf(page, `[data-rf-item="${chk}"]`);
+  const fz = await rfPoint(page, 180, 66);
+  await touch(cdp, 'touchStart', ...from);
+  await page.waitForTimeout(520);
+  for (let k = 1; k <= 8; k++) { await touch(cdp, 'touchMove', from[0] + (fz[0] - from[0]) * k / 8, from[1] + (fz[1] - from[1]) * k / 8); await page.waitForTimeout(16); }
+  await page.waitForTimeout(450);
+  expectEqual('held over the freezer', await page.evaluate(() => [document.getElementById('rfUnit').classList.contains('fz-peek'), document.querySelector('.rf-drop[data-zone="freezer"]').classList.contains('over')]), [true, true]);
+  await page.screenshot({ path: path.join(OUT, 'drag-freezer-phone.png') });
+  await touch(cdp, 'touchEnd');
+  await page.waitForTimeout(150);
+  expectEqual('frozen', (await recOf(page, chk)).frozen, true);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Reduced motion: the drop still works, with no fly animation.
+async function dragReducedMotionScenario(browser) {
+  const { page, errors } = await touchPage(browser, false);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  console.log('\n--- DRAG: reduced motion ---');
+  const [chk] = await seedDrag(page);
+  const from = await centerOf(page, `[data-rf-item="${chk}"]`), fz = await rfPoint(page, 180, 66);
+  await page.mouse.move(...from); await page.mouse.down();
+  await page.mouse.move(...fz, { steps: 8 });
+  await page.mouse.up();
+  const anims = await page.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('.rf-foodshape, .rf-drag-ghost')).length);
+  expectEqual('frozen, no fly', [(await recOf(page, chk)).frozen, anims], [true, 0]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 /* ---------- the freezer ---------- */
 
 // Opens an item's popover (wherever it's drawn) and leaves it open.
@@ -2960,6 +3185,12 @@ async function pageStructureScenario(browser) {
     () => freezePausesDecayScenario(browser),
     () => bigThawScenario(browser),
     () => thawReachScenario(browser),
+    () => dragFreezeScenario(browser),
+    () => dragThawScenario(browser),
+    () => dragRefusedScenario(browser),
+    () => dragTouchGesturesScenario(browser),
+    () => dragPhoneShotScenario(browser),
+    () => dragReducedMotionScenario(browser),
   ];
   let passed = 0;
   const failed = [];

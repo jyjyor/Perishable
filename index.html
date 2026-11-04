@@ -410,6 +410,17 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rooms-track::-webkit-scrollbar{display:none}
 .room{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
 .rf{padding-top:18px}
+/* Dragging between fridge and freezer (rfInitDrag): the item lifts out
+   of its place, valid drop zones get a quiet outline, and a closed
+   freezer door opens a little while food is held over it. */
+.rf-fooditem{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.rf-fooditem.rf-lifted{opacity:0}
+.rf-unit.rf-dragging .rf-fooditem:hover{transform:none}
+.rf-drag-ghost{position:fixed;z-index:50;pointer-events:none;cursor:grabbing}
+.rf-drop{position:absolute;z-index:30;pointer-events:none;outline:1px dashed var(--ink-3);outline-offset:-3px;border-radius:6px}
+.rf-drop.over{outline:1px solid var(--ink-2)}
+.rf-drop[hidden]{display:none}
+.rf-unit.fz-peek:not(.fz-open) .rf-fz-door{transform:rotateY(26deg)}
 /* Food and the fridge door take taps, never a horizontal swipe. */
 .rf-fooditem,.rf-door,.rf-handle,.rf-fz-door,.rf-fz-handle{touch-action:pan-y}
 @media (max-width:720px){
@@ -2473,7 +2484,7 @@ function setBought(id, iso){
 // Freeze: into the freezer, the clock restarted today on FoodKeeper's
 // freezer value (a date set before no longer applies). A spirit just
 // moves: it keeps, so no clock changes. Nothing reaches the ledger.
-function freezeItem(id){
+function freezeItem(id, undo){
   const it = fridge.find(x => x.id === id);
   if (!it || !canFreeze(it)) return;
   // the rot it has now stays, under the frost (decayFraction)
@@ -2482,21 +2493,21 @@ function freezeItem(id){
   it.frozen = true;
   delete it.thawed;
   it.crossed = false;
-  if (food(it).keeps){ toast(food(it).en + ' moved to the freezer'); render(); return; }
+  if (food(it).keeps){ toast(food(it).en + ' moved to the freezer', undo); render(); return; }
   it.clockFrom = today();
   delete it.shelf; delete it.shelfFrom; delete it.ripening;
   const s = shelfOf(it);
-  toast(food(it).en + ' frozen · ' + (s === Infinity ? 'no limit in the freezer' : dayCount(s) + ' in the freezer'));
+  toast(food(it).en + ' frozen · ' + (s === Infinity ? 'no limit in the freezer' : dayCount(s) + ' in the freezer'), undo);
   render();
 }
 // Thaw: back to the fridge, the clock restarted today on FoodKeeper's
 // refrigerator value after thawing -- the one place that column is read.
 // With no such value the person gives a date (iso). A spirit just comes
 // out, its clock untouched.
-function thawItem(id, iso){
+function thawItem(id, iso, undo){
   const it = fridge.find(x => x.id === id);
   if (!it || !it.frozen) return;
-  if (food(it).keeps && it.clockFrom == null){ delete it.frozen; toast(food(it).en + ' taken out of the freezer'); render(); return; }
+  if (food(it).keeps && it.clockFrom == null){ delete it.frozen; toast(food(it).en + ' taken out of the freezer', undo); render(); return; }
   let shelf = null;
   if (iso != null){
     const day = parseReceiptDate(iso);
@@ -2510,7 +2521,7 @@ function thawItem(id, iso){
   it.crossed = false;
   delete it.shelf; delete it.shelfFrom;
   if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
-  toast(food(it).en + ' thawed · ' + dayCount(shelfOf(it)) + ' in the fridge');
+  toast(food(it).en + ' thawed · ' + dayCount(shelfOf(it)) + ' in the fridge', undo);
   render();
 }
 const left = it => leftAt(it, today());
@@ -5708,7 +5719,7 @@ function rfShowPopover(id, anchorEl, opts = {}){
   };
   // Thaw from the All items row, with no thawed figure: straight to the date
   if (thawAsks && opts.thaw){ pop.querySelector('.rf-pop-thaw').hidden = true; pop.querySelector('.rf-pop-thawask').hidden = false; }
-  if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value); };
+  if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value, opts.undo ? rfUndoFor(id) : undefined); };
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
   pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
@@ -5727,6 +5738,191 @@ function rfShowPopover(id, anchorEl, opts = {}){
 }
 function rfHidePopover(){
   document.getElementById('rfPopover').hidden = true;
+}
+
+/* ---------- dragging between fridge and freezer ----------
+   Not free placement: where an item sits stays automatic (urgency), so
+   dragging only moves food between places. A fridge item dropped on the
+   freezer is frozen; a frozen one dropped on the fridge is thawed --
+   freezeItem and thawItem, the popover buttons' own rules, which stay for
+   the keyboard and screen readers. Mouse: press and drag. Touch: hold
+   about 400 ms to pick up, then drag, so a tap still opens the popover and
+   a swipe still scrolls or switches Fridge / Kitchen. Pointer Events. */
+const RF_HOLD_MS = 400, RF_SLOP = 8;
+let rfDrag = null, rfClickBlock = false, rfSetFreezer = null;
+// Undo for a drop: the record exactly as it was before.
+function rfUndoFor(id){
+  const i = fridge.findIndex(x => x.id === id);
+  if (i < 0) return undefined;
+  const before = structuredClone(fridge[i]);
+  return () => {
+    const j = fridge.findIndex(x => x.id === id);
+    if (j < 0) return;
+    fridge[j] = before;
+    render();
+  };
+}
+// Where a drop counts, in the page: the freezer compartment (its door's
+// box, open or closed), and the fridge -- the cabinet below it and, open
+// on a wide screen, the door with its bins.
+function rfZones(){
+  const unit = document.getElementById('rfUnit'), r = unit.getBoundingClientRect();
+  const box = b => ({l: r.left + b.x0 / RF.W * r.width, t: r.top + b.y0 / RF.H * r.height,
+    r: r.left + b.x1 / RF.W * r.width, b: r.top + b.y1 / RF.H * r.height});
+  const fridgeBoxes = [box(RF.door)];
+  if (unit.classList.contains('open') && !RF_PHONE.matches){
+    const d = document.getElementById('rfDoor').getBoundingClientRect();
+    fridgeBoxes.push({l: d.left, t: d.top, r: d.right, b: d.bottom});
+  }
+  return {freezer: [box(FZ.door)], fridge: fridgeBoxes};
+}
+function rfZoneAt(x, y){
+  const z = rfZones(), inside = b => x >= b.l && x <= b.r && y >= b.t && y <= b.b;
+  return z.freezer.some(inside) ? 'freezer' : z.fridge.some(inside) ? 'fridge' : null;
+}
+// Why something can't go in the freezer, in one line; null if it can.
+function rfFreezeRefusal(it){
+  const name = food(it).en;
+  if (left(it) < 0) return name + ' is past date — it stays out of the freezer';
+  if (canFreeze(it)) return null;
+  return freezeNotRecommended(it.key) ? 'FoodKeeper says ' + name + ' doesn\'t freeze well'
+    : 'No FoodKeeper freezer time for ' + name;
+}
+function rfInitDrag(unit){
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // the quiet outlines, one per zone, in the drawing's own coordinates
+  const drops = {};
+  [['freezer', FZ.door], ['fridge', RF.door]].forEach(([k, b]) => {
+    const el = document.createElement('div');
+    el.className = 'rf-drop';
+    el.hidden = true;
+    el.dataset.zone = k;
+    Object.assign(el.style, {left: rfPct(b.x0, RF.W), top: rfPct(b.y0, RF.H), width: rfPct(b.x1 - b.x0, RF.W), height: rfPct(b.y1 - b.y0, RF.H)});
+    unit.appendChild(el);
+    drops[k] = el;
+  });
+  const end = () => {
+    if (!rfDrag) return;
+    clearTimeout(rfDrag.timer);
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    document.removeEventListener('pointercancel', cancel);
+    Object.values(drops).forEach(el => { el.hidden = true; el.classList.remove('over'); });
+    unit.classList.remove('fz-peek', 'rf-dragging');
+    rfDrag = null;
+  };
+  const restore = d => { if (d.ghost) d.ghost.remove(); d.btn.classList.remove('rf-lifted'); };
+  // back where it came from: no change, so no toast of its own
+  const snapBack = d => {
+    if (reduced() || !d.ghost){ restore(d); return; }
+    const to = d.btn.getBoundingClientRect();
+    d.ghost.animate([{left: d.ghost.style.left, top: d.ghost.style.top}, {left: to.left + 'px', top: to.top + 'px'}],
+      {duration: 220, easing: 'ease-out'}).onfinish = () => restore(d);
+  };
+  // to its automatic spot, from where it was let go (FLIP)
+  const fly = (d, id) => {
+    const from = d.ghost.getBoundingClientRect();
+    d.ghost.remove();
+    const el = unit.querySelector(`[data-rf-item="${id}"] .rf-foodshape`);
+    if (!el || reduced()) return;
+    const to = el.getBoundingClientRect();
+    if (!to.width) return;
+    el.style.transformOrigin = '0 0';
+    el.animate([{transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`}, {transform: 'none'}],
+      {duration: 380, easing: 'cubic-bezier(.22,.8,.3,1)'}).onfinish = () => { el.style.transformOrigin = ''; };
+  };
+  const pickUp = () => {
+    const d = rfDrag;
+    if (!d || d.picked) return;
+    const it = fridge.find(x => x.id === d.id);
+    if (!it){ end(); return; }
+    d.picked = true;
+    rfHidePopover();
+    d.from = it.frozen ? 'freezer' : 'fridge';
+    d.to = it.frozen ? 'fridge' : 'freezer';
+    // a valid zone shows; the freezer doesn't for something that can't go in
+    d.valid = d.to === 'fridge' || !rfFreezeRefusal(it);
+    const shape = d.btn.querySelector('.rf-foodshape'), r = shape.getBoundingClientRect();
+    d.dx = d.x - r.left; d.dy = d.y - r.top;
+    const g = shape.cloneNode(true);
+    g.classList.add('rf-drag-ghost');
+    Object.assign(g.style, {width: r.width + 'px', height: r.height + 'px', left: r.left + 'px', top: r.top + 'px', marginBottom: '0'});
+    document.body.appendChild(g);
+    d.ghost = g;
+    d.btn.classList.add('rf-lifted');
+    unit.classList.add('rf-dragging');
+    if (d.valid) drops[d.to].hidden = false;
+  };
+  const move = e => {
+    const d = rfDrag;
+    if (!d || e.pointerId !== d.pointer) return;
+    d.x = e.clientX; d.y = e.clientY;
+    if (!d.picked){
+      if (Math.hypot(d.x - d.x0, d.y - d.y0) <= RF_SLOP) return;
+      // a mouse picks up by moving; a finger that moves before the hold
+      // is a scroll or a swipe, and is left to the page
+      if (d.mouse) pickUp(); else { end(); return; }
+    }
+    e.preventDefault();
+    d.ghost.style.left = (d.x - d.dx) + 'px';
+    d.ghost.style.top = (d.y - d.dy) + 'px';
+    const over = d.valid && rfZoneAt(d.x, d.y) === d.to;
+    drops[d.to].classList.toggle('over', over);
+    // a closed freezer door opens a little while food is held over it
+    unit.classList.toggle('fz-peek', over && d.to === 'freezer');
+  };
+  const up = e => {
+    const d = rfDrag;
+    if (!d || e.pointerId !== d.pointer) return;
+    if (!d.picked){ end(); return; }
+    rfClickBlock = true;
+    setTimeout(() => { rfClickBlock = false; }, 60);
+    const zone = rfZoneAt(e.clientX, e.clientY);
+    end();
+    const it = fridge.find(x => x.id === d.id);
+    if (!it || zone !== d.to){ snapBack(d); return; }
+    if (d.to === 'freezer'){
+      const no = rfFreezeRefusal(it);
+      if (no){ snapBack(d); toast(no); return; }
+      if (!unit.classList.contains('fz-open') && rfSetFreezer) rfSetFreezer(true);
+      freezeItem(d.id, rfUndoFor(d.id));
+      fly(d, d.id);
+      return;
+    }
+    // thaw: the Thaw button's own rules -- with no thawed figure, the
+    // popover asks for the date first
+    if (thawLabel(it) !== 'Take out' && thawDays(it) == null){
+      snapBack(d);
+      rfShowPopover(d.id, d.btn, {thaw: true, undo: true});
+      return;
+    }
+    thawItem(d.id, null, rfUndoFor(d.id));
+    fly(d, d.id);
+  };
+  const cancel = e => {
+    const d = rfDrag;
+    if (!d || e.pointerId !== d.pointer) return;
+    end();
+    if (d.picked) snapBack(d);
+  };
+  unit.addEventListener('pointerdown', e => {
+    const btn = e.target.closest('[data-rf-item]');
+    if (!btn || !unit.contains(btn) || !e.isPrimary || rfDrag) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    rfClickBlock = false;
+    rfDrag = {id: +btn.dataset.rfItem, btn, pointer: e.pointerId, mouse: e.pointerType === 'mouse',
+      x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, picked: false};
+    if (!rfDrag.mouse) rfDrag.timer = setTimeout(pickUp, RF_HOLD_MS);
+    document.addEventListener('pointermove', move, {passive: false});
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  });
+  // once picked up, a finger's movement drags instead of scrolling
+  document.addEventListener('touchmove', e => { if (rfDrag && rfDrag.picked) e.preventDefault(); }, {passive: false});
+  // a long press opens no context menu on an item
+  unit.addEventListener('contextmenu', e => { if (e.target.closest('[data-rf-item]')) e.preventDefault(); });
+  // the click that ends a drag doesn't also open the popover
+  unit.addEventListener('click', e => { if (rfClickBlock){ rfClickBlock = false; e.stopPropagation(); e.preventDefault(); } }, true);
 }
 
 // Runs once, at boot -- the door's own load animation and the handle's
@@ -5770,6 +5966,8 @@ function rfInit(){
     e.stopPropagation();
     setFreezer(!unit.classList.contains('fz-open'));
   });
+  rfSetFreezer = setFreezer;
+  rfInitDrag(unit);
   // The count on the closed door opens it too.
   document.getElementById('rfFzCount').addEventListener('click', e => {
     e.stopPropagation();

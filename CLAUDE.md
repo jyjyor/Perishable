@@ -355,7 +355,20 @@ on hover, a focus ring) that opens the popover: name, status, Bought and
 Use by (both editable), shelf-life source, Est. weight, It's ripe for a
 ripening item, Freeze or Thaw (rule 7), Used and Tossed, and a quiet Remove link for an item
 logged by mistake (removeFridgeItem: out of the fridge, not waste, its
-restock count undone; the toast offers Undo, as for Used and Tossed). Past-date items sit in the crisper, whose drawer
+restock count undone; the toast offers Undo, as for Used and Tossed).
+Dragging moves food between places, never to a spot: position stays
+automatic by urgency (rfInitDrag, Pointer Events, no library). A fridge
+item dropped on the freezer, door open or closed, is frozen (freezeItem);
+a frozen one dropped on the fridge is thawed (thawItem), with the Thaw
+button's rules and its date prompt. While dragging, the valid zone gets
+a quiet outline, and a closed freezer door opens a little while food is
+held over it; something FoodKeeper says doesn't freeze well, or past
+date, gets no outline and goes back with a one-line note. Every drop
+shows the Undo toast, and the item flies to its automatic spot (no fly
+under reduced motion). Mouse: press and drag. Touch: hold about 400 ms to
+pick up, so a tap still opens the popover and a swipe still scrolls or
+switches Fridge / Kitchen. Freeze and Thaw in the popover stay for the
+keyboard and screen readers. Past-date items sit in the crisper, whose drawer
 front reads "N past date · Toss all"; Toss all asks right there ("Toss N
 past date? Toss N · Cancel") before anything counts as waste.
 
