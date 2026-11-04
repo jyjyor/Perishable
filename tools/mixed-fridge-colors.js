@@ -57,7 +57,7 @@ function serve() {
   await page.click('#addbtn');
   await page.waitForTimeout(150);
   // Banana asks Ripe / Not ripe yet; the default (Ripe) is what we want.
-  if (await page.$('#voicePreview .receipt-row')) { await page.click('#voiceAdd'); await page.waitForTimeout(150); }
+  if (await page.$('#entryPreview .receipt-row')) { await page.click('#entryAdd'); await page.waitForTimeout(150); }
   await page.$eval('#allItems', d => { d.open = true; });
   await page.waitForTimeout(150);
 

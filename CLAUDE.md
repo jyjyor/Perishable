@@ -152,8 +152,8 @@ consumer food app.
   hand; change the script and run it again. Names match whole (FOODS,
   then a FoodKeeper name, then a FoodKeeper keyword), never by one word
   of several: "apple juice" is not Apple. Equal matches ask.
-- English only. Typed entry, voice (en-US), autocomplete, receipt
-  scanning and every hint and placeholder work in English; FOODS carries
+- English only. Typed entry, autocomplete, receipt scanning and every
+  placeholder work in English; FOODS carries
   no other-language synonyms. The single exception is LEGACY_ZH in
   index.html, a frozen table that migrateLegacyNames() uses once to move
   saved Chinese-named custom items onto their English FOODS keys (schema
@@ -278,13 +278,15 @@ chips and buttons, so a title never reads as data. Food names keep their
 own capitals wherever they appear ("Chinese broccoli", never lowercased
 mid-list).
 
-The page is four parts, about three times as far apart as anything
-within one, with rules only between parts: Fridge / Kitchen (the tabs
-are its title, All items under it); What's turning (the headline, its
-subline, and the decay line under its own small title); Add food (a
-faint flat tinted panel: Your usuals with Edit, then the entry field
-with Add, Speak and Scan receipt -- the top bar's Add jumps here); and
-So far (the ledger). Both come from an Adobe Fonts web project tied to a
+The page is four parts, in this order, about three times as far apart
+as anything within one, with rules only between parts: Fridge / Kitchen
+(the tabs are its title, All items under it); Add food (a faint flat
+tinted panel: Your usuals with Edit, then the entry field, placeholder
+"what did you buy?", with Add and Scan receipt -- the top bar's Add
+jumps here; no hint under it, and "2d" after an item still dates it two
+days back); What's turning (the headline, its subline, and the decay
+line under its own small title); and So far (the ledger). There is no
+voice entry. Both come from an Adobe Fonts web project tied to a
 Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
 CDN — fallbacks are Georgia/serif for Caslonian and ui-monospace for
 Tonos Mono, so the page still holds together if that stops being served.
@@ -360,7 +362,9 @@ Dragging moves food between places, never to a spot: position stays
 automatic by urgency (rfInitDrag, Pointer Events, no library). A fridge
 item dropped on the freezer, door open or closed, is frozen (freezeItem);
 a frozen one dropped on the fridge is thawed (thawItem), with the Thaw
-button's rules and its date prompt. While dragging, the valid zone gets
+button's rules and its date prompt; once it's thawed, a closed fridge
+door opens so it can be seen where it landed, as the freezer's door does
+on a freeze (a spirit taken out to the counter leaves it shut). While dragging, the valid zone gets
 a quiet outline, and a closed freezer door opens a little while food is
 held over it; something FoodKeeper says doesn't freeze well, or past
 date, gets no outline and goes back with a one-line note. Every drop

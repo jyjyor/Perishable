@@ -151,23 +151,23 @@ async function receiptScenario(browser) {
 // purchase (milk's old fixed value), then adds. No-op when nothing opened.
 async function answerPreview(page) {
   await page.waitForTimeout(50);
-  if (!(await page.$('#voicePreview .receipt-row'))) return;
+  if (!(await page.$('#entryPreview .receipt-row'))) return;
   for (;;) {
-    const pick = await page.$('#voicePreview .receipt-row.unresolved .entry-pick');
+    const pick = await page.$('#entryPreview .receipt-row.unresolved .entry-pick');
     if (!pick) break;
     const first = await pick.$eval('option:nth-child(2)', o => o.value);
     await pick.selectOption(first);
   }
   for (;;) {
-    const input = await page.$('#voicePreview .entry-date:not([data-done])');
+    const input = await page.$('#entryPreview .entry-date:not([data-done])');
     if (!input) break;
     const idx = await input.getAttribute('data-idx');
     const iso = await page.evaluate(i => new Date((today() - pendingItems[i].age + 7 - DAY_OFFSET) * 86400000)
       .toISOString().slice(0, 10), +idx);
     await input.fill(iso);
-    await page.$eval(`#voicePreview .entry-date[data-idx="${idx}"]`, el => el.setAttribute('data-done', ''));
+    await page.$eval(`#entryPreview .entry-date[data-idx="${idx}"]`, el => el.setAttribute('data-done', ''));
   }
-  await page.click('#voiceAdd');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
 }
 
@@ -582,7 +582,9 @@ async function migrationScenario(browser) {
   // Since 42c2338 a typed batch with an item that needs a date (milk's
   // printed date, dragonfruit matching nothing) waits in a review instead
   // of saving at once: give every date a person would, then Add.
-  const reviewAdd = await livePage.$('#voiceAdd');
+  // (Its Add was #voiceAdd until voice entry was removed: either.)
+  const ADD = '#entryAdd, #voiceAdd';
+  const reviewAdd = await livePage.$(ADD);
   if (reviewAdd && await reviewAdd.isVisible()) {
     const inFive = await livePage.evaluate(() => new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10));
     // the review re-renders as each date is given: look again each time
@@ -591,8 +593,8 @@ async function migrationScenario(browser) {
       await livePage.locator('.entry-date').nth(i).fill(inFive);
       await livePage.waitForTimeout(100);
     }
-    if (await livePage.$eval('#voiceAdd', b => b.disabled)) throw new Error('origin/main review still blocks Add after every date was filled');
-    await livePage.click('#voiceAdd');
+    if (await livePage.$eval(ADD, b => b.disabled)) throw new Error('origin/main review still blocks Add after every date was filled');
+    await livePage.click(ADD);
     await livePage.waitForTimeout(150);
   }
   // A driver that no longer matches origin/main's entry UI saves nothing,
@@ -1102,7 +1104,7 @@ async function typeEntry(page, text) {
   await page.click('#addbtn');
   await page.waitForTimeout(120);
 }
-const previewOpen = page => page.$eval('#voicePreview', el => el.style.display !== 'none' && !!el.querySelector('.receipt-row'));
+const previewOpen = page => page.$eval('#entryPreview', el => el.style.display !== 'none' && !!el.querySelector('.receipt-row'));
 function readReview(page, box) {
   return page.$$eval(`${box} .receipt-row`, els => els.map(el => ({
     name: (el.querySelector('.entry-name') || el.querySelector('input[type=text]')).textContent.trim() ||
@@ -1170,11 +1172,11 @@ async function fkOnlyScenario(browser) {
   if (!pop.includes('FoodKeeper #253 “Berries (blackberries, boysenberries, currant)”')) throw new Error('popover source should name #253 and its title');
   // A FoodKeeper-only food counted from ripeness offers Ripe / Not ripe yet.
   await typeEntry(page, 'apricots');
-  const [apricot] = await readReview(page, '#voicePreview');
+  const [apricot] = await readReview(page, '#entryPreview');
   console.log(' ', apricot.name, '|', apricot.flag || 'ok', '|', apricot.match);
   if (apricot.match.includes('FOODS') || !apricot.match.includes('FoodKeeper #249')) throw new Error('apricots should match FoodKeeper #249 alone');
   if (!apricot.match.includes('Ripe') || !apricot.match.includes('Not ripe yet')) throw new Error('apricots should offer the ripeness choice');
-  await page.click('#voiceDiscard');
+  await page.click('#entryDiscard');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1201,7 +1203,7 @@ async function noFalseMatchScenario(browser) {
   console.log('\n--- NO FALSE MATCH: apple juice is not Apple, almond milk is not Milk ---');
   await typeEntry(page, 'apple juice, chicken salad, almond milk, potato chips');
   if (!(await previewOpen(page))) throw new Error('almond milk and potato chips need answers; the preview should open');
-  const rows = await readReview(page, '#voicePreview');
+  const rows = await readReview(page, '#entryPreview');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
   const byName = n => rows.find(r => r.name === n);
   const expectMatch = (n, src, not) => {
@@ -1217,7 +1219,7 @@ async function noFalseMatchScenario(browser) {
   if (!byName('Potato chips').match.includes('no shelf-life data')) throw new Error('potato chips should say no shelf-life data');
   const keys = await page.evaluate(() => ['apple juice', 'chicken salad', 'almond milk', 'potato chips'].map(t => resolveName(t).keys));
   if (keys.flat().some(k => ['apple', 'chicken', 'milk', 'potato'].includes(k))) throw new Error('a generic FOODS key matched: ' + JSON.stringify(keys));
-  await page.click('#voiceDiscard');
+  await page.click('#entryDiscard');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1254,16 +1256,16 @@ async function ambiguousScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- AMBIGUOUS: "cheese" and "tortillas" ask which one ---');
   await typeEntry(page, 'cheese, tortillas');
-  const rows = await readReview(page, '#voicePreview');
+  const rows = await readReview(page, '#entryPreview');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag, '|', r.options.join(' / ')));
   expectEqual('cheese options', rows[0].options, ['Hard cheese (FOODS)', 'Shredded cheese (FOODS)', 'Soft cheese (FOODS)']);
   expectEqual('tortilla options', rows[1].options, ['Flour tortillas (FOODS)', 'Corn tortillas (FOODS)']);
-  if (!(await page.$eval('#voiceAdd', b => b.disabled))) throw new Error('Add should be blocked while a choice is open');
+  if (!(await page.$eval('#entryAdd', b => b.disabled))) throw new Error('Add should be blocked while a choice is open');
   await page.click('#addbtn');   // the other Add path refuses too
   if ((await readInventory(page)).length) throw new Error('nothing should be added before the choices are made');
-  await page.selectOption('#voicePreview .entry-pick[data-idx="0"]', 'softcheese');
-  await page.selectOption('#voicePreview .entry-pick[data-idx="1"]', 'corntortilla');
-  await page.click('#voiceAdd');
+  await page.selectOption('#entryPreview .entry-pick[data-idx="0"]', 'softcheese');
+  await page.selectOption('#entryPreview .entry-pick[data-idx="1"]', 'corntortilla');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   const inv = await readInventory(page);
   console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
@@ -1279,14 +1281,14 @@ async function noMatchScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- NO MATCH: cannot be saved without a date ---');
   await typeEntry(page, 'potato chips 2d');
-  const [row] = await readReview(page, '#voicePreview');
+  const [row] = await readReview(page, '#entryPreview');
   console.log(' ', row.name, '|', row.flag, '|', row.match);
-  if (!(await page.$eval('#voiceAdd', b => b.disabled))) throw new Error('Add should be blocked with no date');
+  if (!(await page.$eval('#entryAdd', b => b.disabled))) throw new Error('Add should be blocked with no date');
   await page.click('#addbtn');
   await page.waitForTimeout(80);
   expectEqual('fridge after refused add', (await readInventory(page)).length, 0);
-  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 28));
-  await page.click('#voiceAdd');
+  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 28));
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   const inv = await readInventory(page);
   console.log('inventory:', JSON.stringify(inv));
@@ -1363,11 +1365,11 @@ async function receiptNewItemsScenario(browser) {
 
   await page.click('[data-restock="sourcream"]');
   await page.waitForTimeout(100);
-  const heading = await page.textContent('#voicePreview > div:first-child');
+  const heading = await page.textContent('#entryPreview > div:first-child');
   console.log('restock sour cream:', heading.trim());
   if (!/needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the date');
-  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 25));
-  await page.click('#voiceAdd');
+  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 25));
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   const after = await readInventory(page);
   expectEqual('sour cream rows after restock', after.filter(r => r.name === 'Sour cream').length, 1);
@@ -1975,11 +1977,11 @@ async function ripenessScenario(browser) {
   console.log('\n--- RIPENESS: Ripe / Not ripe yet / It\'s ripe ---');
   await typeEntry(page, 'bananas, pineapple');
   if (!(await previewOpen(page))) throw new Error('bananas should open the preview for the ripeness choice');
-  expectEqual('first-time default', await page.$eval('#voicePreview .entry-ripe:checked', r => r.value), 'ripe');
-  expectEqual('pineapple asks nothing', await page.$$eval('#voicePreview .entry-ripe[data-idx="1"]', r => r.length), 0);
-  if (await page.$eval('#voiceAdd', b => b.disabled)) throw new Error('a ripeness choice has a default; Add should be enabled');
-  await page.check('#voicePreview .entry-ripe[data-idx="0"][value="unripe"]');
-  await page.click('#voiceAdd');
+  expectEqual('first-time default', await page.$eval('#entryPreview .entry-ripe:checked', r => r.value), 'ripe');
+  expectEqual('pineapple asks nothing', await page.$$eval('#entryPreview .entry-ripe[data-idx="1"]', r => r.length), 0);
+  if (await page.$eval('#entryAdd', b => b.disabled)) throw new Error('a ripeness choice has a default; Add should be enabled');
+  await page.check('#entryPreview .entry-ripe[data-idx="0"][value="unripe"]');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   let inv = await readInventory(page);
   console.log('after adding:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
@@ -1989,8 +1991,8 @@ async function ripenessScenario(browser) {
   expectEqual('ten days on, still no countdown or decay', later, [3, 0]);
 
   await typeEntry(page, 'bananas');
-  expectEqual('remembered default', await page.$eval('#voicePreview .entry-ripe:checked', r => r.value), 'unripe');
-  await page.click('#voiceDiscard');
+  expectEqual('remembered default', await page.$eval('#entryPreview .entry-ripe:checked', r => r.value), 'unripe');
+  await page.click('#entryDiscard');
   await page.click('[data-restock="banana"]');
   await page.waitForTimeout(100);
   expectEqual('restock uses the remembered choice', await page.evaluate(() => fridge.find(i => i.key === 'banana').ripening), true);
@@ -2024,24 +2026,24 @@ async function drinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- DRINKS: beer, wine, vodka; guava ---');
   await typeEntry(page, 'beer, wine, vodka, guava');
-  let rows = await readReview(page, '#voicePreview');
+  let rows = await readReview(page, '#entryPreview');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match, r.options])));
   expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
   expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
   if (!rows[2].match.includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539: ' + rows[2].match);
   if (!rows[3].match.includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
-  await page.fill('#voicePreview .entry-date[data-idx="0"]', await isoIn(page, 120));
-  await page.dispatchEvent('#voicePreview .entry-date[data-idx="0"]', 'change');
-  await page.selectOption('#voicePreview .entry-pick[data-idx="1"]', 'redwine');
+  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 120));
+  await page.dispatchEvent('#entryPreview .entry-date[data-idx="0"]', 'change');
+  await page.selectOption('#entryPreview .entry-pick[data-idx="1"]', 'redwine');
   await page.waitForTimeout(80);
-  rows = await readReview(page, '#voicePreview');
+  rows = await readReview(page, '#entryPreview');
   if (!rows[1].match.includes('opened or unopened?')) throw new Error('red wine should ask opened or unopened: ' + rows[1].match);
-  expectEqual('unopened by default', await page.$eval('#voicePreview .entry-open[data-idx="1"]:checked', r => r.value), 'unopened');
-  await page.click('#voiceAdd');
+  expectEqual('unopened by default', await page.$eval('#entryPreview .entry-open[data-idx="1"]:checked', r => r.value), 'unopened');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   await typeEntry(page, 'white wine');
-  await page.check('#voicePreview .entry-open[data-idx="0"][value="opened"]');
-  await page.click('#voiceAdd');
+  await page.check('#entryPreview .entry-open[data-idx="0"][value="opened"]');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
 
   let inv = await readInventory(page);
@@ -2098,14 +2100,14 @@ async function drinksScenario(browser) {
 
   // The rest of the drinks: what each name matches, and what it asks.
   await typeEntry(page, 'whisky, bourbon, scotch, rum, gin, tequila, mezcal, brandy, cognac, baijiu, liquor, spirits, cream liqueur, canned beer, hard cider, hard seltzer');
-  rows = await readReview(page, '#voicePreview');
+  rows = await readReview(page, '#entryPreview');
   const got = rows.map(r => [r.name, r.flag, (r.match.match(/FoodKeeper #\d+/) || ['none'])[0]]);
   console.log(JSON.stringify(got));
   const keepsNames = ['Whiskey', 'Bourbon', 'Scotch', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Baijiu', 'Liquor', 'Liquor'];
   expectEqual('spirits: #539, nothing asked', got.slice(0, 12), keepsNames.map(n => [n, '', 'FoodKeeper #539']));
   expectEqual('cream liqueur: #540, nothing asked', got[12], ['Cream liqueur', '', 'FoodKeeper #540']);
   expectEqual('cans and cider: the printed date', got.slice(13).map(r => r[1]), ['needs date', 'needs date', 'needs date']);
-  const asks = await page.$$eval('#voicePreview .entry-open', r => r.length);
+  const asks = await page.$$eval('#entryPreview .entry-open', r => r.length);
   expectEqual('no opened question for any of these', asks, 0);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -2119,7 +2121,7 @@ async function moreDrinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- MORE DRINKS: sparkling, rosé, vermouth, sake, soju ---');
   await typeEntry(page, 'champagne, prosecco, cava, rosé, rose wine, sweet vermouth, sake, soju');
-  let rows = await readReview(page, '#voicePreview');
+  let rows = await readReview(page, '#entryPreview');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
   expectEqual('names', rows.map(r => r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
   rows.forEach(r => { if (r.flag !== 'needs date') throw new Error(r.name + ' unopened should need the printed date: ' + JSON.stringify(r)); });
@@ -2131,17 +2133,17 @@ async function moreDrinksScenario(browser) {
   });
   // Opened: the date field goes away and the line can go in.
   for (const i of [0, 3, 5]) {
-    await page.check(`#voicePreview .entry-open[data-idx="${i}"][value="opened"]`);
+    await page.check(`#entryPreview .entry-open[data-idx="${i}"][value="opened"]`);
     await page.waitForTimeout(60);
   }
-  rows = await readReview(page, '#voicePreview');
+  rows = await readReview(page, '#entryPreview');
   expectEqual('opened lines need nothing', [0, 3, 5].map(i => rows[i].flag), ['', '', '']);
   for (const i of [1, 2, 4, 6, 7]) {
-    await page.fill(`#voicePreview .entry-date[data-idx="${i}"]`, await isoIn(page, 200));
-    await page.dispatchEvent(`#voicePreview .entry-date[data-idx="${i}"]`, 'change');
+    await page.fill(`#entryPreview .entry-date[data-idx="${i}"]`, await isoIn(page, 200));
+    await page.dispatchEvent(`#entryPreview .entry-date[data-idx="${i}"]`, 'change');
     await page.waitForTimeout(40);
   }
-  await page.click('#voiceAdd');
+  await page.click('#entryAdd');
   await page.waitForTimeout(150);
   const recs = await page.evaluate(() => fridge.map(i => [i.key, !!i.opened, Math.round(left(i)), fridgeShapeOf(i)]));
   console.log(JSON.stringify(recs));
@@ -2285,7 +2287,8 @@ async function dragFreezeScenario(browser) {
 // fridge. With FoodKeeper's thaw figure (The Big Thaw for raw chicken) it
 // thaws straight away with Undo; with none (broccoli) it goes back and the
 // popover asks for the date, as the Thaw button does -- and that date's
-// toast offers Undo too.
+// toast offers Undo too. Dropped on a closed fridge door, the door opens
+// once the item is thawed, so it can be seen where it landed.
 async function dragThawScenario(browser) {
   const { page, errors, cdp } = await touchPage(browser, true);
   console.log('\n--- DRAG: freezer item to the fridge (touch, phone) ---');
@@ -2293,9 +2296,21 @@ async function dragThawScenario(browser) {
   await page.click('#rfFzHandle');
   await page.waitForTimeout(1100);
   const shelf = await rfPoint(page, 180, 330);
+  const doorState = () => page.evaluate(() => [document.getElementById('rfUnit').classList.contains('open'), document.getElementById('rfHandle').getAttribute('aria-pressed')]);
+  // by the handle from the keyboard: the open door's own edge sits over it
+  const closeDoor = async () => {
+    await page.focus('#rfHandle');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1100);
+    expectEqual('fridge door closed before the drop', await doorState(), [false, 'false']);
+  };
+  await closeDoor();
   await touchPath(page, cdp, await centerOf(page, `[data-rf-item="${fzChk}"]`), shelf, { hold: 520 });
   await page.waitForTimeout(150);
   expectEqual('thawed by the drop', await recOf(page, fzChk), {frozen: false, thawed: true, left: 2});
+  expectEqual('the closed fridge door opened on the drop', await doorState(), [true, 'true']);
+  await page.waitForTimeout(1100);
+  await page.screenshot({ path: path.join(OUT, 'drag-thaw-door-open-phone.png') });
   const t = await toastText(page);
   if (!t.startsWith('Chicken breast thawed') || !t.includes('Undo')) throw new Error('toast: ' + t);
   expectEqual('no popover after a drop', await page.$eval('#rfPopover', p => p.hidden), true);
@@ -2303,6 +2318,7 @@ async function dragThawScenario(browser) {
   await page.waitForTimeout(100);
   expectEqual('Undo: frozen again', await recOf(page, fzChk), {frozen: true, thawed: false, left: null});
 
+  await closeDoor();
   await touchPath(page, cdp, await centerOf(page, `[data-rf-item="${fzBroc}"]`), shelf, { hold: 520 });
   await page.waitForTimeout(150);
   expectEqual('broccoli: still frozen, the date asked', await page.evaluate(id => [!!fridge.find(i => i.id === id).frozen, !document.getElementById('rfPopover').hidden, !document.querySelector('#rfPopover .rf-pop-thawask').hidden], fzBroc), [true, true, true]);
@@ -2310,6 +2326,7 @@ async function dragThawScenario(browser) {
   await page.dispatchEvent('#rfPopover .rf-pop-thawdate', 'change');
   await page.waitForTimeout(120);
   expectEqual('broccoli thawed by the date', await recOf(page, fzBroc), {frozen: false, thawed: true, left: 3});
+  expectEqual('the fridge door opened once the date thawed it', await doorState(), [true, 'true']);
   if (!(await toastText(page)).includes('Undo')) throw new Error('date thaw after a drop should offer Undo');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -2566,10 +2583,10 @@ async function cantFreezeScenario(browser) {
   // Typed "frozen cucumber" stops at the preview and says why it goes in
   // the fridge.
   await typeEntry(page, 'frozen cucumber');
-  const rows = await readReview(page, '#voicePreview');
+  const rows = await readReview(page, '#entryPreview');
   console.log(JSON.stringify(rows));
   if (!rows[0].match.includes('freezing not recommended') || rows[0].match.includes('Frozen')) throw new Error('frozen cucumber: ' + rows[0].match);
-  await page.click('#voiceAdd');
+  await page.click('#entryAdd');
   await page.waitForTimeout(100);
   expectEqual('cucumber went in the fridge', await page.evaluate(() => fridge.filter(i => i.key === 'cucumber').map(i => !!i.frozen)), [false, false]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
@@ -2589,18 +2606,18 @@ async function frozenEntryScenario(browser) {
   let st = await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen, shelfOf(i)]));
   expectEqual('shrimp frozen, 540 days', st, [['shrimp', true, 540]]);
   await typeEntry(page, 'salmon, chicken nuggets, frozen peas, frozen edamame');
-  let rows = await readReview(page, '#voicePreview');
+  let rows = await readReview(page, '#entryPreview');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
-  const checked = await page.$$eval('#voicePreview .entry-frozen', bs => bs.map(b => b.checked));
+  const checked = await page.$$eval('#entryPreview .entry-frozen', bs => bs.map(b => b.checked));
   expectEqual('Frozen toggles: salmon off, nuggets, peas and edamame on', checked, [false, true, true, true]);
   expectEqual('only the peas need a date', rows.map(r => r.flag), ['', '', 'no match / choice', '']);
   if (!rows[3].match.includes('FoodKeeper #641')) throw new Error('frozen edamame should be #641: ' + rows[3].match);
-  await page.check('#voicePreview .entry-frozen[data-idx="0"]');
+  await page.check('#entryPreview .entry-frozen[data-idx="0"]');
   await page.waitForTimeout(60);
-  await page.fill('#voicePreview .entry-date[data-idx="2"]', await isoIn(page, 120));
-  await page.dispatchEvent('#voicePreview .entry-date[data-idx="2"]', 'change');
+  await page.fill('#entryPreview .entry-date[data-idx="2"]', await isoIn(page, 120));
+  await page.dispatchEvent('#entryPreview .entry-date[data-idx="2"]', 'change');
   await page.waitForTimeout(60);
-  await page.click('#voiceAdd');
+  await page.click('#entryAdd');
   await page.waitForTimeout(150);
   st = await page.evaluate(() => fridge.map(i => [food(i).en, !!i.frozen, shelfOf(i)]));
   console.log(JSON.stringify(st));
@@ -3075,7 +3092,7 @@ async function kitchenScenario(browser) {
 // title), never in the mono caps that label data. Food names keep their
 // own capitals in labels: "Chinese broccoli", never "chinese broccoli".
 async function pageStructureScenario(browser) {
-  console.log('\n--- PAGE: four parts, titles in Caslonian, food names capitalized ---');
+  console.log('\n--- PAGE: four parts in order, no voice entry, titles in Caslonian, food names capitalized ---');
   const items = [...KITCHEN_20, ['gailan', 2]];
   for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport: vp });
@@ -3096,10 +3113,18 @@ async function pageStructureScenario(browser) {
         usuals: document.querySelector('#addFood .sub-title').textContent,
         entryInAdd: !!document.querySelector('#addFood #entry') && !!document.querySelector('#addFood #restock'),
         chart: document.getElementById('chart').textContent,
+        speak: !!document.getElementById('voicebtn') || [...document.querySelectorAll('button')].some(b => /speak/i.test(b.textContent)),
+        hint: !!document.querySelector('#addFood .hint') || /Type a list|joins your usuals/.test(document.getElementById('addFood').textContent),
+        placeholder: document.getElementById('entry').placeholder,
+        buttons: [...document.querySelectorAll('#addFood .add > button')].map(b => b.textContent.trim()),
       };
     });
     console.log(`${tag}:`, JSON.stringify({ ...st, chart: undefined }));
-    expectEqual(`${tag}: four parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', "What's turning", 'Add food', 'So far']);
+    expectEqual(`${tag}: four parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', 'Add food', "What's turning", 'So far']);
+    expectEqual(`${tag}: no Speak button`, st.speak, false);
+    expectEqual(`${tag}: no hint under the entry field`, st.hint, false);
+    expectEqual(`${tag}: placeholder`, st.placeholder, 'what did you buy?');
+    expectEqual(`${tag}: entry buttons`, st.buttons, ['Add', 'Scan receipt']);
     for (const [fam, size, tt] of st.fonts) {
       if (fam !== 'caslonian-std-l' || tt !== 'none' || parseFloat(size) < 19) throw new Error(`${tag}: a part title is ${fam} ${size} ${tt}`);
     }
@@ -3109,6 +3134,23 @@ async function pageStructureScenario(browser) {
     expectEqual(`${tag}: chips and entry in one section`, st.entryInAdd, true);
     // (a phone shortens a crowded day to "+N", so the full names are checked on desktop)
     if (tag === 'desktop' && !/Chinese broccoli/.test(st.chart) || /chinese broccoli/.test(st.chart)) throw new Error(`${tag}: decay line should say "Chinese broccoli": ${st.chart}`);
+    // The top bar's Add still lands on Add food, cursor in the field.
+    await page.click('#addJumpBtn');
+    await page.waitForTimeout(900);
+    const jump = await page.evaluate(() => ({
+      focused: document.activeElement && document.activeElement.id,
+      top: Math.round(document.getElementById('addFood').getBoundingClientRect().top),
+    }));
+    expectEqual(`${tag}: top bar Add focuses the entry field`, jump.focused, 'entry');
+    if (jump.top < 0 || jump.top > 120) throw new Error(`${tag}: top bar Add should scroll Add food to the top, got ${jump.top}`);
+    // "2d" after an item still dates it two days back.
+    await page.fill('#entry', 'spinach 2d');
+    await page.click('#addbtn');
+    await page.waitForTimeout(200);
+    if (await page.$('#entryPreview .receipt-row')) await page.click('#entryAdd');
+    await page.waitForTimeout(200);
+    const ages = await page.evaluate(() => fridge.filter(it => it.key === 'spinach').map(it => today() - it.bought));
+    if (!ages.includes(2)) throw new Error(`${tag}: "spinach 2d" should be bought two days ago, got ages ${ages}`);
     await page.screenshot({ path: path.join(OUT, `page-${tag}.png`), fullPage: true });
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await ctx.close();

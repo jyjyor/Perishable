@@ -81,7 +81,6 @@ button.solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 button.solid:hover{background:#000}
 button.ghost{border-color:transparent;color:var(--ink-2);padding:4px 8px}
 button.ghost:hover{color:var(--ink);background:var(--panel-2)}
-button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
 /* ---------- fridge view ----------
    A reversed fridge: what's closest to expiring sits large and lit on a
@@ -641,11 +640,10 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 .add input:focus{outline:none;border-color:var(--ink)}
 .add input::placeholder{color:var(--ink-3)}
-.hint{margin-top:10px;color:var(--ink-3);max-width:60ch;font-size:13px}
 
 /* Suggestions are a menu of things you could add — a plain attached list,
    the same row/border-bottom vocabulary as the inventory table. Deliberately
-   not chip-styled and not accented: the voice preview (.missing, turn accent,
+   not chip-styled and not accented: the entry preview (.missing, turn accent,
    pill chips) means "about to be added, confirm or drop it" — a different
    claim than "here's what exists," so the two must not read alike. */
 .suggest{
@@ -698,7 +696,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 
 /* ---------- the page's four parts ----------
-   Fridge / Kitchen, What's turning, Add food, So far. A part's title is
+   Fridge / Kitchen, Add food, What's turning, So far. A part's title is
    Caslonian at 22px, sentence case, so it never reads as data; the small
    mono caps stay on data labels, axis ticks, legends, chips and buttons.
    About three times as much space between parts as within one, and rules
@@ -732,17 +730,16 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 #panelKitchen .tonight.projected{margin-top:calc(var(--gap-in) * 1.5);border-top:none;padding-top:0}
 #panelKitchen .dish-sub{margin-top:12px;border-top:none;padding-top:0}
 
-/* 2 */
+/* 3 */
 .part-turning .hero{padding:0}
 .part-turning .sub-title{margin-top:calc(var(--gap-in) * 1.5)}
 .part-turning .chart{margin-top:8px}
 
-/* 3: a faint tinted panel -- flat, square, no shadow -- so it reads as
+/* 2: a faint tinted panel -- flat, square, no shadow -- so it reads as
    the place you do something. It replaces the rule above it. */
 .part.part-add{border-top:none;background:var(--panel);padding:var(--gap-in) 28px 28px}
 .part-add .add{margin-top:var(--gap-in)}
 .part-add .add input{background:var(--paper)}
-.part-add .hint{margin-top:12px}
 
 /* 4 */
 .part-sofar .ledger{margin-top:0;border-top:none;padding-top:0}
@@ -899,7 +896,27 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   </details>
   </section>
 
-  <!-- 2. What's turning: the headline, its subline, the decay line. -->
+  <!-- 2. Add food: the place where you do something. The top bar's Add
+       jumps here. -->
+  <section class="part part-add" id="addFood" aria-labelledby="addTitle">
+    <h2 class="part-title" id="addTitle">Add food</h2>
+    <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit">Edit</button></div>
+    <div class="rescue" id="restock"></div>
+
+    <div class="add">
+      <div class="entrywrap">
+        <input id="entry" placeholder="what did you buy?" autocomplete="off">
+        <div class="suggest" id="suggest" style="display:none"></div>
+      </div>
+      <button class="solid" id="addbtn">Add</button>
+      <button id="scanReceiptBtn">Scan receipt</button>
+      <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
+    </div>
+    <div class="missing" id="entryPreview" style="display:none"></div>
+    <div class="missing" id="receiptPreview" style="display:none"></div>
+  </section>
+
+  <!-- 3. What's turning: the headline, its subline, the decay line. -->
   <section class="part part-turning" aria-labelledby="turningTitle">
     <h2 class="part-title" id="turningTitle">What's turning</h2>
     <div class="hero">
@@ -913,28 +930,6 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       <span><i style="background:var(--turn)"></i>this week</span>
       <span><i style="background:var(--fresh)"></i>holding</span>
     </div>
-  </section>
-
-  <!-- 3. Add food: the place where you do something. The top bar's Add
-       jumps here. -->
-  <section class="part part-add" id="addFood" aria-labelledby="addTitle">
-    <h2 class="part-title" id="addTitle">Add food</h2>
-    <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit">Edit</button></div>
-    <div class="rescue" id="restock"></div>
-
-    <div class="add">
-      <div class="entrywrap">
-        <input id="entry" placeholder="what did you buy? e.g. spinach, milk, chicken breast 2d" autocomplete="off">
-        <div class="suggest" id="suggest" style="display:none"></div>
-      </div>
-      <button class="solid" id="addbtn">Add</button>
-      <button id="voicebtn" style="display:none">Speak</button>
-      <button id="scanReceiptBtn">Scan receipt</button>
-      <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
-    </div>
-    <div class="missing" id="voicePreview" style="display:none"></div>
-    <div class="missing" id="receiptPreview" style="display:none"></div>
-    <p class="hint">Type a list. Add <span class="mono" style="text-transform:none">2d</span> after an item if you bought it two days ago. Anything typed here joins your usuals next time.</p>
   </section>
 
   <!-- 4. So far: the ledger. -->
@@ -978,7 +973,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    FRIDGE_CAT below) and, by default, picks the silhouette too -- and
    never touches shelf life. One of: leafy (wilts), soft (shrinks/
    wrinkles), veg (firm produce), dairy, protein, cooked. A custom item
-   (typed/voice/receipt, never in FOODS) has no cat and keeps the generic
+   (typed/receipt, never in FOODS) has no cat and keeps the generic
    shape and neutral weights.
 
    shape optionally overrides just the silhouette a specific food uses,
@@ -1067,7 +1062,7 @@ const FOODS = {
   // dressed up as a source (napa cabbage via Cabbage, garlic chives via
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
-  // unrecognised typed/spoken items.
+  // unrecognised typed items.
   napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', base:'#a7c0a5'},
   garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, base:'#429453'},
   lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#dfdad8'},
@@ -2804,7 +2799,7 @@ function pos(d){ // sqrt scale: the near edge gets the room it deserves
 // each with its own silhouette and its own weight on the decay stages --
 // greens droop hardest, soft produce wrinkles and shrinks hardest, dairy
 // darkens and molds more than it deforms, protein darkens hardest, packaged
-// goods hold their shape. 1.0 is baseline. A custom item (typed/voice/
+// goods hold their shape. 1.0 is baseline. A custom item (typed/
 // receipt) carries no cat and gets 'generic': the plain container shape,
 // every weight neutral.
 const FRIDGE_CAT = {
@@ -2861,7 +2856,7 @@ const INK_HEX = '#141817'; // --ink: the line-art exploration's stroke color
 // (neutralWashColor -- one flat wash for every food, darkening with
 // decay -- was explored and set aside in favor of this; kept here only
 // because tools/mushroom-study.js's side-by-side comparison still calls it.)
-const DEFAULT_BASE_HEX = '#C9BFAE'; // a custom (typed/voice/receipt) item has no FOODS.base
+const DEFAULT_BASE_HEX = '#C9BFAE'; // a custom (typed/receipt) item has no FOODS.base
 function foodBaseColor(it){ return food(it).base || DEFAULT_BASE_HEX; }
 // What a body is filled with at a decay fraction: the base drifting
 // toward brown (natureColor), except packaging, which keeps its colour.
@@ -5719,7 +5714,7 @@ function rfShowPopover(id, anchorEl, opts = {}){
   };
   // Thaw from the All items row, with no thawed figure: straight to the date
   if (thawAsks && opts.thaw){ pop.querySelector('.rf-pop-thaw').hidden = true; pop.querySelector('.rf-pop-thawask').hidden = false; }
-  if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value, opts.undo ? rfUndoFor(id) : undefined); };
+  if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value, opts.undo ? rfUndoFor(id) : undefined); if (opts.undo) rfOpenDoorFor(id); };
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
   pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
@@ -5749,7 +5744,15 @@ function rfHidePopover(){
    about 400 ms to pick up, then drag, so a tap still opens the popover and
    a swipe still scrolls or switches Fridge / Kitchen. Pointer Events. */
 const RF_HOLD_MS = 400, RF_SLOP = 8;
-let rfDrag = null, rfClickBlock = false, rfSetFreezer = null;
+let rfDrag = null, rfClickBlock = false, rfSetFreezer = null, rfSetDoor = null;
+// A frozen item dropped on the fridge: once it's thawed, a closed fridge
+// door opens so it can be seen where it landed, as the freezer's does on a
+// freeze. A spirit taken out to the counter leaves the door as it is.
+function rfOpenDoorFor(id){
+  const it = fridge.find(x => x.id === id);
+  if (!it || it.frozen || !inFridgeAt(it, today()) || !rfSetDoor) return;
+  if (!document.getElementById('rfUnit').classList.contains('open')) rfSetDoor(true);
+}
 // Undo for a drop: the record exactly as it was before.
 function rfUndoFor(id){
   const i = fridge.findIndex(x => x.id === id);
@@ -5897,6 +5900,7 @@ function rfInitDrag(unit){
       return;
     }
     thawItem(d.id, null, rfUndoFor(d.id));
+    rfOpenDoorFor(d.id);
     fly(d, d.id);
   };
   const cancel = e => {
@@ -5967,6 +5971,7 @@ function rfInit(){
     setFreezer(!unit.classList.contains('fz-open'));
   });
   rfSetFreezer = setFreezer;
+  rfSetDoor = setDoor;
   rfInitDrag(unit);
   // The count on the closed door opens it too.
   document.getElementById('rfFzCount').addEventListener('click', e => {
@@ -6725,9 +6730,6 @@ function clearGone(){
 
 /* ---------- entry ---------- */
 
-// Exact only: token must equal a food's key or name outright.
-// Used standalone by the speech tokenizer, where a multi-unit window must
-// match a whole food name rather than merely contain one.
 /* ---------- matching: FOODS, then FoodKeeper ---------- */
 
 // A name is always compared whole, after the same normalisation
@@ -7152,83 +7154,6 @@ function parseText(text){
   }).filter(Boolean);
 }
 
-// Pure: speech transcript in, entries out. Speech carries no punctuation
-// to split on, so this walks a flat sequence of words and greedily tries
-// the largest plausible window at each position: 2 words (covers every
-// multi-word food name), then 1. Every window is matched whole by
-// resolveName(), so "milk chicken" is never one item. Unmatched units
-// accumulate and flush as one grouped no-match entry rather than one per
-// stray word.
-//
-// Known gap: only the existing "<number>d" shorthand is recognised as an age
-// marker (glued "2d" or spoken-apart "2 d"). Natural phrases like "two days
-// ago" are not parsed — nobody actually says "2d" out loud, so this needs
-// revisiting, just not in this pass.
-function parseSpeech(text){
-  const raw = text.trim().replace(/\s+/g, ' ');
-  if (!raw) return [];
-
-  const units = [];
-  let i = 0;
-  while (i < raw.length){
-    const ch = raw[i];
-    if (ch === ' '){ i++; continue; }
-    let j = i;
-    while (j < raw.length && /[a-zA-Z0-9']/.test(raw[j])) j++;
-    if (j === i) { i++; continue; } // stray punctuation
-    units.push({text:raw.slice(i, j)});
-    i = j;
-  }
-
-  function windowText(u, len){
-    return units.slice(u, u + len).map(x => x.text).join(' ');
-  }
-  function tryMatch(u){
-    for (let len = Math.min(2, units.length - u); len >= 1; len--){
-      const cand = windowText(u, len);
-      if (resolveName(cand).keys.length) return {raw:cand, consumed:len};
-    }
-    return null;
-  }
-
-  const items = [];
-  let unresolved = '';
-  function flushUnresolved(){
-    const t = unresolved.trim();
-    unresolved = '';
-    if (!t) return;
-    items.push(entryFor(t, 0));
-  }
-
-  let u = 0;
-  while (u < units.length){
-    const glued = units[u].text.match(/^(\d+)d$/i);
-    if (glued && items.length){
-      items[items.length - 1].age = parseInt(glued[1], 10);
-      u += 1;
-      continue;
-    }
-    if (/^\d+$/.test(units[u].text) && u + 1 < units.length &&
-        /^d$/i.test(units[u+1].text) && items.length){
-      items[items.length - 1].age = parseInt(units[u].text, 10);
-      u += 2;
-      continue;
-    }
-
-    const m = tryMatch(u);
-    if (m){
-      flushUnresolved();
-      items.push(entryFor(m.raw, 0));
-      u += m.consumed;
-    } else {
-      unresolved += (unresolved ? ' ' : '') + units[u].text;
-      u += 1;
-    }
-  }
-  flushUnresolved();
-  return items;
-}
-
 // Commits entries that need nothing more (entryNeeds() null): pushes to
 // fridge, updates standing, renders, toasts. A restock entry goes back
 // through restock() with the date it now has.
@@ -7328,7 +7253,7 @@ function renderSettingsStatus(){
 /* ---------- receipt scanning ----------
    Flow: downscale the photo client-side, send it to Claude for OCR only
    (names + quantity + is_food + date — never shelf life), run every
-   returned name through the same resolveName() the typed/voice path uses so
+   returned name through the same resolveName() the typed path uses so
    USDA FoodKeeper stays the one source of shelf life, then show an
    editable review list before anything touches the fridge. A failed
    call keeps the photo and offers Retry — nothing is logged silently. */
@@ -7568,7 +7493,7 @@ function renderReceiptBox(){
   document.getElementById('receiptDiscard').onclick = discardReceipt;
 }
 
-// Committing goes through the same entryRecord() typed and voice entry
+// Committing goes through the same entryRecord() typed entry
 // use, with every line dated by the receipt. Nothing goes in while a
 // checked line still lacks a match or a date.
 function confirmReceipt(){
@@ -7601,91 +7526,19 @@ function confirmReceipt(){
   else toast('Nothing checked to add');
 }
 
-/* ---------- voice ---------- */
+/* ---------- entry preview ---------- */
 
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recog = null;
-let listening = false;
 let pendingItems = null;
-
-function initVoice(){
-  const btn = document.getElementById('voicebtn');
-  if (!SR){ btn.remove(); return; }
-  btn.style.display = '';
-  btn.onclick = () => listening ? stopVoice() : startVoice();
-}
-
-function setVoiceUI(active){
-  const btn = document.getElementById('voicebtn');
-  btn.textContent = active ? 'Listening…' : 'Speak';
-  btn.classList.toggle('recording', active);
-}
-
-function voiceErrorMessage(err){
-  switch(err){
-    case 'not-allowed':
-    case 'service-not-allowed': return 'Microphone permission denied';
-    case 'no-speech': return 'Didn’t catch anything';
-    case 'audio-capture': return 'No microphone found';
-    case 'network': return 'Speech recognition network error';
-    default: return 'Speech recognition failed';
-  }
-}
-
-function startVoice(){
-  pendingItems = null;
-  renderVoicePreview();
-  document.getElementById('entry').value = '';
-
-  recog = new SR();
-  recog.lang = 'en-US';
-  recog.continuous = true;
-  recog.interimResults = true;
-
-  let finalText = '';
-  recog.onresult = e => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++){
-      const r = e.results[i];
-      if (r.isFinal) finalText += r[0].transcript;
-      else interim += r[0].transcript;
-    }
-    document.getElementById('entry').value = (finalText + interim).trim();
-  };
-  recog.onerror = e => toast(voiceErrorMessage(e.error));
-  recog.onend = () => {
-    listening = false;
-    setVoiceUI(false);
-    const text = document.getElementById('entry').value.trim();
-    if (text) showVoicePreview(text);
-  };
-
-  try {
-    recog.start();
-    listening = true;
-    setVoiceUI(true);
-  } catch(e){
-    toast('Could not start microphone');
-  }
-}
-
-function stopVoice(){
-  if (recog) recog.stop();
-}
-
 let pendingHeading = '';
-function showVoicePreview(text){
-  showEntryPreview(parseSpeech(text), 'Heard this — untick anything wrong before adding.');
-}
-// The one preview for typed, spoken and restocked entries.
+// The one preview for typed and restocked entries.
 function showEntryPreview(entries, heading){
   pendingItems = entries;
   pendingHeading = heading;
-  renderVoicePreview();
+  renderEntryPreview();
 }
 
-function renderVoicePreview(){
-  const box = document.getElementById('voicePreview');
+function renderEntryPreview(){
+  const box = document.getElementById('entryPreview');
   if (!pendingItems || !pendingItems.length){
     box.style.display = 'none';
     box.innerHTML = '';
@@ -7705,35 +7558,35 @@ function renderVoicePreview(){
     <div>${pendingHeading}</div>
     <div style="margin-top:10px">${rows}</div>
     <div class="sub" style="margin-top:10px">
-      <button class="solid" id="voiceAdd"${waiting ? ' disabled' : ''}>Add ${included.length}</button>
-      <button id="voiceDiscard">Discard</button>
+      <button class="solid" id="entryAdd"${waiting ? ' disabled' : ''}>Add ${included.length}</button>
+      <button id="entryDiscard">Discard</button>
       ${waiting ? `<span class="mono">${waiting} ${waiting === 1 ? 'needs' : 'need'} a date or a match first</span>` : ''}
     </div>`;
   box.querySelectorAll('.entry-check').forEach(cb => {
-    cb.onchange = () => { pendingItems[+cb.dataset.idx].included = cb.checked; renderVoicePreview(); };
+    cb.onchange = () => { pendingItems[+cb.dataset.idx].included = cb.checked; renderEntryPreview(); };
   });
-  wireEntryControls(box, pendingItems, renderVoicePreview);
-  document.getElementById('voiceAdd').onclick = confirmVoicePreview;
-  document.getElementById('voiceDiscard').onclick = discardVoicePreview;
+  wireEntryControls(box, pendingItems, renderEntryPreview);
+  document.getElementById('entryAdd').onclick = confirmEntryPreview;
+  document.getElementById('entryDiscard').onclick = discardEntryPreview;
 }
 
 // Also called by #addbtn when a preview is pending, so there is exactly one
 // code path for "commit the preview" — clicking either button can never
 // disagree about what gets added, because they're the same call.
-function confirmVoicePreview(){
+function confirmEntryPreview(){
   const items = pendingItems.filter(it => it.included);
   const waiting = items.filter(it => entryNeeds(it)).length;
   if (waiting){ toast(waiting + (waiting === 1 ? ' needs' : ' need') + ' a date or a match first'); return; }
   pendingItems = null;
   document.getElementById('entry').value = '';
-  renderVoicePreview();
+  renderEntryPreview();
   if (items.length) commitItems(items); else toast('Nothing to add');
 }
 
-function discardVoicePreview(){
+function discardEntryPreview(){
   pendingItems = null;
   document.getElementById('entry').value = '';
-  renderVoicePreview();
+  renderEntryPreview();
 }
 
 /* ---------- autocomplete ---------- */
@@ -7841,7 +7694,7 @@ document.getElementById('restockEdit').onclick = () => { editingRestock = !editi
 document.getElementById('addbtn').onclick = () => {
   // A pending preview always wins: this button and the preview's own Add N
   // must never disagree about what "Add" does while one is open.
-  if (pendingItems){ confirmVoicePreview(); return; }
+  if (pendingItems){ confirmEntryPreview(); return; }
   const el = document.getElementById('entry');
   if (el.value.trim()) addEntry(el.value);
 };
@@ -7849,7 +7702,7 @@ document.getElementById('entry').addEventListener('input', () => {
   // Editing the field while a preview is open means the shown chips no
   // longer describe what's in the field — drop them rather than re-parse
   // live and have the chips flicker mid-correction.
-  if (pendingItems) discardVoicePreview();
+  if (pendingItems) discardEntryPreview();
   updateSuggestions();
 });
 document.getElementById('entry').addEventListener('keydown', e => {
@@ -7877,7 +7730,6 @@ document.getElementById('entry').addEventListener('blur', () => {
 });
 window.addEventListener('resize', () => { renderChart(); renderFridgeView(); });
 document.getElementById('allItems').addEventListener('toggle', renderFridgeView);
-initVoice();
 initSettings();
 initReceipt();
 
