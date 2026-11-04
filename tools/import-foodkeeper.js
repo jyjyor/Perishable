@@ -12,7 +12,18 @@
 //     date with the hint "about N days after it ripens"
 //   - no number, but the refrigerator guidance is the package date: kept,
 //     with no days, so the app asks for the printed date
-//   - no number at all: left out, so the app treats it as no match
+//   - no number at all: left out, so the app treats it as no match --
+//     except an item only ever kept frozen (bought frozen, "Food Purchased
+//     Frozen", or one with an after-thawing value) that has a freezer
+//     value: kept as 'F', with no days, so the app puts it in the freezer
+//     at entry (ice cream, frozen edamame, chicken nuggets)
+//
+// It also writes FK_FREEZE, for every product with any freezer guidance:
+// the freezer value (DOP_Freeze, else Freeze; upper end; 'no' where
+// FoodKeeper says "Not Recommended", 'keeps' for "Indefinitely") and the
+// refrigerator value after thawing (Refrigerate_After_Thawing, upper end,
+// or null). The app reads the after-thawing value only for Thaw -- the
+// one exception to the rule's "never the after-thawing values".
 //
 // Run: node tools/import-foodkeeper.js
 
@@ -88,7 +99,7 @@ function range(r, col) {
   return Math.round(hi * MULT[metric]);
 }
 
-function valueOf(r) {
+function valueOf(r, catName) {
   const id = r.ID;
   const order = (PANTRY_KEPT.has(id) ? [['DOP_Pantry', 'P'], ['Pantry', 'P']] : [])
     .concat([['DOP_Refrigerate', 'R'], ['Refrigerate', 'R']]);
@@ -102,7 +113,26 @@ function valueOf(r) {
   if (['DOP_Refrigerate', 'Refrigerate'].some(c => r[c + '_Metric'] === 'Package use-by date')) {
     return { days: null, store: 'pkg' };
   }
+  const fz = freezeOf(r);
+  if (fz && typeof fz[0] === 'number' && (catName === 'Food Purchased Frozen' || fz[1] != null)) {
+    return { days: null, store: 'F' };
+  }
   return null;
+}
+
+// Freezer guidance: [days | 'no' | 'keeps', after-thawing days | null], or
+// null when FoodKeeper says nothing about freezing it.
+function freezeOf(r) {
+  let freeze = null;
+  for (const col of ['DOP_Freeze', 'Freeze']) {
+    const metric = r[col + '_Metric'];
+    if (metric === 'Not Recommended') { freeze = 'no'; break; }
+    if (metric === 'Indefinitely') { freeze = 'keeps'; break; }
+    const days = range(r, col);
+    if (days != null) { freeze = days; break; }
+  }
+  const thaw = range(r, 'Refrigerate_After_Thawing');
+  return freeze == null && thaw == null ? null : [freeze, thaw];
 }
 
 function norm(s) {
@@ -134,7 +164,7 @@ function main() {
 
   const kept = [];
   for (const r of products) {
-    const v = valueOf(r);
+    const v = valueOf(r, cats.get(r.Category_ID));
     if (v) kept.push({ r, v });
   }
 
@@ -183,12 +213,16 @@ function main() {
     return [r.ID, name, aliases.join('|'), v.days, v.store, catIndex(cats.get(r.Category_ID) || 'Unknown')];
   }).sort((a, b) => a[0] - b[0]);
 
+  const freezeRows = products.map(r => [r.ID, freezeOf(r)]).filter(([, v]) => v).sort((a, b) => a[0] - b[0]);
   const body =
     `// [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,\n` +
     `//  storage column (R refrigerator, P pantry, ripe refrigerator counted from\n` +
-    `//  ripeness, pkg package date), category index]\n` +
+    `//  ripeness, pkg package date, F kept frozen: freezer value only), category index]\n` +
     `const FK_CATEGORIES = ${JSON.stringify(catNames)};\n` +
-    `const FK_TABLE = [\n` + rows.map(r => JSON.stringify(r)).join(',\n') + `\n];`;
+    `const FK_TABLE = [\n` + rows.map(r => JSON.stringify(r)).join(',\n') + `\n];\n` +
+    `// FoodKeeper id -> [freezer days | 'no' (not recommended) | 'keeps'\n` +
+    `//  (indefinitely), refrigerator days after thawing | null]\n` +
+    `const FK_FREEZE = {\n` + freezeRows.map(([id, v]) => `${id}:${JSON.stringify(v)}`).join(',\n') + `\n};`;
   const block = `${BEGIN}\n${body}\n${END}`;
 
   const html = fs.readFileSync(HTML, 'utf8');
@@ -196,11 +230,13 @@ function main() {
   if (a < 0 || b < 0 || b < a) throw new Error('FOODKEEPER markers not found in index.html');
   fs.writeFileSync(HTML, html.slice(0, a) + block + html.slice(b + END.length));
 
-  const counts = { R: 0, P: 0, ripe: 0, pkg: 0 };
+  const counts = { R: 0, P: 0, ripe: 0, pkg: 0, F: 0 };
   rows.forEach(r => counts[r[4]]++);
-  console.log(`${rows.length} items written (refrigerator ${counts.R}, pantry ${counts.P}, from ripeness ${counts.ripe}, package date ${counts.pkg}); ` +
+  console.log(`${rows.length} items written (refrigerator ${counts.R}, pantry ${counts.P}, from ripeness ${counts.ripe}, package date ${counts.pkg}, kept frozen ${counts.F}); ` +
     `${products.length - rows.length} left out with no value; ${dropped} generic keywords dropped; ` +
     `${[...HAND_ALIASES.values()].flat().length} hand-kept aliases; ` +
+    `${freezeRows.length} with freezer guidance (${freezeRows.filter(([, v]) => v[0] === 'no').length} not recommended, ` +
+    `${freezeRows.filter(([, v]) => v[1] != null).length} with an after-thawing value); ` +
     `table ${(Buffer.byteLength(block) / 1024).toFixed(1)} KB.`);
 }
 

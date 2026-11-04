@@ -2121,6 +2121,291 @@ async function moreDrinksScenario(browser) {
   await page.context().close();
 }
 
+/* ---------- the freezer ---------- */
+
+// Opens an item's popover (wherever it's drawn) and leaves it open.
+async function openPopover(page, id) {
+  await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
+  await page.waitForTimeout(80);
+}
+const popButtons = page => page.$$eval('#rfPopover button', bs => bs.filter(b => !b.hidden).map(b => b.textContent.trim()));
+
+// Freeze: closed freezer on load with its count; Freeze in the popover
+// restarts the clock today on FoodKeeper's freezer value (chicken breast
+// #117, 9 months = 270 days); the item leaves the fridge for the freezer,
+// the headline, the decay line and the at-risk counts, shows in All items
+// as "frozen" in plain ink, and nothing reaches the ledger. Used counts.
+async function freezeScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: freeze ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = [{id: ++uid, key: 'chicken', bought: t - 1, custom: null}, {id: ++uid, key: 'spinach', bought: t - 5, custom: null}];
+    render();
+  });
+  await page.waitForTimeout(700);
+  expectEqual('freezer closed on load', await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), false);
+  expectEqual('count on the door, empty', await page.textContent('#rfFzCount'), 'empty');
+  const id = await page.evaluate(() => fridge.find(i => i.key === 'chicken').id);
+  const before = await page.evaluate(() => ({ledger: JSON.stringify(ledger), headline: document.getElementById('headline').textContent,
+    dots: document.querySelectorAll('#chart .dot').length, atRisk: rfAtRiskCount(today())}));
+  await openPopover(page, id);
+  const btns = await popButtons(page);
+  if (!btns.includes('Freeze') || btns.includes('Thaw')) throw new Error('chicken popover should offer Freeze, not Thaw: ' + btns);
+  await page.click('#rfPopover .rf-pop-freeze');
+  await page.waitForTimeout(150);
+  const st = await page.evaluate(id => {
+    const it = fridge.find(i => i.id === id);
+    return {frozen: !!it.frozen, clockFrom: it.clockFrom - today(), shelf: shelfOf(it), bought: it.bought - today(), left: leftAt(it, today()),
+      inFreezer: !!document.querySelector(`#rfFzShelf [data-rf-item="${id}"]`), inFridge: !!document.querySelector(`#rfShelfEye [data-rf-item="${id}"], #rfShelfUpper [data-rf-item="${id}"]`),
+      count: document.getElementById('rfFzCount').textContent, ledger: JSON.stringify(ledger),
+      headline: document.getElementById('headline').textContent, dots: document.querySelectorAll('#chart .dot').length, atRisk: rfAtRiskCount(today()),
+      source: shelfSourceOf(it)};
+  }, id);
+  console.log(JSON.stringify(st));
+  expectEqual('frozen, clock from today, 270 days, bought kept', [st.frozen, st.clockFrom, st.shelf, st.bought], [true, 0, 270, -1]);
+  expectEqual('no countdown while frozen', st.left, null); // Infinity
+  expectEqual('in the freezer, not on a fridge shelf', [st.inFreezer, st.inFridge], [true, false]);
+  expectEqual('count on the door', st.count, '1 inside');
+  expectEqual('ledger untouched by freezing', st.ledger, before.ledger);
+  expectEqual('headline drops it (spinach still counts)', [before.headline, st.headline], ['2 things become waste within 72 hours.', '1 thing becomes waste within 72 hours.']);
+  expectEqual('decay line drops it', [before.dots, st.dots], [2, 1]);
+  expectEqual('at-risk count drops it', [before.atRisk, st.atRisk], [2, 1]);
+  if (!st.source.startsWith('frozen: FoodKeeper #117, 270 days in the freezer')) throw new Error('source: ' + st.source);
+  const text = await popoverText(page, 'chicken');
+  if (!text.includes('Frozen') || !text.includes('270 days of freezer time left') || !text.includes('Thaw') || text.includes('Freeze')) throw new Error('frozen popover: ' + text);
+  const inv = await readInventory(page);
+  expectRow(inv, 'Chicken breast', 'frozen');
+  const color = await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#fridgeShelf .fridge-label')].find(l => l.textContent.startsWith('Chicken breast'))).color);
+  expectEqual('frozen label in plain ink', color, 'rgb(92, 102, 100)');
+  // The handle opens and closes it.
+  await page.click('#rfFzHandle');
+  await page.waitForTimeout(1200);
+  expectEqual('handle opens it', await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), true);
+  expectEqual('pressed state', await page.getAttribute('#rfFzHandle', 'aria-pressed'), 'true');
+  // Used from the freezer counts like any other.
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-used');
+  await page.waitForTimeout(100);
+  expectEqual('Used counts as saved', await page.evaluate(() => ledger.savedG), 500);
+  await page.evaluate(() => { document.getElementById('rfFzHandle').click(); });
+  await page.waitForTimeout(100);
+  expectEqual('handle closes it', await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), false);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Thaw: with FoodKeeper's after-thawing value (#134 chicken nuggets, 2
+// days) straight back to the fridge, the clock restarted today; without
+// one (chicken breast) a date is asked first. A spirit comes out with no
+// clock change ("Take out").
+async function thawScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: thaw ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = [
+      {id: ++uid, key: '_fk_134', name: 'Chicken nuggets', bought: t - 40, custom: null, frozen: true},
+      {id: ++uid, key: 'chicken', bought: t - 30, custom: null, frozen: true, clockFrom: t - 20},
+      {id: ++uid, key: 'vodka', bought: t - 10, custom: null, frozen: true},
+    ];
+    render();
+  });
+  const [nug, chk, vod] = await page.evaluate(() => fridge.map(i => i.id));
+  await openPopover(page, nug);
+  expectEqual('nuggets: Thaw, no Freeze', (await popButtons(page)).filter(b => /Freeze|Thaw|Take out/.test(b)), ['Thaw']);
+  await page.click('#rfPopover .rf-pop-thaw');
+  await page.waitForTimeout(120);
+  let st = await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, !!it.thawed, it.clockFrom - today(), left(it), shelfSourceOf(it)]; }, nug);
+  console.log(JSON.stringify(st));
+  expectEqual('nuggets thawed: fridge, 2 days from today', st.slice(0, 4), [false, true, 0, 2]);
+  if (!st[4].startsWith('thawed: FoodKeeper #134, 2 days in the fridge after thawing')) throw new Error('source: ' + st[4]);
+  expectEqual('back on a fridge shelf', await page.evaluate(id => !!document.querySelector(`#rfShelfEye [data-rf-item="${id}"]`), nug), true);
+
+  await openPopover(page, chk);
+  await page.click('#rfPopover .rf-pop-thaw');
+  await page.waitForTimeout(80);
+  expectEqual('chicken breast: no thawed figure, still frozen until a date', await page.evaluate(id => [!fridge.find(i => i.id === id).frozen, !document.querySelector('#rfPopover .rf-pop-thawask').hidden], chk), [false, true]);
+  await page.fill('#rfPopover .rf-pop-thawdate', await isoIn(page, 2));
+  await page.dispatchEvent('#rfPopover .rf-pop-thawdate', 'change');
+  await page.waitForTimeout(120);
+  st = await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, it.clockFrom - today(), left(it), it.shelfFrom]; }, chk);
+  expectEqual('chicken breast thawed by the date given', st, [false, 0, 2, 'date']);
+
+  await openPopover(page, vod);
+  expectEqual('a spirit: Take out', (await popButtons(page)).filter(b => /Freeze|Thaw|Take out/.test(b)), ['Take out']);
+  await page.click('#rfPopover .rf-pop-thaw');
+  await page.waitForTimeout(120);
+  st = await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, it.clockFrom == null, keeps(it), drinkOnCounter(it)]; }, vod);
+  expectEqual('vodka out, no clock, back on the counter', st, [false, true, true, true]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Foods FoodKeeper says not to freeze get no Freeze: lettuce, cucumber,
+// eggs in shell; nor does a custom item or one past date. A spirit can go
+// in, with no clock change.
+async function cantFreezeScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: can\'t be frozen ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = ['leaflettuce', 'romaine', 'cucumber', 'egg', 'avocado'].map(key => ({id: ++uid, key, bought: t, custom: null}))
+      .concat([{id: ++uid, key: '_c_dumplings', custom: {en: 'Dumplings', g: 300, usd: 4}, bought: t, shelf: 30, shelfFrom: 'date'},
+               {id: ++uid, key: 'steak', bought: t - 9, custom: null},
+               {id: ++uid, key: 'gin', bought: t - 3, custom: null}]);
+    render();
+  });
+  const ids = await page.evaluate(() => fridge.map(i => [i.key, i.id]));
+  const offered = {};
+  for (const [key, id] of ids) {
+    await openPopover(page, id);
+    offered[key] = (await popButtons(page)).includes('Freeze');
+    await page.click('#headline');
+  }
+  console.log(JSON.stringify(offered));
+  expectEqual('Freeze offered', offered, {leaflettuce: false, romaine: false, cucumber: false, egg: false, avocado: false, _c_dumplings: false, steak: false, gin: true});
+  const gin = ids.find(([k]) => k === 'gin')[1];
+  await openPopover(page, gin);
+  await page.click('#rfPopover .rf-pop-freeze');
+  await page.waitForTimeout(100);
+  expectEqual('gin frozen, no clock change, still keeps', await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, it.clockFrom == null, keeps(it), drinkOnCounter(it)]; }, gin), [true, true, true, false]);
+  // Typed "frozen cucumber" stops at the preview and says why it goes in
+  // the fridge.
+  await typeEntry(page, 'frozen cucumber');
+  const rows = await readReview(page, '#voicePreview');
+  console.log(JSON.stringify(rows));
+  if (!rows[0].match.includes('freezing not recommended') || rows[0].match.includes('Frozen')) throw new Error('frozen cucumber: ' + rows[0].match);
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(100);
+  expectEqual('cucumber went in the fridge', await page.evaluate(() => fridge.filter(i => i.key === 'cucumber').map(i => !!i.frozen)), [false, false]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Frozen food by typing: "frozen shrimp" goes straight into the freezer
+// (FOODS shrimp, #151's freezer value counted from purchase); "chicken
+// nuggets" is only ever kept frozen (#134) and defaults in; the preview's
+// Frozen toggle puts salmon in too, and a frozen line with no freezer
+// value (frozen peas: no match) asks for its date.
+async function frozenEntryScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: frozen entry by typing ---');
+  await typeEntry(page, 'frozen shrimp');
+  expectEqual('frozen shrimp straight in', await previewOpen(page), false);
+  let st = await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen, shelfOf(i)]));
+  expectEqual('shrimp frozen, 540 days', st, [['shrimp', true, 540]]);
+  await typeEntry(page, 'salmon, chicken nuggets, frozen peas, frozen edamame');
+  let rows = await readReview(page, '#voicePreview');
+  console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
+  const checked = await page.$$eval('#voicePreview .entry-frozen', bs => bs.map(b => b.checked));
+  expectEqual('Frozen toggles: salmon off, nuggets, peas and edamame on', checked, [false, true, true, true]);
+  expectEqual('only the peas need a date', rows.map(r => r.flag), ['', '', 'no match / choice', '']);
+  if (!rows[3].match.includes('FoodKeeper #641')) throw new Error('frozen edamame should be #641: ' + rows[3].match);
+  await page.check('#voicePreview .entry-frozen[data-idx="0"]');
+  await page.waitForTimeout(60);
+  await page.fill('#voicePreview .entry-date[data-idx="2"]', await isoIn(page, 120));
+  await page.dispatchEvent('#voicePreview .entry-date[data-idx="2"]', 'change');
+  await page.waitForTimeout(60);
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(150);
+  st = await page.evaluate(() => fridge.map(i => [food(i).en, !!i.frozen, shelfOf(i)]));
+  console.log(JSON.stringify(st));
+  expectEqual('all frozen, by their freezer values (peas by the date)', st,
+    [['Shrimp', true, 540], ['Salmon', true, 90], ['Chicken nuggets', true, 90], ['Peas', true, 120], ['Frozen edamame', true, 730]]);
+  expectEqual('remembered for restock', await page.evaluate(() => !!standing.salmon.frozen), true);
+  expectEqual('count on the door', await page.textContent('#rfFzCount'), '5 inside');
+  expectEqual('none counted', await page.evaluate(() => counted(fridge).length), 0);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Frozen food by receipt: a line containing "frozen" (in the scanned
+// name or as printed) is ticked Frozen and goes straight into the
+// freezer; the toggle takes another in; a plain line stays in the fridge.
+async function frozenReceiptScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: frozen entry by receipt ---');
+  await page.evaluate(() => {
+    window.__receiptApiOverride = async () => ({
+      date: null,
+      items: [
+        {raw: 'KS FROZEN SHRIMP 2LB', expanded: 'Frozen shrimp', quantity: 1, is_food: true},
+        {raw: 'FROZEN BROCCOLI', expanded: 'Broccoli', quantity: 1, is_food: true},
+        {raw: 'GROUND BEEF', expanded: 'Ground beef', quantity: 1, is_food: true},
+        {raw: 'ROMAINE HEARTS', expanded: 'Romaine hearts', quantity: 1, is_food: true}
+      ]
+    });
+  });
+  const fixturePath = path.join(require('os').tmpdir(), 'perishable-receipt-fixture-frozen.jpg');
+  fs.writeFileSync(fixturePath, FIXTURE_JPEG);
+  await page.setInputFiles('#receiptFile', fixturePath);
+  await page.waitForSelector('#receiptPreview .receipt-row');
+  const checked = await page.$$eval('#receiptPreview .receipt-row', rs => rs.map(r => { const c = r.querySelector('.entry-frozen'); return c ? c.checked : null; }));
+  expectEqual('Frozen: shrimp and broccoli ticked, beef not, romaine none', checked, [true, true, false, null]);
+  await page.check('#receiptPreview .entry-frozen[data-idx="2"]');
+  await page.waitForTimeout(60);
+  await page.click('#receiptConfirm');
+  await page.waitForTimeout(200);
+  const st = await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen, shelfOf(i)]));
+  console.log(JSON.stringify(st));
+  expectEqual('in the freezer by their freezer values; romaine in the fridge', st,
+    [['shrimp', true, 540], ['broccoli', true, 360], ['beef', true, 120], ['romaine', false, 14]]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Saved data from before the freezer (the drinks commit, ad0d0c0) loads
+// with nothing frozen: every item where it was, the freezer empty and
+// closed, and every count as before.
+async function freezerMigrationScenario(browser) {
+  const oldHtml = execSync('git show ad0d0c0:index.html', { cwd: ROOT, maxBuffer: 1024 * 1024 * 20 });
+  const oldServer = await new Promise(resolve => {
+    const s = http.createServer((req, res) => { res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }); res.end(oldHtml); });
+    s.listen(PORT_LIVE, () => resolve(s));
+  });
+  console.log('\n--- FREEZER: migration of pre-freezer saved data ---');
+  const old = await (await browser.newContext()).newPage();
+  await old.goto(`http://localhost:${PORT_LIVE}/`);
+  await old.evaluate(() => localStorage.clear());
+  await old.reload();
+  await old.waitForSelector('#headline');
+  await old.evaluate(() => {
+    const t = today();
+    fridge = [
+      {id: ++uid, key: 'chicken', bought: t - 1, custom: null}, {id: ++uid, key: 'shrimp', bought: t, custom: null},
+      {id: ++uid, key: 'vodka', bought: t, custom: null}, {id: ++uid, key: 'milk', bought: t - 2, custom: null, shelf: 7, shelfFrom: 'date'},
+      {id: ++uid, key: 'tomato', bought: t - 10, custom: null}, {id: ++uid, key: 'banana', bought: t, custom: null, ripening: true},
+    ];
+    render(); saveState();
+  });
+  const oldView = await old.evaluate(() => ({headline: document.getElementById('headline').textContent, atRisk: rfAtRiskCount(today()),
+    left: fridge.map(i => left(i))}));
+  const saved = await old.evaluate(() => localStorage.getItem('perishable.v1'));
+  await old.context().close();
+  oldServer.close();
+  if (saved.includes('frozen')) throw new Error('pre-freezer state already mentions frozen');
+
+  const page = await (await browser.newContext()).newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(st => localStorage.setItem('perishable.v1', st), saved);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(200);
+  const now = await page.evaluate(() => ({headline: document.getElementById('headline').textContent, atRisk: rfAtRiskCount(today()),
+    left: fridge.map(i => left(i)), frozen: fridge.filter(i => i.frozen).length, count: document.getElementById('rfFzCount').textContent,
+    inFreezer: document.querySelectorAll('#rfFzShelf [data-rf-item]').length, open: document.getElementById('rfUnit').classList.contains('fz-open')}));
+  console.log(JSON.stringify({oldView, now}));
+  expectEqual('nothing frozen', [now.frozen, now.inFreezer, now.count, now.open], [0, 0, 'empty', false]);
+  expectEqual('same headline', now.headline, oldView.headline);
+  expectEqual('same at-risk count', now.atRisk, oldView.atRisk);
+  expectEqual('same days left', now.left, oldView.left);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // The top bar's Add: scrolls to Add food and puts the cursor in the
 // entry field. On a phone the bar is a thin sticky strip, so Add stays
 // one tap away from anywhere on the page.
@@ -2404,6 +2689,12 @@ async function pageStructureScenario(browser) {
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),
+    () => freezeScenario(browser),
+    () => thawScenario(browser),
+    () => cantFreezeScenario(browser),
+    () => frozenEntryScenario(browser),
+    () => frozenReceiptScenario(browser),
+    () => freezerMigrationScenario(browser),
   ];
   let passed = 0;
   const failed = [];

@@ -183,6 +183,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   --rf-bin:rgba(214,230,236,.42);--rf-bin-back:#D2DEE5;
   --rf-dome:#C9D3D8;--rf-dome-lit:#FBFCF8;
   --rf-gasket:#9AA7AB;--rf-handle:#E9EDEE;--rf-handle-2:#C7CFD2;
+  --rf-frost:#F4F8FA;--rf-fz-back:#D5E0E6;
 }
 .rf-unit[data-body="cream"]{--rf-b1:#EFE5CB;--rf-b2:#E2D5B4;--rf-b3:#CDBC96;--rf-bh:#F8F2E3}
 .rf-unit[data-body="cool"]{--rf-b1:#E3EBEE;--rf-b2:#D2DDE2;--rf-b3:#BCCBD2;--rf-bh:#F3F7F8}
@@ -326,6 +327,52 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   cursor:pointer;font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:14px;line-height:1;padding:4px;
 }
 .rf-popover .rf-pop-close:hover{color:var(--ink)}
+.rf-popover [hidden]{display:none}
+.rf-popover .rf-pop-freeze,.rf-popover .rf-pop-thaw{margin-top:8px}
+
+/* The freezer: its own compartment above the fridge, its own door on the
+   same right-hand hinge, closed on load. Inside, one wire shelf and frost
+   on the walls; the cavity is drawn in the fridge's own coordinates
+   (360 x 640), so its rows place exactly like the fridge's. */
+.rf-fz{position:absolute;inset:0;z-index:1;pointer-events:none}
+.rf-fz .rf-fooditem,.rf-fz-door{pointer-events:auto}
+.rf-svg .frostwash{fill:var(--rf-frost);stroke:var(--rf-ink);stroke-width:.5;stroke-opacity:.35}
+.rf-svg .frostline{stroke:var(--rf-ink);stroke-width:.5;stroke-opacity:.4;fill:none;stroke-linecap:round}
+.rf-svg .rack{stroke:var(--rf-ink);stroke-width:.6;fill:none;stroke-linecap:round}
+.rf-svg .rackrod{stroke:var(--rf-ink);stroke-width:1.2;fill:var(--rf-glass-edge)}
+.rf-fz-door{
+  position:absolute;z-index:20;
+  transform-style:preserve-3d;transform-origin:right center;
+  transition:transform 1s cubic-bezier(.22,.8,.3,1);
+  transform:rotateY(0deg);
+  --rf-t:3cqw;
+}
+.rf-unit.fz-open .rf-fz-door{transform:rotateY(116deg)}
+.rf-fz-front,.rf-fz-inside{position:absolute;inset:0;backface-visibility:hidden}
+.rf-fz-front{transform:translateZ(calc(var(--rf-t) / 2))}
+.rf-fz-inside{transform:rotateY(180deg) translateZ(calc(var(--rf-t) / 2))}
+.rf-fz-edge{
+  position:absolute;top:4%;bottom:4%;left:calc(var(--rf-t) / -2);width:var(--rf-t);
+  transform:rotateY(90deg);
+}
+.rf-fz-handle{
+  position:absolute;left:5%;top:73%;width:21.5625%;height:22.1154%;
+  background:none;border:none;cursor:pointer;padding:0;
+}
+.rf-fz-handle svg{display:block;width:100%;height:100%;overflow:visible}
+.rf-fz-handle:hover .handle{fill:var(--rf-bh)}
+.rf-fz-handle:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.rf-fz-count{
+  position:absolute;right:12%;top:72%;color:var(--ink-2);pointer-events:none;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+}
+.rf-unit.fz-open .rf-fz-inside,.rf-unit.fz-open .rf-fz-edge{cursor:pointer}
+.rf-unit.fz-open:has(.rf-fz-handle:focus-visible) .rf-fz-inside{outline:2px solid var(--ink);outline-offset:-4px}
+.rf-fz-empty{
+  position:absolute;left:0;right:0;text-align:center;color:var(--ink-3);
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+}
+.rf-fz-empty[hidden]{display:none}
 
 /* Phone: the door's inside would nearly double the drawing's width and
    shrink the food below legibility, so the door swings to square -- only
@@ -336,6 +383,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   .rf-stage{--rf-w:min(82vw,440px)}
   .rf-unit{margin-right:calc(var(--rf-w) * .05)}
   .rf-unit.open .rf-door{transform:rotateY(90deg)}
+  .rf-unit.fz-open .rf-fz-door{transform:rotateY(90deg)}
 }
 
 /* ---------- fridge and kitchen ----------
@@ -362,7 +410,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .room{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
 .rf{padding-top:18px}
 /* Food and the fridge door take taps, never a horizontal swipe. */
-.rf-fooditem,.rf-door,.rf-handle{touch-action:pan-y}
+.rf-fooditem,.rf-door,.rf-handle,.rf-fz-door,.rf-fz-handle{touch-action:pan-y}
 @media (max-width:720px){
   /* about 16px of the other panel shows at the edge */
   .room{flex-basis:calc(100% - 16px)}
@@ -743,13 +791,37 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
           <div class="rf-crisper-label" id="rfCrisperLabel">Crisper — past date</div>
           <div class="rf-emptycavity" id="rfEmptyCavity" hidden></div>
         </div>
+        <div class="rf-fz" id="rfFreezer">
+          <svg class="rf-svg" id="rfFzInteriorSvg" viewBox="0 0 360 640" aria-hidden="true"></svg>
+          <div class="rf-row" id="rfFzShelf"></div>
+          <div class="rf-fz-empty" id="rfFzEmpty" hidden>Nothing frozen</div>
+          <div class="rf-fz-door" id="rfFzDoor">
+            <div class="rf-fz-edge"><svg class="rf-svg" id="rfFzEdgeSvg" viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true"></svg></div>
+            <div class="rf-fz-front">
+              <svg class="rf-svg" id="rfFzFrontSvg" viewBox="0 0 320 104" aria-hidden="true"></svg>
+              <div class="rf-fz-count" id="rfFzCount"></div>
+              <button class="rf-fz-handle" id="rfFzHandle" aria-label="Open freezer door" aria-pressed="false">
+                <svg class="rf-svg" viewBox="16 76 69 23" aria-hidden="true">
+                  <g filter="url(#rfWobble)">
+                    <rect class="handle2 i" x="27" y="82" width="9" height="8" rx="2"/>
+                    <rect class="handle2 i" x="65" y="82" width="9" height="8" rx="2"/>
+                    <path class="handle o" d="M20 88 Q50 79 81 88 L81 95 Q50 86 20 95 Z"/>
+                  </g>
+                </svg>
+              </button>
+            </div>
+            <div class="rf-fz-inside">
+              <svg class="rf-svg" id="rfFzInsideSvg" viewBox="0 0 320 104" aria-hidden="true"></svg>
+            </div>
+          </div>
+        </div>
         <div class="rf-door" id="rfDoor">
           <div class="rf-door-edge"><svg class="rf-svg" id="rfDoorEdgeSvg" viewBox="0 0 10 460" preserveAspectRatio="none" aria-hidden="true"></svg></div>
           <div class="rf-door-front">
             <svg class="rf-svg" id="rfDoorFrontSvg" viewBox="0 0 320 468" aria-hidden="true"></svg>
             <div class="rf-closedline mono" id="rfClosedLine">—</div>
             <button class="rf-handle" id="rfHandle" aria-label="Open fridge door" aria-pressed="false">
-              <svg viewBox="0 0 28 112" aria-hidden="true">
+              <svg class="rf-svg" viewBox="0 0 28 112" aria-hidden="true">
                 <g filter="url(#rfWobble)">
                   <path class="handle2 i" d="M6 2 h16 a3 3 0 0 1 3 3 v8 a3 3 0 0 1 -3 3 h-16 a3 3 0 0 1 -3 -3 v-8 a3 3 0 0 1 3 -3 Z"/>
                   <path class="handle2 i" d="M6 96 h16 a3 3 0 0 1 3 3 v8 a3 3 0 0 1 -3 3 h-16 a3 3 0 0 1 -3 -3 v-8 a3 3 0 0 1 3 -3 Z"/>
@@ -1256,7 +1328,7 @@ const SUBS = {
 /* BEGIN FOODKEEPER -- generated by tools/import-foodkeeper.js from tools/data/foodkeeper.json; do not edit by hand */
 // [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,
 //  storage column (R refrigerator, P pantry, ripe refrigerator counted from
-//  ripeness, pkg package date), category index]
+//  ripeness, pkg package date, F kept frozen: freezer value only), category index]
 const FK_CATEGORIES = ["Dairy Products & Eggs","Meat / Fresh","Meat / Smoked or Processed","Meat / Stuffed or Assembled","Meat / Shelf Stable Foods","Poultry / Fresh","Poultry / Stuffed or Assembled","Poultry / Cooked or Processed","Deli & Prepared Foods","Seafood / Fresh","Seafood / Shellfish","Seafood / Smoked","Vegetarian Proteins","Baked Goods / Bakery","Baked Goods / Refrigerated Dough","Produce / Fresh Fruits","Produce / Fresh Vegetables","Food Purchased Frozen","Grains, Beans & Pasta","Condiments, Sauces & Canned Goods","Shelf Stable Foods","Beverages","Baked Goods / Baking and Cooking"];
 const FK_TABLE = [
 [1,"Butter","",60,"R",0],
@@ -1352,7 +1424,7 @@ const FK_TABLE = [
 [96,"Ham (fresh, uncooked, half leg, bone-in)","half leg",7,"R",2],
 [97,"Ham (country ham (whole or half))","country ham",7,"R",2],
 [98,"Hot dogs","",14,"R",2],
-[102,"Sausage (raw bulk type or patties)","raw bulk type|patty",2,"R",2],
+[102,"Sausage (raw bulk type or patties)","raw bulk type",2,"R",2],
 [103,"Sausage (fully cooked smoked links, kielbasa)","fully cooked smoked link|kielbasa|smoked link|fully cooked",7,"R",2],
 [104,"Sausage (hard, dry (pepperoni), sliced)","pepperoni|dry pepperoni",21,"R",2],
 [105,"Stuffed, raw pork chops","",2,"R",3],
@@ -1376,6 +1448,7 @@ const FK_TABLE = [
 [130,"Giblets","",2,"R",5],
 [131,"Stuffed, raw chicken breasts","",2,"R",6],
 [132,"Raw kabobs with vegetables","",2,"R",6],
+[134,"Chicken nuggets, patties","",null,"F",7],
 [135,"Cooked poultry dishes","",4,"R",7],
 [136,"Fried chicken","",4,"R",7],
 [140,"Poultry pieces (covered with gravy or broth)","",4,"R",8],
@@ -1493,15 +1566,24 @@ const FK_TABLE = [
 [308,"Yuca/cassava","",3,"R",16],
 [309,"Dough (commercial (bread or cookie))","",4,"R",17],
 [310,"Egg substitutes","",4,"R",17],
+[311,"Fish (breaded)","breaded",null,"F",17],
 [312,"Fish (raw but headed and gutted)","",4,"R",17],
+[313,"Frozen potato products (fries, hashbrowns, tater tots)","fry|hashbrown|tater tot",null,"F",17],
 [314,"Frozen pretzels","",4,"R",17],
+[315,"Fruits (such as berries, melons)","",null,"F",17],
+[317,"Ice cream","",null,"F",17],
+[318,"Ice pops","",null,"F",17],
+[319,"Juice concentrates","",null,"F",17],
 [320,"Lobster tails","",4,"R",17],
+[321,"Pancakes, waffles","",null,"F",17],
 [322,"Sausages (uncooked)","",4,"R",17],
 [323,"Sausages (precooked)","",4,"R",17],
+[324,"Sherbet, sorbet","",null,"F",17],
 [325,"Shrimp, shellfish","",4,"R",17],
 [326,"Soy crumbles and hot dogs","",4,"R",17],
 [327,"Soy meat substitutes","",4,"R",17],
 [328,"Tempeh","",4,"R",17],
+[330,"Frozen entrees (prepared meals)","tv dinner",null,"F",17],
 [331,"Vegetables","",4,"R",17],
 [332,"Fresh pasta","",2,"R",18],
 [343,"Dry gravy mixes","",2,"R",19],
@@ -1622,18 +1704,21 @@ const FK_TABLE = [
 [638,"Bratwurst (fresh)","fresh brautwurst",3,"R",1],
 [639,"Bratwurst (smoked and processed)","smoked brautwurst|processed brautwurst",7,"R",2],
 [640,"Edamame (fresh)","fresh edamame",5,"R",16],
+[641,"Edamame (frozen)","frozen edamame",null,"F",17],
 [642,"Edamame (salted, dry roasted, out of pod)","dry roasted",180,"R",20],
 [645,"Salsa (homemade, fresh)","homemade salsa",7,"R",8],
 [649,"Ghee","clarified butter",730,"R",0],
 [653,"Pine nuts","",90,"R",20],
 [654,"Coconut flour","",360,"R",22],
 [655,"Pecans (chopped)","chopped pecan",360,"R",20],
+[657,"Polenta (frozen)","frozen polenta",null,"F",17],
 [659,"Milk (ultra-pasteurized)","ultra pasteurized milk",90,"R",20],
 [661,"Celery root","",7,"R",16],
 [662,"Apple cider (fresh)","",21,"R",21],
 [663,"Yuzu juice","",360,"R",21],
 [664,"Yuzu (fruit, fresh)","yuzu fruit",7,"R",21],
 [665,"Pastrami","",40,"R",2],
+[666,"Kugel (commercial)","commercial kugel",null,"F",17],
 [667,"Kugel (homemade)","homemade kugel",4,"R",8],
 [670,"Aioli (homemade)","garlic aioli|garlic mayo|garlic mayonnaise",4,"R",19],
 [674,"Radicchio","",21,"R",16],
@@ -1646,6 +1731,405 @@ const FK_TABLE = [
 [682,"Croutons","",180,"R",20],
 [683,"Bacon (uncured)","uncured bacon|nitrite-free bacon|natural bacon",7,"R",2]
 ];
+// FoodKeeper id -> [freezer days | 'no' (not recommended) | 'keeps'
+//  (indefinitely), refrigerator days after thawing | null]
+const FK_FREEZE = {
+1:[270,null],
+2:[90,null],
+3:[180,null],
+4:["no",null],
+5:[120,null],
+6:["no",null],
+7:[180,null],
+9:["no",null],
+10:["no",null],
+11:["no",null],
+12:[60,null],
+13:[120,null],
+14:[120,null],
+15:[120,null],
+16:["no",null],
+17:["no",null],
+20:[180,null],
+21:["no",null],
+22:[360,null],
+23:["no",null],
+24:[90,null],
+25:["no",null],
+26:[360,null],
+27:[90,null],
+28:["no",null],
+29:["no",null],
+30:["no",null],
+31:["no",null],
+32:[420,null],
+33:[60,null],
+34:[360,null],
+35:[360,null],
+36:[360,null],
+37:[360,null],
+38:[360,null],
+39:[360,null],
+40:[360,null],
+41:[360,null],
+42:[360,null],
+43:[120,null],
+44:[360,null],
+45:[360,null],
+46:[360,null],
+47:[360,null],
+48:[360,null],
+49:[360,null],
+50:[120,null],
+51:[360,null],
+52:[360,null],
+53:[360,null],
+54:[360,null],
+55:[360,null],
+56:[360,null],
+57:[360,null],
+58:[360,null],
+59:[120,null],
+60:[360,null],
+61:[360,null],
+63:[360,null],
+64:[360,null],
+65:[360,null],
+66:[360,null],
+67:[360,null],
+69:[360,null],
+70:[360,null],
+71:[360,null],
+72:[360,null],
+73:[120,null],
+74:[360,null],
+75:[360,null],
+76:[360,null],
+77:[120,null],
+78:[120,null],
+79:[30,null],
+81:[30,null],
+82:["no",null],
+83:[60,null],
+84:[60,null],
+85:[60,null],
+86:[60,null],
+87:[60,null],
+88:[60,null],
+89:[60,null],
+90:[60,null],
+91:[60,null],
+92:[60,null],
+93:[60,null],
+94:[60,null],
+95:[60,null],
+96:[60,null],
+97:[60,null],
+98:[60,null],
+102:[60,null],
+103:[60,null],
+104:[60,null],
+105:[270,null],
+106:[120,null],
+113:[360,null],
+114:[360,null],
+115:[120,null],
+116:[270,null],
+117:[270,null],
+118:[270,null],
+119:[270,null],
+120:[270,null],
+121:[270,null],
+123:[180,null],
+125:[180,null],
+126:[180,null],
+127:[180,null],
+128:[360,null],
+129:[360,null],
+130:[120,null],
+131:[270,null],
+132:[120,null],
+133:[270,null],
+134:[90,2],
+135:[180,null],
+136:[120,null],
+140:[60,null],
+141:[120,null],
+144:[240,null],
+145:[240,null],
+146:[90,null],
+147:["no",null],
+148:[60,null],
+149:[270,null],
+150:[540,null],
+151:[540,null],
+152:[540,null],
+153:[120,null],
+154:[120,null],
+155:[300,null],
+156:[360,null],
+157:[90,null],
+158:["no",null],
+159:[28,null],
+160:["no",null],
+161:[28,null],
+162:[90,null],
+163:["no",null],
+164:[360,null],
+165:[360,null],
+166:[360,null],
+167:[360,null],
+168:[150,null],
+169:["no",null],
+173:[90,null],
+174:[60,null],
+175:[60,null],
+176:["no",null],
+177:[60,null],
+178:[180,null],
+179:["no",null],
+180:[120,null],
+181:["no",null],
+183:["no",null],
+184:[60,null],
+185:[90,null],
+186:[180,null],
+187:["no",null],
+188:[60,null],
+190:["no",null],
+191:["no",null],
+192:[60,null],
+193:[90,null],
+195:[150,null],
+196:[180,null],
+197:[180,null],
+198:[180,null],
+199:[360,null],
+200:[360,null],
+201:[90,null],
+202:["no",null],
+203:[360,null],
+204:["no",null],
+205:["no",null],
+206:["no",null],
+207:[240,null],
+208:[240,null],
+209:[60,null],
+210:[60,null],
+211:[90,null],
+245:["no",null],
+246:[60,null],
+247:[60,null],
+248:[240,null],
+249:["no",null],
+250:["no",null],
+251:[90,null],
+252:[360,null],
+253:[360,null],
+254:[360,null],
+255:[360,null],
+256:["no",null],
+257:[365,null],
+258:["no",null],
+259:[360,null],
+260:[730,null],
+261:[30,null],
+262:["no",null],
+263:["no",null],
+264:[30,null],
+265:[240,null],
+266:[60,null],
+267:[360,null],
+268:[360,null],
+269:[360,null],
+270:["no",null],
+271:[150,null],
+273:[240,null],
+274:[240,null],
+275:[360,null],
+276:[360,null],
+277:[360,null],
+278:[360,null],
+279:[360,null],
+280:[360,null],
+281:[360,null],
+282:[240,null],
+283:["no",null],
+284:[240,null],
+285:[30,null],
+286:[180,null],
+287:[360,null],
+288:[60,null],
+289:[360,null],
+290:["no",null],
+291:["no",null],
+292:[360,null],
+293:[360,null],
+294:[360,null],
+295:[360,null],
+296:[240,null],
+297:[360,null],
+299:["no",null],
+301:[300,null],
+302:[360,null],
+303:[360,null],
+304:[365,null],
+306:[60,null],
+307:[300,null],
+308:[60,null],
+309:[360,null],
+310:[360,null],
+311:[540,null],
+312:[180,null],
+313:[360,null],
+314:[270,null],
+315:[540,null],
+317:[180,null],
+318:[270,null],
+319:[730,null],
+320:[240,null],
+321:[90,null],
+322:[60,null],
+323:[60,null],
+324:[270,null],
+325:[540,null],
+326:[60,null],
+327:[540,null],
+328:[180,null],
+330:[360,null],
+331:[540,null],
+332:[60,null],
+354:[30,null],
+377:[120,null],
+386:[360,null],
+401:[730,null],
+414:["no",null],
+415:["no",null],
+417:["no",null],
+418:["no",null],
+419:["no",null],
+420:["no",null],
+423:[360,null],
+426:[360,null],
+431:[120,null],
+437:[600,null],
+438:[300,null],
+439:[360,null],
+440:[720,null],
+441:[720,null],
+442:[720,null],
+443:[720,null],
+444:[720,null],
+445:[720,null],
+446:[720,null],
+449:[90,null],
+450:[90,null],
+451:[90,null],
+452:[90,null],
+455:[360,null],
+456:[360,null],
+457:[21,null],
+459:[730,null],
+460:[90,null],
+461:[90,null],
+477:[90,null],
+478:[360,null],
+479:[360,null],
+480:[360,null],
+481:[360,null],
+482:[360,null],
+483:[360,null],
+484:[90,null],
+485:[90,null],
+486:[90,null],
+487:[90,null],
+490:["no",null],
+491:[90,null],
+494:[360,null],
+495:[360,null],
+496:[360,null],
+497:[360,null],
+498:["keeps",null],
+501:[90,null],
+504:[360,null],
+505:[180,null],
+514:[60,null],
+515:[60,null],
+516:[60,null],
+517:[60,null],
+518:[60,null],
+519:[360,null],
+525:[360,null],
+526:[270,null],
+536:[360,null],
+537:[360,null],
+538:[360,null],
+541:[360,null],
+542:[90,null],
+543:["no",null],
+547:[300,null],
+548:[270,null],
+551:[360,null],
+552:["no",null],
+554:[60,null],
+561:[180,null],
+562:[360,null],
+571:[360,null],
+575:[240,null],
+576:[120,null],
+577:[360,null],
+578:[180,null],
+579:[120,null],
+580:[60,null],
+581:[360,null],
+582:[180,null],
+583:[120,null],
+584:[60,null],
+585:[240,null],
+586:[120,null],
+587:[360,null],
+588:[180,null],
+589:[240,null],
+590:[120,null],
+591:[360,null],
+592:[180,null],
+593:[240,null],
+594:[120,null],
+595:[270,null],
+601:[90,null],
+602:[90,null],
+611:[120,null],
+621:[270,null],
+622:[120,null],
+628:[120,null],
+629:[90,null],
+630:[60,null],
+631:[60,null],
+632:[180,null],
+635:[90,null],
+638:[90,null],
+639:[90,null],
+641:[730,7],
+645:[360,null],
+653:[270,null],
+654:[360,null],
+655:[730,null],
+656:["no",null],
+657:[360,5],
+662:["keeps",null],
+663:[730,null],
+664:["keeps",null],
+666:[365,null],
+667:[30,null],
+673:[60,null],
+675:[30,null],
+676:[120,null],
+677:[180,null],
+680:[365,null],
+682:[360,null],
+683:[28,null],
+684:[730,null]
+};
 /* END FOODKEEPER */
 
 const HORIZON = 21;
@@ -1863,22 +2347,57 @@ const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : fo
 // date, or a value pinned by a migration. Otherwise the food's own.
 // An opened bottle of wine counts by FoodKeeper's after-opening figure
 // (FOODS[key].opens), the one place that column is read.
+// In the freezer (it.frozen) it counts by FoodKeeper's freezer value; once
+// thawed (it.thawed), by its refrigerator value after thawing.
 const shelfOf = it => it.shelf != null ? it.shelf
+  : it.frozen ? freezerDays(it)
+  : it.thawed ? thawDays(it)
   : it.opened && food(it).opens != null ? food(it).opens : food(it).shelf;
 // A food FoodKeeper gives no spoilage limit (vodka: FOODS[key].keeps)
 // keeps: no countdown and no decay, and it is left out of the headline,
 // the decay line and every at-risk count (counted()). A Use by the person
 // sets on it is a date like any other, and the countdown starts.
 const keeps = it => !!food(it).keeps && it.shelf == null;
-const counted = list => list.filter(it => !keeps(it));
+// Frozen food is out of every count too: it isn't about to be lost.
+const counted = list => list.filter(it => !keeps(it) && !it.frozen);
+
+// The freezer. FK_FREEZE (generated by tools/import-foodkeeper.js) holds
+// each FoodKeeper item's freezer value -- DOP_Freeze, else Freeze, upper
+// end; 'no' where FoodKeeper says freezing is not recommended (lettuce,
+// cucumber, eggs in shell...); 'keeps' for "Indefinitely" -- and its
+// refrigerator value after thawing, which only three items have.
+const freezeGuide = key => { const f = key && foodOf(key); return f && f.fk != null ? FK_FREEZE[f.fk] || null : null; };
+// Days in the freezer (Infinity: no limit), or null: nothing to count by.
+function freezerDays(it){
+  const v = freezeGuide(it.key);
+  return !v ? null : typeof v[0] === 'number' ? v[0] : v[0] === 'keeps' ? Infinity : null;
+}
+const thawDays = it => { const v = freezeGuide(it.key); return v ? v[1] : null; };
+const freezeNotRecommended = key => { const v = freezeGuide(key); return !!v && v[0] === 'no'; };
+// Freeze, from the popover: a FoodKeeper freezer value, or a spirit (it
+// keeps, so the move changes no clock).
+const canFreeze = it => !it.frozen && !it.custom && (!!food(it).keeps || freezerDays(it) != null);
+// Freezer quality left, in days: freezer burn, never rot.
+const frozenLeftAt = (it, day) => shelfOf(it) - (day - clockStart(it));
+function burnFraction(it, day){
+  if (!it.frozen || keeps(it)) return 0;
+  const s = shelfOf(it);
+  if (!(s > 0) || s === Infinity) return 0;
+  return Math.max(0, Math.min(1, 1 - frozenLeftAt(it, day) / s));
+}
+
 // The clock starts at purchase, or on the day a ripening item was marked
-// ripe (ripeOn). A ripening item has no countdown and no decay: it stays
-// at its full shelf life until then.
-const clockStart = it => it.ripeOn != null ? it.ripeOn : it.bought;
-const leftAt = (it, day) => keeps(it) ? Infinity : it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
+// ripe (ripeOn), or on the day it was frozen or thawed (clockFrom). A
+// ripening item has no countdown and no decay: it stays at its full shelf
+// life until then. A frozen one has no countdown either: its freezer
+// time shows as freezer burn (burnFraction), not as urgency.
+const clockStart = it => it.clockFrom != null ? it.clockFrom : it.ripeOn != null ? it.ripeOn : it.bought;
+const leftAt = (it, day) => keeps(it) || it.frozen ? Infinity : it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
 // The day an item goes, as an epoch day, and as YYYY-MM-DD for a date
-// input; null for one that keeps.
-const expiryOf = it => keeps(it) ? null : it.ripening ? today() + shelfOf(it) : clockStart(it) + shelfOf(it);
+// input; null for one that keeps. A frozen item's is its freezer-quality
+// date (frozenUntil).
+const expiryOf = it => keeps(it) || it.frozen ? null : it.ripening ? today() + shelfOf(it) : clockStart(it) + shelfOf(it);
+const frozenUntil = it => keeps(it) || shelfOf(it) === Infinity ? null : clockStart(it) + shelfOf(it);
 function markRipe(id){
   const it = fridge.find(x => x.id === id);
   if (!it || !it.ripening) return;
@@ -1888,7 +2407,7 @@ function markRipe(id){
   render();
 }
 // What an item's days-left reads as, short: "ripening", "today", "3d".
-const shortLeft = (it, d) => keeps(it) ? 'keeps' : it.ripening ? 'ripening' : d === 0 ? 'today' : d + 'd';
+const shortLeft = (it, d) => it.frozen ? 'frozen' : keeps(it) ? 'keeps' : it.ripening ? 'ripening' : d === 0 ? 'today' : d + 'd';
 const isoOfDay = day => new Date((day - DAY_OFFSET) * 86400000).toISOString().slice(0, 10);
 // A date the person sets is stored on the item (shelf counted from its
 // purchase) and never recomputed from FOODS -- the same as a package date
@@ -1898,6 +2417,7 @@ function setUseBy(id, iso){
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
   if (day < it.bought){ toast('Use by can\'t be before the day it was bought'); render(); return; }
+  if (it.clockFrom != null && day < it.clockFrom){ toast('Use by can\'t be before the day it was ' + (it.frozen ? 'frozen' : 'thawed')); render(); return; }
   if (it.ripening){ delete it.ripening; it.ripeOn = today(); }
   it.shelf = day - clockStart(it);
   it.shelfFrom = 'date';
@@ -1914,6 +2434,7 @@ function setBought(id, iso){
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
   if (day > today()){ toast('Bought can\'t be in the future'); render(); return; }
+  if (it.clockFrom != null && day > it.clockFrom){ toast('Bought can\'t be after it was ' + (it.frozen ? 'frozen' : 'thawed')); render(); return; }
   const fixed = it.shelfFrom === 'date' && !it.ripening;
   const useBy = fixed ? expiryOf(it) : null;
   if (fixed && day > useBy){ toast('Bought can\'t be after use by'); render(); return; }
@@ -1921,7 +2442,47 @@ function setBought(id, iso){
   if (it.ripeOn != null && it.ripeOn < day) it.ripeOn = day;
   if (fixed) it.shelf = useBy - clockStart(it);
   it.crossed = false;
-  toast(food(it).en + ' bought ' + fmtDate(day) + (it.ripening || keeps(it) ? '' : ', goes ' + fmtDate(expiryOf(it))));
+  toast(food(it).en + ' bought ' + fmtDate(day) + (it.ripening || keeps(it) || it.frozen ? '' : ', goes ' + fmtDate(expiryOf(it))));
+  render();
+}
+// Freeze: into the freezer, the clock restarted today on FoodKeeper's
+// freezer value (a date set before no longer applies). A spirit just
+// moves: it keeps, so no clock changes. Nothing reaches the ledger.
+function freezeItem(id){
+  const it = fridge.find(x => x.id === id);
+  if (!it || !canFreeze(it)) return;
+  it.frozen = true;
+  delete it.thawed;
+  it.crossed = false;
+  if (food(it).keeps){ toast(food(it).en + ' moved to the freezer'); render(); return; }
+  it.clockFrom = today();
+  delete it.shelf; delete it.shelfFrom; delete it.ripening;
+  const s = shelfOf(it);
+  toast(food(it).en + ' frozen · ' + (s === Infinity ? 'no limit in the freezer' : dayCount(s) + ' in the freezer'));
+  render();
+}
+// Thaw: back to the fridge, the clock restarted today on FoodKeeper's
+// refrigerator value after thawing -- the one place that column is read.
+// With no such value the person gives a date (iso). A spirit just comes
+// out, its clock untouched.
+function thawItem(id, iso){
+  const it = fridge.find(x => x.id === id);
+  if (!it || !it.frozen) return;
+  if (food(it).keeps && it.clockFrom == null){ delete it.frozen; toast(food(it).en + ' taken out of the freezer'); render(); return; }
+  let shelf = null;
+  if (iso != null){
+    const day = parseReceiptDate(iso);
+    if (day == null) return;
+    if (day < today()){ toast('Use by can\'t be before today'); render(); return; }
+    shelf = day - today();
+  } else if (thawDays(it) == null) return; // the popover asks for a date first
+  delete it.frozen;
+  it.thawed = true;
+  it.clockFrom = today();
+  it.crossed = false;
+  delete it.shelf; delete it.shelfFrom;
+  if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
+  toast(food(it).en + ' thawed · ' + dayCount(shelfOf(it)) + ' in the fridge');
   render();
 }
 const left = it => leftAt(it, today());
@@ -1943,7 +2504,7 @@ const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh
 // date. The fridge view's only decay math; everything else (darken, sag,
 // shrink, mold) is this one number driving continuous CSS/SVG output.
 function decayFraction(it, day){
-  if (keeps(it)) return 0;
+  if (keeps(it) || it.frozen) return 0;
   return Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
 }
 
@@ -1977,7 +2538,7 @@ Object.entries(DISH_FILLS).forEach(([need, keys]) => keys.forEach(k => (FILLS_FO
 function haveAt(sourceFridge, day){
   const have = {};
   sourceFridge.forEach(it => {
-    if (leftAt(it, day) < 0 || it.ripening) return; // never recommend cooking something past date, or not ripe yet
+    if (leftAt(it, day) < 0 || it.ripening || it.frozen) return; // never recommend cooking something past date, not ripe yet, or still frozen
     [it.key, ...(FILLS_FOR[it.key] || [])].forEach(k => {
       if (!have[k] || leftAt(it, day) < leftAt(have[k], day)) have[k] = it;
     });
@@ -4291,6 +4852,39 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   </svg>`;
 }
 
+// Freezer burn, over any drawing (food, package or bottle): frozen food
+// doesn't rot, so instead of decay it frosts as its freezer time runs out
+// (burn 0..1, burnFraction). A frost rim inside the outline that thickens,
+// a broken line of crystals along it, and pale dry patches that spread
+// across the surface -- wash and thin ink, like everything else drawn.
+// At 0 it is a thin rim only: frozen, not yet burnt.
+const FROST_HEX = '#F4F8FA', BURN_HEX = '#E4DFD4';
+function freezerBurnMarkup(svg, burn, seed){
+  // the outline: the first path in every drawing (foodShapeMarkupLine's
+  // clip, a package's or a bottle's body)
+  const m = svg.match(/^<svg width="([\d.]+)"[^]*?<path d="([^"]+)"/);
+  if (!m) return svg;
+  const s = +m[1], d = m[2], id = 'frost' + (fridgeShapeCounter++);
+  const thin = Math.max(0.6, s * 0.005).toFixed(2);
+  const rim = s * (0.03 + 0.075 * burn);
+  const R = seededRand(seed * 7 + 401);
+  let patches = '';
+  const n = Math.round(burn * 7);
+  for (let k = 0; k < n; k++){
+    const cx = 0.28 + R() * 0.44, cy = 0.32 + R() * 0.46, r = 0.05 + R() * 0.07 * (0.5 + burn);
+    const pts = ellipseRing(9, r, r * (0.6 + R() * 0.4), cx, cy)
+      .map(([x, y]) => { const j = 0.75 + R() * 0.5; return [cx + (x - cx) * j, cy + (y - cy) * j]; });
+    patches += `<path d="${smoothClosedPath(scalePts(s, pts))}" fill="${BURN_HEX}" fill-opacity="${(0.55 + 0.35 * burn).toFixed(2)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
+  }
+  const extra = `<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs>
+    <g clip-path="url(#${id})" class="frost">
+      ${patches}
+      <path d="${d}" fill="none" stroke="${FROST_HEX}" stroke-opacity="${(0.75 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(rim * 2)}" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="${INK_HEX}" stroke-opacity="${(0.3 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(s * 0.03)}" stroke-dasharray="${f1(s * 0.004)} ${f1(s * (0.045 - 0.02 * burn))}" stroke-linecap="round"/>
+    </g>`;
+  return svg.replace(/<\/svg>\s*$/, extra + '</svg>');
+}
+
 // A package: rigid outline (bulged only), its own colour, its identity
 // cue, then the label and the seam mold on top.
 function packagedMarkupLine(shape, color, fraction, size, seed){
@@ -4381,13 +4975,15 @@ function buildShelfItem(p, day){
   // urgency lives only on the label now, via the same state()/COLOR
   // lookup the list and legend use.
   const color = foodBodyColor(it, frac);
-  // something that keeps has no urgency: plain ink, not the fresh colour
-  const labelColor = keeps(it) ? 'var(--ink-2)' : COLOR[state(d)];
+  // something that keeps, or is frozen, has no urgency: plain ink, not
+  // the fresh colour
+  const labelColor = keeps(it) || it.frozen ? 'var(--ink-2)' : COLOR[state(d)];
   const brightness = (0.6 + frontness * 0.4).toFixed(2);
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = shortLeft(it, d);
   const itemStyle = `left:${x}px;z-index:${p.z}`;
-  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
+  if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   return `<div class="fridge-item" style="${itemStyle}">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
     <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${dayLabel}</span>${fridgeActs(it, f)}</div>
@@ -4479,6 +5075,7 @@ function staggerFridgeLabels(shelf){
 // out. Once past date they go to the crisper with everything else past
 // date, so Toss all stays one place.
 function onCounter(it){
+  if (it.frozen || it.thawed) return false; // frozen: the freezer; thawed: the fridge
   const f = food(it);
   if (f.cat === 'drinks') return drinkOnCounter(it);
   if (it.ripening || it.key === 'banana') return true;
@@ -4488,9 +5085,9 @@ function onCounter(it){
 // liqueur) stands on the counter behind the bowl, never in it; one
 // counted in the refrigerator (beer, cans, an opened wine) is in the fridge.
 function drinkOnCounter(it){
-  return food(it).cat === 'drinks' && food(it).store === 'pantry' && !it.opened;
+  return food(it).cat === 'drinks' && food(it).store === 'pantry' && !it.opened && !it.frozen;
 }
-function inFridgeAt(it, day){ return leftAt(it, day) < 0 || !onCounter(it); }
+function inFridgeAt(it, day){ return !it.frozen && (leftAt(it, day) < 0 || !onCounter(it)); }
 
 function rfAtRiskCount(day){
   return counted(fridge).filter(it => inFridgeAt(it, day)).filter(it => {
@@ -4555,7 +5152,6 @@ function rfDrawCabinet(){
         <feDisplacementMap in="SourceGraphic" scale="2.8" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
       <clipPath id="rfBodyClip"><path d="${bodyD}"/></clipPath>
-      <clipPath id="rfFreezerClip"><path d="${freezerD}"/></clipPath>
     </defs>
     <g filter="url(#rfWobble)">
       <path class="b3 o" d="M42 620 L45 636 Q46 640 50 640 H62 Q66 640 67 636 L70 620 Z"/>
@@ -4569,17 +5165,9 @@ function rfDrawCabinet(){
       <path class="o nf" d="${bodyD}"/>
       <rect class="b3 i" x="32" y="598" width="296" height="20" rx="4"/>
       <line class="i" x1="40" y1="604" x2="320" y2="604"/>
-      <path class="b1" d="${freezerD}"/>
-      <g clip-path="url(#rfFreezerClip)">
-        <rect class="b2" x="318" y="0" width="30" height="130"/>
-        <rect class="b2" x="0" y="108" width="360" height="12"/>
-        <rect class="bh" x="34" y="34" width="5" height="70"/>
-      </g>
-      <path class="o nf" d="${freezerD}"/>
-      <rect class="handle2 i" x="47" y="96" width="9" height="8" rx="2"/>
-      <rect class="handle2 i" x="85" y="96" width="9" height="8" rx="2"/>
-      <path class="handle o" d="M40 102 Q70 93 101 102 L101 109 Q70 100 40 109 Z"/>
+      <path class="b2 i" d="${freezerD}"/>
     </g>`;
+  rfDrawFreezer();
 
   // Interior: back wall, two side walls, ceiling and floor, each its own
   // flat tone (side walls a step darker than the back), plus the wall
@@ -4679,6 +5267,112 @@ function rfDrawCabinet(){
     <line class="i" x1="5" y1="4" x2="5" y2="456" vector-effect="non-scaling-stroke"/>`;
 }
 
+// The freezer's geometry, in the same 360 x 640 units: its door over the
+// compartment at the top of the body, the opening inside the door's
+// frame, and its own one-point perspective (fzP, as rfP) into a cavity as
+// deep as the fridge's. One wire shelf just above the floor.
+const FZ = {
+  door: {x0: 20, y0: 14, x1: 340, y1: 118},
+  open: {x0: 40, y0: 26, x1: 320, y1: 110},
+  vx: 180, vy: 70, k: 0.62, lip: 0.05, rackY: 102
+};
+function fzP(x, y, d){
+  const f = 1 - d * (1 - FZ.k);
+  return [FZ.vx + (x - FZ.vx) * f, FZ.vy + (y - FZ.vy) * f];
+}
+function rfDrawFreezer(){
+  const o = FZ.open, L = FZ.lip;
+  const TL = d => fzP(o.x0, o.y0, d), TR = d => fzP(o.x1, o.y0, d);
+  const BL = d => fzP(o.x0, o.y1, d), BR = d => fzP(o.x1, o.y1, d);
+  let inner = '';
+  inner += rfPoly([TL(0), TR(0), TR(L), TL(L)], 'b2');
+  inner += rfPoly([BL(0), BR(0), BR(L), BL(L)], 'b3');
+  inner += rfPoly([TL(0), TL(L), BL(L), BL(0)], 'b2');
+  inner += rfPoly([TR(0), TR(L), BR(L), BR(0)], 'b2');
+  inner += `<path class="i" style="fill:var(--rf-fz-back)" d="${polyD([TL(1), TR(1), BR(1), BL(1)])}"/>`;
+  inner += rfPoly([TL(L), TR(L), TR(1), TL(1)], 'ceil');
+  inner += rfPoly([BL(L), BR(L), BR(1), BL(1)], 'floor');
+  inner += rfPoly([TL(L), TL(1), BL(1), BL(L)], 'side');
+  inner += rfPoly([TR(L), TR(1), BR(1), BR(L)], 'side');
+  inner += rfLine(TL(L), TL(1), 'i') + rfLine(TR(L), TR(1), 'i') + rfLine(BL(L), BL(1), 'i') + rfLine(BR(L), BR(1), 'i');
+
+  // Frost: pale washes with a thin ink edge, gathered where walls meet --
+  // the corners, the ceiling's edges, the back wall's rim -- and a few
+  // crystal ticks. Seeded, so it never moves between renders.
+  const R = seededRand(9173);
+  const blob = (cx, cy, rx, ry) => {
+    const pts = ellipseRing(10, rx, ry, cx, cy).map(([x, y]) => { const j = 0.7 + R() * 0.55; return [cx + (x - cx) * j, cy + (y - cy) * j]; });
+    return `<path class="frostwash" d="${smoothClosedPath(pts)}"/>`;
+  };
+  const along = (a, b, n, rx, ry) => {
+    let out = '';
+    for (let k = 0; k < n; k++){
+      const t = (k + 0.2 + R() * 0.6) / n, p = rfLerp(a, b, t);
+      out += blob(p[0], p[1], rx * (0.6 + R() * 0.8), ry * (0.6 + R() * 0.8));
+    }
+    return out;
+  };
+  inner += along(TL(L), TL(1), 4, 6, 3.4) + along(TR(L), TR(1), 4, 6, 3.4);
+  inner += along(BL(0.3), BL(1), 3, 5, 2.4) + along(BR(0.3), BR(1), 3, 5, 2.4);
+  inner += along(TL(1), TR(1), 7, 7, 2.6);
+  inner += along(TL(L), BL(L), 3, 2.6, 6) + along(TR(L), BR(L), 3, 2.6, 6);
+  inner += along(TL(1), BL(1), 2, 2.4, 5) + along(TR(1), BR(1), 2, 2.4, 5);
+  let ticks = '';
+  for (let k = 0; k < 26; k++){
+    const p = R() < 0.5 ? rfLerp(TL(1), TR(1), R()) : rfLerp(R() < 0.5 ? TL(L) : TR(L), R() < 0.5 ? TL(1) : TR(1), R());
+    const a = R() * Math.PI, l = 1.2 + R() * 2;
+    ticks += `M${f1(p[0] - Math.cos(a) * l)} ${f1(p[1] - Math.sin(a) * l)} L${f1(p[0] + Math.cos(a) * l)} ${f1(p[1] + Math.sin(a) * l)} `;
+  }
+  inner += `<path class="frostline" d="${ticks}"/>`;
+
+  // One wire shelf, wall to wall just above the floor: a front rod and
+  // wires running back.
+  const rack = FZ.rackY;
+  const rl = fzP(o.x0 + 2, rack, 0.05), rr = fzP(o.x1 - 2, rack, 0.05);
+  const bl = fzP(o.x0 + 2, rack, 1), br = fzP(o.x1 - 2, rack, 1);
+  let wires = '';
+  for (let k = 0; k <= 16; k++){
+    const t = k / 16, f = rfLerp(rl, rr, t), b = rfLerp(bl, br, t);
+    wires += `M${f1(f[0])} ${f1(f[1])} L${f1(b[0])} ${f1(b[1])} `;
+  }
+  [0.35, 0.7].forEach(d => { const a = fzP(o.x0 + 2, rack, d), b = fzP(o.x1 - 2, rack, d); wires += `M${f1(a[0])} ${f1(a[1])} L${f1(b[0])} ${f1(b[1])} `; });
+  inner += `<path class="rack" d="${wires}"/>`;
+  inner += `<rect class="rackrod" x="${f1(rl[0])}" y="${f1(rl[1] - 1)}" width="${f1(rr[0] - rl[0])}" height="2.4" rx="1.2"/>`;
+  inner += `<rect class="o nf" x="${o.x0}" y="${o.y0}" width="${o.x1 - o.x0}" height="${o.y1 - o.y0}" rx="6"/>`;
+  document.getElementById('rfFzInteriorSvg').innerHTML = `<g filter="url(#rfWobble)">${inner}</g>`;
+
+  const em = document.getElementById('rfFzEmpty');
+  em.style.top = rfPct(fzP(FZ.vx, FZ.vy, 0.5)[1] - 4, RF.H);
+
+  // The door: the compartment's own outline, now its own leaf, hinged on
+  // the right like the fridge door.
+  const dr = FZ.door, DW = dr.x1 - dr.x0, DH = dr.y1 - dr.y0;
+  Object.assign(document.getElementById('rfFzDoor').style, {
+    left: rfPct(dr.x0, RF.W), top: rfPct(dr.y0, RF.H), width: rfPct(DW, RF.W), height: rfPct(DH, RF.H)});
+  const doorD = `M0 44 A44 44 0 0 1 44 0 H${DW - 44} A44 44 0 0 1 ${DW} 44 V${DH - 5} A5 5 0 0 1 ${DW - 5} ${DH} H5 A5 5 0 0 1 0 ${DH - 5} Z`;
+  document.getElementById('rfFzFrontSvg').innerHTML = `
+    <defs><clipPath id="rfFzDoorClip"><path d="${doorD}"/></clipPath></defs>
+    <g filter="url(#rfWobble)">
+      <path class="b1" d="${doorD}"/>
+      <g clip-path="url(#rfFzDoorClip)">
+        <rect class="b2" x="${DW - 22}" y="0" width="30" height="${DH}"/>
+        <rect class="b2" x="0" y="${DH - 10}" width="${DW}" height="12"/>
+        <rect class="bh" x="14" y="20" width="5" height="54"/>
+      </g>
+      <path class="o nf" d="${doorD}"/>
+    </g>`;
+  document.getElementById('rfFzInsideSvg').innerHTML = `<g filter="url(#rfWobble)">
+    <path class="b1 o" d="${doorD}"/>
+    <path class="gasket" d="M8 46 A38 38 0 0 1 46 8 H${DW - 46} A38 38 0 0 1 ${DW - 8} 46 V${DH - 10} A3 3 0 0 1 ${DW - 11} ${DH - 7} H11 A3 3 0 0 1 8 ${DH - 10} Z"/>
+    <path class="liner i" d="M16 48 A32 32 0 0 1 48 16 H${DW - 48} A32 32 0 0 1 ${DW - 16} 48 V${DH - 18} H16 Z"/>
+    ${[[40, 30], [DW - 60, 26], [DW / 2, 22], [30, DH - 26], [DW - 34, DH - 24]].map(([x, y]) =>
+      `<path class="frostwash" d="${smoothClosedPath(ellipseRing(10, 9 + R() * 6, 4 + R() * 2, x, y).map(([px, py]) => [px + (R() - 0.5) * 3, py + (R() - 0.5) * 2]))}"/>`).join('')}
+  </g>`;
+  document.getElementById('rfFzEdgeSvg').innerHTML = `
+    <rect class="b3" x="0" y="0" width="10" height="100"/>
+    <rect class="o nf" x="0" y="0" width="10" height="100" vector-effect="non-scaling-stroke"/>`;
+}
+
 // Size follows urgency and nothing else: days left through the same
 // sqrt scale the decay line and the line-art fridge use (pos), so a
 // today item is the largest thing in the drawing and a 28-day carrot one
@@ -4700,9 +5394,9 @@ function rfUrgencyPx(it, day){
 // overlapping (nearer items in front) when there isn't, and only scaled
 // down once overlap alone can't make it fit. Returns sizes in units and
 // the gap between neighbours (negative = overlap).
-function rfFitRow(items, day, widthU, scale = 1){
+function rfFitRow(items, day, widthU, scale = 1, sizeU = null){
   if (!items.length) return {items: [], gapU: 0, scale};
-  const base = items.map(it => rfUrgencyPx(it, day) / RF.PX * scale);
+  const base = items.map(it => (sizeU ? sizeU(it) : rfUrgencyPx(it, day) / RF.PX) * scale);
   const sum = base.reduce((a, b) => a + b, 0), n = base.length;
   const avg = sum / n;
   let gapU = n > 1 ? Math.min(avg * 0.25, (widthU * 0.96 - sum) / (n - 1)) : 0;
@@ -4742,7 +5436,8 @@ function rfBuildFoodItem(it, day, u, z){
   const frac = gone ? 1 : decayFraction(it, day);
   const px = Math.round(u * RF.PX);
   const color = foodBodyColor(it, frac);
-  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
+  if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
   // No tags under items: the fridge tells urgency by position, size and
   // decay; the line-art row below names every item, and the popover has
@@ -4776,14 +5471,18 @@ function renderRealFridge(){
       ? `${atRisk} ${atRisk === 1 ? 'item needs' : 'items need'} attention`
       : 'Nothing needs attention yet';
 
+  rfRenderFreezer(day);
   const here = fridge.filter(it => inFridgeAt(it, day));
   if (!here.length){
     [eyeShelf, upperShelf, crisperItems, ...bins].forEach(el => { el.innerHTML = ''; });
     document.getElementById('rfCrisperLabel').textContent = 'Crisper — past date';
     emptyCavity.hidden = false;
-    emptyCavity.innerHTML = fridge.length
-      ? 'Nothing in the fridge.<br>What you have is on the counter, in Kitchen.'
-      : 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.';
+    const onCounterNow = fridge.some(it => !it.frozen && !inFridgeAt(it, day));
+    emptyCavity.innerHTML = !fridge.length
+      ? 'Nothing in the fridge yet.<br>Add what you bought and it will show up on these shelves.'
+      : onCounterNow ? 'Nothing in the fridge.<br>What you have is on the counter, in Kitchen.'
+      : 'Nothing in the fridge.<br>What you have is in the freezer.';
+    rfWireItems(unit);
     unit.classList.remove('has-items');
     return;
   }
@@ -4854,18 +5553,10 @@ function renderRealFridge(){
     rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4});
   });
 
-  // foodShapeMarkupLine centres a body in its square; pull each one down
-  // by the empty space under its outline so it rests on the surface.
-  unit.querySelectorAll('.rf-foodshape').forEach(span => {
-    const svg = span.querySelector('svg'), outline = svg && svg.querySelector(':scope > path');
-    if (!outline) return;
-    const box = outline.getBBox(), size = svg.viewBox.baseVal.height;
-    const gap = Math.max(0, size - (box.y + box.height)) / size;
-    span.style.marginBottom = `-${(gap * +span.dataset.u * 100 / RF.W).toFixed(3)}cqw`;
-  });
-  unit.querySelectorAll('[data-rf-item]').forEach(b => {
-    b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
-  });
+  // foodShapeMarkupLine centres a body in its square; rfWireItems pulls
+  // each one down by the empty space under its outline so it rests on the
+  // surface.
+  rfWireItems(unit);
   // The drawer front: how many are past date, and Toss all, which opens
   // the same confirmation as the list's "Toss N expired".
   // The drawer front: how many are past date, and Toss all, which asks
@@ -4883,16 +5574,65 @@ function renderRealFridge(){
   on('rfTossYes', () => { rfTossConfirm = false; clearGone(); });
 }
 
+// The freezer: everything frozen, on its one wire shelf, in the order it
+// went in; the door shows how many. No urgency here -- frozen food is out
+// of every count -- so every item is one size, and its freezer time shows
+// only as freezer burn.
+function rfRenderFreezer(day){
+  const items = fridge.filter(it => it.frozen);
+  const count = document.getElementById('rfFzCount');
+  count.textContent = items.length ? items.length + ' inside' : 'empty';
+  document.getElementById('rfFzEmpty').hidden = items.length > 0;
+  const row = document.getElementById('rfFzShelf'), o = FZ.open;
+  const x0 = fzP(o.x0 + 8, FZ.rackY, 0.05)[0], x1 = fzP(o.x1 - 8, FZ.rackY, 0.05)[0];
+  rfPlaceRow(row, x0, x1, fzP(FZ.vx, FZ.rackY, 0.05)[1] - 0.5);
+  // one size for everything (no urgency here), a bottle taller, both
+  // under the compartment's ceiling
+  const sizeU = it => BOTTLES[fridgeShapeOf(it)] ? 66 : 54;
+  rfFillRow(row, rfFitRow(items, day, x1 - x0, 1, sizeU), day, {z: (i, n) => n - i});
+}
+// Every drawn item opens its popover (fridge, freezer and door bins).
+function rfWireItems(unit){
+  unit.querySelectorAll('.rf-foodshape').forEach(span => {
+    if (span.dataset.rested) return;
+    const svg = span.querySelector('svg'), outline = svg && svg.querySelector(':scope > path');
+    if (!outline) return;
+    const box = outline.getBBox(), size = svg.viewBox.baseVal.height;
+    const gap = Math.max(0, size - (box.y + box.height)) / size;
+    span.style.marginBottom = `-${(gap * +span.dataset.u * 100 / RF.W).toFixed(3)}cqw`;
+    span.dataset.rested = '1';
+  });
+  unit.querySelectorAll('[data-rf-item]').forEach(b => {
+    b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.rfItem, b); };
+  });
+}
+
 function rfShowPopover(id, anchorEl){
   const it = fridge.find(x => x.id === id);
   if (!it) return;
   const day = today();
   const f = food(it);
   const d = leftAt(it, day);
-  const leftLabel = keeps(it) ? 'keeps — no countdown' : it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
+  // Frozen: no urgency, only how much freezer time is left.
+  const fl = it.frozen ? frozenLeftAt(it, day) : null;
+  const leftLabel = it.frozen ? (keeps(it) || fl === Infinity ? 'in the freezer — no limit'
+      : fl < 0 ? `past its freezer time by ${dayCount(-fl)}` : `${dayCount(fl)} of freezer time left`)
+    : keeps(it) ? 'keeps — no countdown' : it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
     : d === 0 ? 'last day' : `${d} ${d === 1 ? 'day' : 'days'} left`;
-  const statusName = keeps(it) ? 'Keeps' : {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
-  const statusColor = keeps(it) ? 'var(--ink-2)' : COLOR[state(d)];
+  const statusName = it.frozen ? 'Frozen' : keeps(it) ? 'Keeps' : {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
+  const statusColor = keeps(it) || it.frozen ? 'var(--ink-2)' : COLOR[state(d)];
+  const useBy = it.frozen ? frozenUntil(it) : it.ripening || keeps(it) ? null : expiryOf(it);
+  // Freeze: only with a FoodKeeper freezer value (or a spirit), and not
+  // once it's past date. Thaw: straight back with FoodKeeper's
+  // after-thawing value, or a date asked first when it has none; a spirit
+  // is just taken out.
+  const freezeBtn = canFreeze(it) && d >= 0 ? `
+    <button type="button" class="ghost rf-pop-freeze">Freeze</button>` : '';
+  const takeOut = it.frozen && food(it).keeps && it.clockFrom == null;
+  const thawAsks = it.frozen && !takeOut && thawDays(it) == null;
+  const thawBtn = it.frozen ? `
+    <button type="button" class="ghost rf-pop-thaw">${takeOut ? 'Take out' : 'Thaw'}</button>${thawAsks ? `
+    <label class="rf-pop-row rf-pop-thawask" hidden><span>No thawed figure — use by</span><input type="date" class="rf-pop-thawdate" min="${isoOfDay(day)}"></label>` : ''}` : '';
   const pop = document.getElementById('rfPopover');
   pop.innerHTML = `<button type="button" class="rf-pop-close" aria-label="Close">×</button>
     <span class="rf-pop-name">${f.en}</span>
@@ -4901,8 +5641,8 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <div class="rf-pop-row"><span>Est. weight</span><span class="rf-pop-weight">${estWeightOf(it)}</span></div>
-    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${it.ripening || keeps(it) ? '' : isoOfDay(expiryOf(it))}" min="${isoOfDay(it.bought)}"></label>${it.ripening ? `
-    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}
+    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${useBy == null ? '' : isoOfDay(useBy)}" min="${isoOfDay(it.clockFrom != null ? it.clockFrom : it.bought)}"></label>${it.ripening && !it.frozen ? `
+    <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${freezeBtn}${thawBtn}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
       <button type="button" class="ghost rf-pop-tossed">Tossed</button>
@@ -4913,7 +5653,17 @@ function rfShowPopover(id, anchorEl){
   pop.querySelector('.rf-pop-close').onclick = rfHidePopover;
   pop.querySelector('.rf-pop-date').onchange = e => { rfHidePopover(); setUseBy(id, e.target.value); };
   pop.querySelector('.rf-pop-bought').onchange = e => { rfHidePopover(); setBought(id, e.target.value); };
-  if (it.ripening) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
+  if (it.ripening && !it.frozen) pop.querySelector('.rf-pop-ripe').onclick = () => { rfHidePopover(); markRipe(id); };
+  if (freezeBtn) pop.querySelector('.rf-pop-freeze').onclick = () => { rfHidePopover(); freezeItem(id); };
+  if (thawBtn) pop.querySelector('.rf-pop-thaw').onclick = e => {
+    if (!thawAsks){ rfHidePopover(); thawItem(id); return; }
+    e.stopPropagation();
+    e.target.hidden = true;
+    const ask = pop.querySelector('.rf-pop-thawask');
+    ask.hidden = false;
+    ask.querySelector('input').focus();
+  };
+  if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value); };
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
   pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
@@ -4963,6 +5713,25 @@ function rfInit(){
   // view, its inside face and its edge, closes it. The handle stays the
   // focusable control for the keyboard. A food item in a door bin stops
   // its own click, so tapping it still shows its popover instead.
+  // The freezer door: the same, on its own handle; closed on load.
+  const fzHandle = document.getElementById('rfFzHandle');
+  const setFreezer = open => {
+    rfHidePopover();
+    unit.classList.toggle('fz-open', open);
+    fzHandle.setAttribute('aria-pressed', open ? 'true' : 'false');
+    fzHandle.setAttribute('aria-label', open ? 'Close freezer door' : 'Open freezer door');
+  };
+  fzHandle.addEventListener('click', e => {
+    e.stopPropagation();
+    setFreezer(!unit.classList.contains('fz-open'));
+  });
+  document.querySelectorAll('.rf-fz-inside, .rf-fz-edge').forEach(el => {
+    el.addEventListener('click', e => {
+      if (!unit.classList.contains('fz-open')) return;
+      e.stopPropagation();
+      setFreezer(false);
+    });
+  });
   document.querySelectorAll('.rf-door-inside, .rf-door-edge').forEach(el => {
     el.addEventListener('click', e => {
       if (!unit.classList.contains('open')) return;
@@ -5029,7 +5798,7 @@ function renderKitchen(){
   const b = KC.board, w = KC.bowl;
   const boardEl = document.getElementById('kcBoardItems');
   const bowlEl = document.getElementById('kcBowlItems');
-  const counter = fridge.filter(it => !inFridgeAt(it, day))
+  const counter = fridge.filter(it => !it.frozen && !inFridgeAt(it, day))
     .sort((a, c) => (!!a.ripening - !!c.ripening) || leftAt(a, day) - leftAt(c, day));
   // Counter food that tonight's dish uses is on the board, not also in the
   // bowl: one thing, drawn once.
@@ -5849,6 +6618,7 @@ function fkFood(id){
   if (FK_SHAPES[id]) f.shape = FK_SHAPES[id];
   if (r[4] === 'ripe') f.ripens = true;
   if (r[4] === 'P') f.store = 'pantry';
+  if (r[4] === 'F') f.keptFrozen = true; // only ever kept frozen: a freezer value, nothing else
   fkCache.set(id, f);
   return f;
 }
@@ -5877,13 +6647,22 @@ const entryLabel = (key, raw) => FOODS[key] ? FOODS[key].en : cleanName(raw);
 // FoodKeeper item without days, or anything unmatched, needs a date. A
 // bottle with an after-opening figure (opens) needs none once opened
 // (sparkling wine, rosé, vermouth: unopened, the printed date governs).
-function needsDate(key, open){
+function needsDate(key, open, frozen){
   const f = key && foodOf(key);
   if (f && open === 'opened' && f.opens != null) return false;
+  // frozen with a FoodKeeper freezer value: that value governs
+  // frozen: the freezer value governs; with none, the date the person gives
+  if (frozen) return !(f && (f.keeps || freezerDays({key}) != null));
   return !f || (!f.keeps && (!!f.pkgDate || f.shelf == null));
 }
 // The opened choice an entry carries, for a bottle that asks it.
 const entryOpen = e => opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null;
+// Whether an entry can go in frozen: anything but a food FoodKeeper says
+// not to freeze. Without a freezer value (or a match) the date the person
+// gives governs in the freezer.
+const entryCanFreeze = e => !(e.options.length > 1 && !e.key) && !freezeNotRecommended(e.key);
+const entryFrozen = e => !!e.frozen && entryCanFreeze(e);
+const entryDated = e => needsDate(e.key, entryOpen(e), entryFrozen(e));
 function sourceOf(key){
   const f = foodOf(key);
   return FOODS[key] ? 'FOODS' + (f.fk != null ? ', FoodKeeper #' + f.fk : '') + (f.estimated ? ', estimated' : '') : 'FoodKeeper #' + f.fk;
@@ -5891,7 +6670,12 @@ function sourceOf(key){
 // Where an item's shelf life comes from, for the popover.
 function shelfSourceOf(it){
   const f = food(it);
-  if (keeps(it)) return 'keeps: FoodKeeper #' + f.fk + ' gives no limit (“Indefinitely”)';
+  if (keeps(it)) return 'keeps: FoodKeeper #' + f.fk + ' gives no limit (“Indefinitely”)' + (it.frozen ? ', in the freezer' : '');
+  if (it.frozen && it.shelf == null) return shelfOf(it) === Infinity
+    ? 'frozen: FoodKeeper #' + f.fk + ' gives no freezer limit'
+    : 'frozen: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' in the freezer from ' + fmtDate(clockStart(it));
+  if (it.thawed && it.shelf == null) return 'thawed: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' in the fridge after thawing, from ' + fmtDate(clockStart(it));
+  if (it.thawed && it.shelfFrom === 'date') return 'thawed: date given when thawed (FoodKeeper has no after-thawing figure)';
   if (it.opened && it.shelf == null && f.opens != null) return f.fk != null
     ? 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening'
     : 'opened: estimated, ' + dayCount(f.opens) + ' after opening — ' + f.note;
@@ -5913,16 +6697,35 @@ const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 // {raw, label, age, included, options, suggestions, key, date}. key is set
 // once there is exactly one match (or the person picked one); date is the
 // use-by date they typed, as YYYY-MM-DD.
+// "frozen" in the name ("frozen shrimp") puts it in the freezer: the
+// whole name is tried first (a FoodKeeper item can carry the word), then
+// the name without it.
+const FROZEN_WORD = /\bfrozen\b/i;
 function entryFor(raw, age){
-  const res = resolveName(raw);
-  const key = res.keys.length === 1 ? res.keys[0] : null;
+  let res = resolveName(raw), name = raw;
+  const frozen = FROZEN_WORD.test(raw);
+  if (frozen && !res.keys.length){
+    const bare = raw.replace(/\bfrozen\b/ig, ' ').replace(/\s+/g, ' ').trim();
+    if (bare){ res = resolveName(bare); name = bare; }
+  }
+  let key = res.keys.length === 1 ? res.keys[0] : null;
+  // Frozen, and the plain match has no freezer value of its own: the
+  // FoodKeeper item kept frozen under the same name, if there is exactly
+  // one (frozen edamame -> #641, not fresh edamame #640).
+  if (frozen && key && freezerDays({key}) == null && !foodOf(key).keeps){
+    const n = normName(name);
+    const alt = FK_TABLE.filter(r => r[4] === 'F' && fkNameForms(r).some(f => normName(f) === n));
+    if (alt.length === 1){ key = fkKey(alt[0][0]); res = {keys: [key], suggestions: []}; }
+  }
   return {raw, age, included: true, options: res.keys, suggestions: res.suggestions || [], key, date: '',
-          label: key ? entryLabel(key, raw) : cleanName(raw)};
+          label: key ? entryLabel(key, name) : cleanName(name),
+          frozen: frozen || !!(key && foodOf(key).keptFrozen)};
 }
 // Re-match after the name was edited, keeping where the entry came from.
 function rematchEntry(e, name){
   const next = entryFor(name, e.age);
-  Object.assign(e, {options: next.options, suggestions: next.suggestions, key: next.key, label: next.label, date: ''});
+  Object.assign(e, {options: next.options, suggestions: next.suggestions, key: next.key, label: next.label, date: '',
+    frozen: next.frozen || !!e.frozen});
 }
 // A food whose number counts from ripeness: the entry carries "ripe" or
 // "unripe", defaulting to the person's last choice for that food.
@@ -5932,22 +6735,25 @@ const lastRipeChoice = key => (standing[key] && standing[key].ripe) || 'ripe';
 const opensKey = key => !!(key && foodOf(key) && foodOf(key).opens != null);
 const lastOpenChoice = key => (standing[key] && standing[key].open) || 'unopened';
 // Whether typed entry has to stop at the preview for this entry.
-const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key) || opensKey(e.key);
+// A name that said "frozen" for a food FoodKeeper says not to freeze
+// stops too, so the person sees it's going in the fridge.
+const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key) || opensKey(e.key) || (!!e.frozen && !entryCanFreeze(e));
 // What still stands between an entry and the fridge; null when it can go in.
 function entryNeeds(e){
   if (!e.key && e.options.length > 1) return 'choice';
-  if (needsDate(e.key, entryOpen(e)) && parseReceiptDate(e.date) == null) return e.key ? 'pkgdate' : 'nodata';
+  if (entryDated(e) && parseReceiptDate(e.date) == null) return e.key ? 'pkgdate' : 'nodata';
   return null;
 }
 // The fridge record an entry becomes, bought on `bought` (an epoch day).
 function entryRecord(e, bought){
-  const shelf = needsDate(e.key, entryOpen(e)) ? parseReceiptDate(e.date) - bought : null;
+  const shelf = entryDated(e) ? parseReceiptDate(e.date) - bought : null;
+  const frozen = entryFrozen(e);
   if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
-    ripe: ripensKey(e.key) ? (e.ripe || lastRipeChoice(e.key)) : null,
-    open: opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null};
+    ripe: ripensKey(e.key) && !frozen ? (e.ripe || lastRipeChoice(e.key)) : null,
+    open: opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null, frozen};
   const name = e.label.trim() || e.raw || 'Item';
   const m = CAT_MEDIANS.all;
-  return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf};
+  return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf, frozen};
 }
 
 // One review row, shared by the add preview and the receipt review: what
@@ -5971,7 +6777,7 @@ function entryMatchMarkup(e, i, kind){
         esc(foodOf(k).en) + ' (' + (FOODS[k] ? 'FOODS' : 'FoodKeeper #' + foodOf(k).fk) + ')</option>').join('') +
       '</select>');
   }
-  if (ripensKey(e.key)){
+  if (ripensKey(e.key) && !entryFrozen(e)){
     const choice = e.ripe || lastRipeChoice(e.key);
     const opt = (v, text) => '<label><input type="radio" class="entry-ripe" name="ripe-' + kind + '-' + i + '" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
@@ -5983,7 +6789,12 @@ function entryMatchMarkup(e, i, kind){
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>opened or unopened?</span>' + opt('unopened', 'Unopened') + opt('opened', 'Opened'));
   }
-  if (need !== 'choice' && needsDate(e.key, entryOpen(e))){
+  if (need !== 'choice'){
+    if (entryCanFreeze(e)) bits.push('<label><input type="checkbox" class="entry-frozen" data-kind="' + kind + '" data-idx="' + i + '"' +
+      (entryFrozen(e) ? ' checked' : '') + '> Frozen</label>');
+    else if (e.frozen) bits.push('<span class="why">FoodKeeper: freezing not recommended — goes in the fridge</span>');
+  }
+  if (need !== 'choice' && entryDated(e)){
     if (need === 'pkgdate') bits.push('<span class="why">needs the date printed on the package</span>');
     bits.push('<label>' + (e.key ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + esc(e.date) + '"></label>');
@@ -6009,6 +6820,9 @@ function wireEntryControls(box, entries, rerender){
   box.querySelectorAll('.entry-open').forEach(r => {
     r.onchange = () => { entries[+r.dataset.idx].open = r.value; rerender(); };
   });
+  box.querySelectorAll('.entry-frozen').forEach(cb => {
+    cb.onchange = () => { entries[+cb.dataset.idx].frozen = cb.checked; rerender(); };
+  });
   box.querySelectorAll('.entry-date').forEach(inp => {
     inp.onchange = () => { entries[+inp.dataset.idx].date = inp.value; rerender(); };
   });
@@ -6031,10 +6845,10 @@ function touchStanding(key, custom, name){
 function restock(key, shelf){
   const entry = standing[key];
   if (!entry) return;
-  if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null)){
+  if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null, !!entry.frozen)){
     const label = labelOf(key);
     showEntryPreview([{raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
-      suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key}],
+      suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key, frozen: !!entry.frozen}],
       'Restocking ' + label + ' needs the date on the new one.');
     return;
   }
@@ -6042,12 +6856,13 @@ function restock(key, shelf){
   // Only a toss counts as waste. A past-date one of these stays in the
   // drawer for the person to check, toss or remove; the new one is a
   // separate record.
-  const existing = fridge.find(it => it.key === key && left(it) >= 0);
+  const existing = entry.frozen ? null : fridge.find(it => it.key === key && !it.frozen && left(it) >= 0);
   let msg = label + ' restocked';
   if (existing){
     existing.bought = today();
     existing.crossed = false;
     delete existing.ripeOn;
+    delete existing.clockFrom; delete existing.thawed; // a fresh one, not the thawed one
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
     if (opensKey(key) && lastOpenChoice(key) === 'opened') existing.opened = true; else delete existing.opened;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
@@ -6059,6 +6874,7 @@ function restock(key, shelf){
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') it.ripening = true;
     if (opensKey(key) && lastOpenChoice(key) === 'opened') it.opened = true;
     if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
+    if (entry.frozen){ it.frozen = true; delete it.ripening; }
     fridge.push(it);
     if (fridge.some(x => x.key === key && left(x) < 0)) msg += ' · the old one stays in the drawer until you toss it';
   }
@@ -6168,17 +6984,24 @@ function commitItems(entries){
   entries.forEach((e, idx) => {
     const bought = today() - e.age;
     const rec = recs[idx];
-    if (e.restockKey){ restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined); return; }
+    if (e.restockKey){
+      const st = standing[e.restockKey];
+      if (st){ if (rec.frozen) st.frozen = true; else delete st.frozen; }
+      restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined);
+      return;
+    }
     for (let n = 0; n < (e.quantity || 1); n++){
       const it = {id: ++uid, key: rec.key, bought, custom: rec.custom};
       if (rec.name) it.name = rec.name;
       if (rec.shelf != null){ it.shelf = rec.shelf; it.shelfFrom = 'date'; }
       if (rec.ripe === 'unripe') it.ripening = true;
       if (rec.open === 'opened') it.opened = true;
+      if (rec.frozen) it.frozen = true; // bought frozen: the freezer value counts from purchase
       fridge.push(it);
       touchStanding(rec.key, rec.custom, rec.name);
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       if (rec.open) standing[rec.key].open = rec.open;
+      if (rec.frozen) standing[rec.key].frozen = true; else delete standing[rec.key].frozen;
       added++;
     }
   });
@@ -6273,7 +7096,8 @@ function buildReceiptPrompt(){
     '- "expanded" is a plain, recognizable name (e.g. "KS ORG BNNA" -> ' +
     '"organic bananas"). If the item clearly matches one of these known ' +
     'foods, return that exact name instead: ' + receiptFoodNames() + '. ' +
-    'Otherwise return a plain English name.\n' +
+    'Otherwise return a plain English name. Keep the word "frozen" for ' +
+    'frozen food (e.g. "FRZN SHRIMP" -> "frozen shrimp").\n' +
     '- "quantity" is an integer count of packages/units bought. A weighed ' +
     'line (e.g. "1.52 lb @ 0.99/lb") is quantity 1.\n' +
     '- "is_food" is false for paper towels, cleaning supplies, tax, ' +
@@ -6365,7 +7189,9 @@ function buildReceiptPending(parsed){
     const e = isFood && expanded ? entryFor(expanded, age)
       : {raw: expanded, age, options: [], suggestions: [], key: null, date: '',
          label: expanded ? capFirst(expanded) : 'Unrecognized item'};
-    return Object.assign(e, {raw: String(it.raw || ''), included: isFood, quantity: isFood ? qty : 1});
+    // a line that says frozen goes straight into the freezer
+    return Object.assign(e, {raw: String(it.raw || ''), included: isFood, quantity: isFood ? qty : 1,
+      frozen: isFood && (!!e.frozen || FROZEN_WORD.test(String(it.raw || '')))});
   });
   receiptPending = {age, dateKnown: dateDay != null, items};
 }
@@ -6493,19 +7319,23 @@ function confirmReceipt(){
   const waiting = items.filter(it => entryNeeds(it)).length;
   if (waiting){ toast(waiting + (waiting === 1 ? ' line needs' : ' lines need') + ' a date or a match first'); return; }
   let added = 0;
-  items.forEach(it => {
-    const bought = today() - receiptPending.age;
-    const rec = entryRecord(it, bought);
+  const bought = today() - receiptPending.age;
+  // settled before any touches standing, as in commitItems
+  const recs = items.map(it => entryRecord(it, bought));
+  items.forEach((it, idx) => {
+    const rec = recs[idx];
     for (let n = 0; n < it.quantity; n++){
       const item = {id: ++uid, key: rec.key, bought, custom: rec.custom};
       if (rec.name) item.name = rec.name;
       if (rec.shelf != null){ item.shelf = rec.shelf; item.shelfFrom = 'date'; }
       if (rec.ripe === 'unripe') item.ripening = true;
       if (rec.open === 'opened') item.opened = true;
+      if (rec.frozen) item.frozen = true;
       fridge.push(item);
       touchStanding(rec.key, rec.custom, rec.name);
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       if (rec.open) standing[rec.key].open = rec.open;
+      if (rec.frozen) standing[rec.key].frozen = true; else delete standing[rec.key].frozen;
       added++;
     }
   });
