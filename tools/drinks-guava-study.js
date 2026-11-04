@@ -8,9 +8,9 @@
 // leftAt()/decayFraction() and foodShapeMarkupLine -- no separate drawing
 // path. Beer and cans have no FoodKeeper number, so they are given a
 // printed date (as at entry); spirits keep, so every cell is the same.
-// The sparkling, sake and small green forms have no FOODS entry yet
-// (FoodKeeper doesn't list those drinks): drawn straight from
-// foodShapeMarkupLine at each fraction, marked "form only".
+// Sparkling wine, rosé and vermouth (estimated, Iowa State Extension's
+// opened figures) are drawn opened and, unopened, with a printed date;
+// sake and soju with a printed date.
 //
 // Run: node tools/drinks-guava-study.js
 // Output: tools/screenshots/drinks-guava-study.png
@@ -65,9 +65,12 @@ function serve() {
       ['Tall spirit · Vodka · keeps', {key: 'vodka'}],
       ['Square · Whiskey · keeps', {key: 'whiskey'}],
       ['Square · Cream liqueur', {key: 'creamliqueur'}],
-      ['Sparkling · form only', {form: 'sparkling'}],
-      ['Sake · form only', {form: 'sake'}],
-      ['Small green · form only', {form: 'smallgreen'}],
+      ['Sparkling · Sparkling wine · opened', {key: 'sparklingwine', opened: true}],
+      ['Sparkling · Sparkling wine · printed date 120 days', {key: 'sparklingwine', shelf: 120, shelfFrom: 'date'}],
+      ['Still wine · Rosé · opened', {key: 'rose', opened: true}],
+      ['Still wine · Vermouth · opened', {key: 'vermouth', opened: true}],
+      ['Sake · Sake · printed date 120 days', {key: 'sake', shelf: 120, shelfFrom: 'date'}],
+      ['Small green · Soju · printed date 120 days', {key: 'soju', shelf: 120, shelfFrom: 'date'}],
       ['Guava · ripe', {key: 'guava'}],
     ];
     let uid = 31000;

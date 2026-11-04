@@ -1123,6 +1123,27 @@ const FOODS = {
   // (opens), and goes in the fridge. "Wine" alone asks which.
   redwine:       {en:'Red wine',          aliases:['wine','wines','red wines','bottle of wine','bottle of red'], shelf:1825, opens:3, fk:462, store:'pantry', g:750, usd:14.99, estPrice:true, cat:'drinks', shape:'redwine', base:'#2f5d43'},
   whitewine:     {en:'White wine',        aliases:['wine','wines','white wines','bottle of wine','bottle of white'], shelf:730, opens:3, fk:463, store:'pantry', g:750, usd:12.99, estPrice:true, cat:'drinks', shape:'whitewine', base:'#2f5d43'},
+  // Sparkling wine, rosé and vermouth: no FoodKeeper entry. Estimated
+  // from Iowa State University Extension and Outreach, "Not All Alcohol
+  // Gets Better with Age" (Francis, Norton, Watrelot, Brown, 2020-12-21,
+  // archived), which gives opened bottles, refrigerated: sparkling wine
+  // and champagne up to three days, a light white wine or rosé up to
+  // seven, fortified wines like port or sherry up to four weeks --
+  // vermouth is a fortified wine, the same kind under that generic figure
+  // (rule 6). The upper end of each. It gives no figure for an unopened
+  // bottle of any of the three, so unopened asks for the printed date,
+  // like beer; "Opened" or "Unopened" is asked at entry, as for wine
+  // (opens). Counted in the refrigerator either way: the door bins.
+  // https://www.extension.iastate.edu/news/not-all-alcohol-gets-better-age
+  sparklingwine: {en:'Sparkling wine',    aliases:['sparkling wines','champagne','champagnes','prosecco','proseccos','cava','cavas','bubbly','bottle of champagne','bottle of prosecco','sparkling','spumante','cremant','crémant'], shelf:null, pkgDate:true, opens:3, estimated:true, note:'No FoodKeeper entry; Iowa State Extension gives opened sparkling wine up to 3 days refrigerated, nothing for unopened', g:750, usd:14.99, estPrice:true, cat:'drinks', shape:'sparkling', base:'#2a4d36'},
+  rose:          {en:'Rosé',              aliases:['rose','roses','rosé wine','rose wine','rosés','bottle of rose','bottle of rosé'], shelf:null, pkgDate:true, opens:7, estimated:true, note:'No FoodKeeper entry; Iowa State Extension gives opened rosé up to 7 days refrigerated, nothing for unopened', g:750, usd:13.99, estPrice:true, cat:'drinks', shape:'rose', base:'#e3ebe6'},
+  vermouth:      {en:'Vermouth',          aliases:['vermouths','dry vermouth','sweet vermouth','red vermouth','bianco vermouth','bottle of vermouth'], shelf:null, pkgDate:true, opens:28, estimated:true, note:'No FoodKeeper entry; Iowa State Extension gives opened fortified wines up to 4 weeks refrigerated, nothing for unopened', g:750, usd:16.99, estPrice:true, cat:'drinks', shape:'vermouth', base:'#e3ebe6'},
+  // Sake and soju: no FoodKeeper entry, and no extension service gives a
+  // storage figure for either (searched; only brewers, retailers and
+  // blogs, which disagree). With no credible source, no number: the date
+  // printed on the bottle governs, as for beer, and nothing else is asked.
+  sake:          {en:'Sake',              aliases:['sakes','nihonshu','junmai','ginjo','daiginjo','nigori','bottle of sake'], shelf:null, pkgDate:true, note:'No FoodKeeper entry and no extension figure; the date printed on the bottle', g:720, usd:19.99, estPrice:true, cat:'drinks', shape:'sake', base:'#5d4128'},
+  soju:          {en:'Soju',              aliases:['sojus','bottle of soju'], shelf:null, pkgDate:true, note:'No FoodKeeper entry and no extension figure; the date printed on the bottle', g:360, usd:5.99, estPrice:true, cat:'drinks', shape:'smallgreen', base:'#7fbf8e'},
   // #540 Cream liquors (unopened): pantry 6-8 months, no other figure, so
   // 8 months on the counter and nothing asked at entry.
   creamliqueur:  {en:'Cream liqueur',     aliases:['cream liqueurs','cream liquor','cream liquors','irish cream'], shelf:240, fk:540, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'creamliqueur', base:'#3d2b21'},
@@ -4129,9 +4150,16 @@ const BOTTLES = {
   scotch:        {p: 'square', clear: true, liquid: '#c98d3a', level: 0.46},
   brandy:        {p: 'square', clear: true, liquid: '#8f4a1c', level: 0.46},
   creamliqueur:  {p: 'square'},
-  // Forms for drinks FoodKeeper doesn't list (sparkling wine, sake, soju):
-  // drawn and in the study, but no FOODS entry uses them yet.
+  // Drinks FoodKeeper doesn't list (FOODS cites the source for each, or
+  // asks the printed date): sparkling wine, rosé and vermouth open, and
+  // darken once opened, as wine does; sake's brown glass and soju's small
+  // green bottle show nothing.
   sparkling:     {p: 'sparkling', liquid: '#e0cf7a', level: 0.45, glass: '#2a4d36'},
+  sparklingOpen: {p: 'sparkling', liquid: '#e0cf7a', level: 0.62, glass: '#2a4d36', open: true},
+  rose:          {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.40},
+  roseOpen:      {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.62, open: true},
+  vermouth:      {p: 'wine', clear: true, liquid: '#a8502a', level: 0.40},
+  vermouthOpen:  {p: 'wine', clear: true, liquid: '#a8502a', level: 0.62, open: true},
   sake:          {p: 'sake', glass: '#5d4128'},
   smallgreen:    {p: 'small', clear: true, glass: '#7fbf8e', level: 0.6}
 };
@@ -5846,20 +5874,27 @@ function cleanName(raw){
 // FoodKeeper fallback the person's own (cleaned) words.
 const entryLabel = (key, raw) => FOODS[key] ? FOODS[key].en : cleanName(raw);
 // FOODS keeps its own number unless the package date governs; a
-// FoodKeeper item without days, or anything unmatched, needs a date.
-function needsDate(key){
+// FoodKeeper item without days, or anything unmatched, needs a date. A
+// bottle with an after-opening figure (opens) needs none once opened
+// (sparkling wine, rosé, vermouth: unopened, the printed date governs).
+function needsDate(key, open){
   const f = key && foodOf(key);
+  if (f && open === 'opened' && f.opens != null) return false;
   return !f || (!f.keeps && (!!f.pkgDate || f.shelf == null));
 }
+// The opened choice an entry carries, for a bottle that asks it.
+const entryOpen = e => opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null;
 function sourceOf(key){
   const f = foodOf(key);
-  return FOODS[key] ? 'FOODS' + (f.fk != null ? ', FoodKeeper #' + f.fk : '') : 'FoodKeeper #' + f.fk;
+  return FOODS[key] ? 'FOODS' + (f.fk != null ? ', FoodKeeper #' + f.fk : '') + (f.estimated ? ', estimated' : '') : 'FoodKeeper #' + f.fk;
 }
 // Where an item's shelf life comes from, for the popover.
 function shelfSourceOf(it){
   const f = food(it);
   if (keeps(it)) return 'keeps: FoodKeeper #' + f.fk + ' gives no limit (“Indefinitely”)';
-  if (it.opened && it.shelf == null && f.opens != null) return 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening';
+  if (it.opened && it.shelf == null && f.opens != null) return f.fk != null
+    ? 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening'
+    : 'opened: estimated, ' + dayCount(f.opens) + ' after opening — ' + f.note;
   if (it.ripening) return 'ripening: ' + (f.fk != null ? 'FoodKeeper #' + f.fk : 'estimated') + ' counts ' + dayCount(f.shelf) + ' from when it is ripe';
   if (it.shelf != null && it.shelfFrom === 'date')
     return (f.pkgDate ? 'package date' : 'date given at entry')
@@ -5901,12 +5936,12 @@ const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key) || opensKey(e.key);
 // What still stands between an entry and the fridge; null when it can go in.
 function entryNeeds(e){
   if (!e.key && e.options.length > 1) return 'choice';
-  if (needsDate(e.key) && parseReceiptDate(e.date) == null) return e.key ? 'pkgdate' : 'nodata';
+  if (needsDate(e.key, entryOpen(e)) && parseReceiptDate(e.date) == null) return e.key ? 'pkgdate' : 'nodata';
   return null;
 }
 // The fridge record an entry becomes, bought on `bought` (an epoch day).
 function entryRecord(e, bought){
-  const shelf = needsDate(e.key) ? parseReceiptDate(e.date) - bought : null;
+  const shelf = needsDate(e.key, entryOpen(e)) ? parseReceiptDate(e.date) - bought : null;
   if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
     ripe: ripensKey(e.key) ? (e.ripe || lastRipeChoice(e.key)) : null,
     open: opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null};
@@ -5948,7 +5983,7 @@ function entryMatchMarkup(e, i, kind){
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>opened or unopened?</span>' + opt('unopened', 'Unopened') + opt('opened', 'Opened'));
   }
-  if (need !== 'choice' && needsDate(e.key)){
+  if (need !== 'choice' && needsDate(e.key, entryOpen(e))){
     if (need === 'pkgdate') bits.push('<span class="why">needs the date printed on the package</span>');
     bits.push('<label>' + (e.key ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + esc(e.date) + '"></label>');
@@ -5996,7 +6031,7 @@ function touchStanding(key, custom, name){
 function restock(key, shelf){
   const entry = standing[key];
   if (!entry) return;
-  if (shelf == null && needsDate(key)){
+  if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null)){
     const label = labelOf(key);
     showEntryPreview([{raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
       suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key}],
@@ -6126,9 +6161,13 @@ function parseSpeech(text){
 // through restock() with the date it now has.
 function commitItems(entries){
   let added = 0;
-  entries.forEach(e => {
+  // Every record is settled before any of them touches standing: an
+  // entry's ripe and opened defaults are the last choice per food, and the
+  // first one committed must not change what the next was shown as.
+  const recs = entries.map(e => entryRecord(e, today() - e.age));
+  entries.forEach((e, idx) => {
     const bought = today() - e.age;
-    const rec = entryRecord(e, bought);
+    const rec = recs[idx];
     if (e.restockKey){ restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined); return; }
     for (let n = 0; n < (e.quantity || 1); n++){
       const it = {id: ++uid, key: rec.key, bought, custom: rec.custom};

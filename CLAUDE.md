@@ -25,7 +25,8 @@ consumer food app.
      bottle counts Refrigerate_After_Opening from purchase (FOODS[key].
      opens, it.opened). Unopened wine has no refrigerator figure, only a
      pantry one, and counts by that (red #462 5 years, white #463 2).
-     Nothing else has an "opened" state.
+     Sparkling wine, rosé and vermouth ask it too (see rule 5); nothing
+     else has an "opened" state.
   2. Foods usually kept out of the fridge use the pantry value instead
      (DOP_Pantry, else Pantry): bananas, potatoes, sweet potatoes, whole
      onions, garlic, tomatoes, winter squash, whole spaghetti squash,
@@ -53,8 +54,16 @@ consumer food app.
        FoodKeeper lists none of them (#662 Apple cider is fresh juice),
        so they have no fk and always ask for the printed date (pkgDate).
        Cream liqueur is #540 (unopened, pantry 8 months, nothing asked).
-       Sparkling wine, rosé, sake, vermouth and soju have no FoodKeeper
-       entry and stay out of FOODS until decided.
+       Sparkling wine (champagne, prosecco, cava), rosé, vermouth, sake
+       and soju have no FoodKeeper entry. The first three are estimated
+       from Iowa State University Extension's "Not All Alcohol Gets
+       Better with Age" (2020), which gives opened bottles only:
+       sparkling 3 days, rosé 7, fortified wines (vermouth) 4 weeks.
+       Entry asks "Opened" or "Unopened"; opened counts that figure from
+       purchase (opens), unopened asks for the printed date (pkgDate) --
+       entry and receipt review ask the date only for an unopened one.
+       No extension service gives a figure for sake or soju: printed
+       date only. All five are refrigerated (door bins).
      - No spoilage limit at all (FoodKeeper "Indefinitely": #539 Hard
        liquors -- vodka, gin, rum, tequila, mezcal, baijiu, whiskey,
        bourbon, scotch, brandy, cognac, plain liquor/spirits): keeps:true. No countdown and no decay; left out of
@@ -184,7 +193,10 @@ too, drawn from a few shared forms (BOTTLE_PROFILES: long-neck, can,
 still wine, sparkling with foil and wire cage, tall spirit, short square
 whiskey, small green, sake), told apart by glass and drink colour
 (BOTTLES): the glass never changes, a blank plain label fades, and an
-opened wine shows its wine darkening toward brown through the glass. No
+opened wine (red, white, rosé, vermouth, sparkling) shows its wine
+darkening toward brown through the glass. Sparkling wine uses the
+sparkling form, rosé and vermouth the still wine form in clear glass,
+sake the sake form, soju the small green bottle. No
 brands, no lettering. Their square is drawn larger in the illustrated
 fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it. Refrigerated
 drinks live in the door bins (toDoorBin) unless urgency puts them at eye

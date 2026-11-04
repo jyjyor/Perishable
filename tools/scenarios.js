@@ -2075,6 +2075,52 @@ async function drinksScenario(browser) {
   await page.context().close();
 }
 
+// Sparkling wine, rosé, vermouth, sake, soju: no FoodKeeper entry. The
+// first three are estimated from Iowa State Extension's opened figures
+// (3, 7, 28 days) and ask "Opened or unopened?"; unopened, the printed
+// date governs. Sake and soju have no credible source: printed date only.
+async function moreDrinksScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- MORE DRINKS: sparkling, rosé, vermouth, sake, soju ---');
+  await typeEntry(page, 'champagne, prosecco, cava, rosé, rose wine, sweet vermouth, sake, soju');
+  let rows = await readReview(page, '#voicePreview');
+  console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
+  expectEqual('names', rows.map(r => r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
+  rows.forEach(r => { if (r.flag !== 'needs date') throw new Error(r.name + ' unopened should need the printed date: ' + JSON.stringify(r)); });
+  rows.slice(0, 6).forEach(r => {
+    if (!r.match.includes('estimated') || !r.match.includes('opened or unopened?')) throw new Error(r.name + ' should be estimated and ask opened: ' + r.match);
+  });
+  rows.slice(6).forEach(r => {
+    if (r.match.includes('opened or unopened?') || r.match.includes('FoodKeeper')) throw new Error(r.name + ' asks nothing but the date: ' + r.match);
+  });
+  // Opened: the date field goes away and the line can go in.
+  for (const i of [0, 3, 5]) {
+    await page.check(`#voicePreview .entry-open[data-idx="${i}"][value="opened"]`);
+    await page.waitForTimeout(60);
+  }
+  rows = await readReview(page, '#voicePreview');
+  expectEqual('opened lines need nothing', [0, 3, 5].map(i => rows[i].flag), ['', '', '']);
+  for (const i of [1, 2, 4, 6, 7]) {
+    await page.fill(`#voicePreview .entry-date[data-idx="${i}"]`, await isoIn(page, 200));
+    await page.dispatchEvent(`#voicePreview .entry-date[data-idx="${i}"]`, 'change');
+    await page.waitForTimeout(40);
+  }
+  await page.click('#voiceAdd');
+  await page.waitForTimeout(150);
+  const recs = await page.evaluate(() => fridge.map(i => [i.key, !!i.opened, Math.round(left(i)), fridgeShapeOf(i)]));
+  console.log(JSON.stringify(recs));
+  expectEqual('records', recs, [
+    ['sparklingwine', true, 3, 'sparklingOpen'], ['sparklingwine', false, 200, 'sparkling'], ['sparklingwine', false, 200, 'sparkling'],
+    ['rose', true, 7, 'roseOpen'], ['rose', false, 200, 'rose'], ['vermouth', true, 28, 'vermouthOpen'],
+    ['sake', false, 200, 'sake'], ['soju', false, 200, 'smallgreen']]);
+  const src = await popoverText(page, 'vermouth');
+  if (!src.includes('opened: estimated, 28 days after opening') || !src.includes('Iowa State Extension')) throw new Error('vermouth popover source: ' + src);
+  // Refrigerated either way: none stands on the counter.
+  expectEqual('none on the counter', await page.evaluate(() => fridge.filter(drinkOnCounter).length), 0);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // The top bar's Add: scrolls to Add food and puts the cursor in the
 // entry field. On a phone the bar is a thin sticky strip, so Add stays
 // one tap away from anywhere on the page.
@@ -2357,6 +2403,7 @@ async function pageStructureScenario(browser) {
     () => kitchenScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
+    () => moreDrinksScenario(browser),
   ];
   let passed = 0;
   const failed = [];
