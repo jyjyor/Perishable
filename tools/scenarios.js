@@ -612,6 +612,18 @@ async function migrationScenario(browser) {
   const cookBtn = await livePage.$('.js-cook');
   if (cookBtn) await cookBtn.click();
   await livePage.waitForTimeout(100);
+  // What else a phone on origin/main holds, written in origin/main's own
+  // record shape and saved by its own saveState: a banana not ripe yet, a
+  // ripe avocado, potatoes (kept out of the fridge: the bowl now), and a
+  // tomato past date (the crisper).
+  await livePage.evaluate(() => {
+    const t = today();
+    fridge.push({id: ++uid, key: 'banana', bought: t - 1, custom: null, ripening: true},
+                {id: ++uid, key: 'avocado', bought: t - 1, custom: null, ripeOn: t},
+                {id: ++uid, key: 'potato', bought: t - 3, custom: null},
+                {id: ++uid, key: 'tomato', bought: t - 12, custom: null});
+    render(); saveState();
+  });
 
   const savedState = await livePage.evaluate(() => localStorage.getItem('perishable.v1'));
   if (!savedState) throw new Error('origin/main produced no saved state to migrate -- nothing to test');
@@ -658,6 +670,30 @@ async function migrationScenario(browser) {
   const drawerItems = await page.$$eval('#fridgeDrawerItems .fridge-item', els => els.length);
   console.log('fridge view: shelf =', shelfItems, ', drawer =', drawerItems);
   if (shelfItems + drawerItems !== expectedCount) throw new Error(`fridge view shows ${shelfItems + drawerItems} items total, expected ${expectedCount}`);
+
+  // Nothing counts as waste by loading: the ledger is exactly what was
+  // saved, and every record is still there by id.
+  const after = await page.evaluate(() => ({ledger, ids: fridge.map(i => i.id).sort((a, b) => a - b),
+    frozen: fridge.filter(i => i.frozen).length}));
+  expectEqual('ledger unchanged by loading', after.ledger, parsed.ledger);
+  expectEqual('every saved record kept', after.ids, parsed.fridge.map(i => i.id).sort((a, b) => a - b));
+  // Every item is drawn somewhere: the illustrated fridge (shelves,
+  // crisper, door bins) or the kitchen (the bowl, the board, the counter);
+  // the freezer is empty and closed, with nothing moved into it.
+  const where = await page.evaluate(() => fridge.map(it => {
+    const at = sel => !!document.querySelector(`${sel} [data-rf-item="${it.id}"], ${sel} [data-board-item="${it.id}"]`);
+    const place = at('#rfFzShelf') ? 'freezer' : at('#rfCrisperItems') ? 'crisper' : at('#rfShelfEye') || at('#rfShelfUpper') ? 'shelf'
+      : at('[id^=rfDoorBin]') ? 'door' : at('#kcBowlItems') || at('#kcBowlBack') ? 'bowl' : at('#kcBoardItems') ? 'board' : at('#kcCounterBack') ? 'counter' : null;
+    return [it.key, place];
+  }));
+  console.log('drawn at:', JSON.stringify(where));
+  const missing = where.filter(([, p]) => !p);
+  if (missing.length) throw new Error('not drawn anywhere: ' + JSON.stringify(missing));
+  const placeOf = k => (where.find(([key]) => key === k) || [])[1];
+  expectEqual('banana (not ripe) and potato in the kitchen, past-date tomato in the crisper',
+    [['bowl', 'board'].includes(placeOf('banana')), ['bowl', 'board'].includes(placeOf('potato')), placeOf('tomato')], [true, true, 'crisper']);
+  const fz = await page.evaluate(() => [document.getElementById('rfFzCount').textContent, document.querySelectorAll('#rfFzShelf [data-rf-item]').length, document.getElementById('rfUnit').classList.contains('fz-open')]);
+  expectEqual('freezer empty and closed, nothing frozen', [...fz, after.frozen], ['empty', 0, false, 0]);
 
   if (errors.length) throw new Error(`current code threw console errors loading migrated state: ${JSON.stringify(errors)}`);
   await page.screenshot({ path: path.join(OUT, 'scn-migration.png'), fullPage: true });
@@ -2436,18 +2472,23 @@ async function freezePausesDecayScenario(browser) {
 
 // Thaw with no FoodKeeper after-thawing value: USDA FSIS "The Big Thaw"
 // (via MSU Extension E3259), upper end, from the thaw date -- poultry,
-// ground meat, stew meat and seafood 2 days, red meat cuts 5. The popover
-// says so before and after. Anything else (broccoli, cooked shellfish)
-// still asks for a date.
+// ground meat (fresh raw sausage too: Italian #102, fresh chorizo #630,
+// fresh bratwurst #638, uncooked links #322), stew meat and seafood 2
+// days, red meat cuts 5. The popover says so before and after. Anything
+// else (broccoli, cooked shellfish, smoked sausage) still asks for a date.
 async function bigThawScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- FREEZER: The Big Thaw ---');
   await page.evaluate(() => {
     const t = today();
-    fridge = ['chicken', 'shrimp', 'steak', 'beef', 'salmon', 'broccoli', '_fk_162', '_fk_41'].map(key =>
-      ({id: ++uid, key, bought: t - 20, custom: null, frozen: true, clockFrom: t - 10, ...(key === '_fk_162' ? {name: 'Cooked shellfish'} : key === '_fk_41' ? {name: 'Stew beef'} : {})}));
+    const NAMES = {_fk_162: 'Cooked shellfish', _fk_41: 'Stew beef', _fk_630: 'Fresh chorizo', _fk_638: 'Fresh bratwurst', _fk_322: 'Uncooked sausages', _fk_639: 'Smoked bratwurst'};
+    fridge = ['chicken', 'shrimp', 'steak', 'beef', 'salmon', 'broccoli', '_fk_162', '_fk_41', '_fk_630', '_fk_638', '_fk_322', '_fk_639'].map(key =>
+      ({id: ++uid, key, bought: t - 20, custom: null, frozen: true, clockFrom: t - 10, ...(NAMES[key] ? {name: NAMES[key]} : {})}));
     render();
   });
+  // Italian sausage typed frozen: #102 raw sausage, into the freezer
+  await typeEntry(page, 'frozen italian sausage');
+  expectEqual('frozen italian sausage straight in as #102', await page.evaluate(() => fridge.filter(i => i.key === '_fk_102').map(i => [!!i.frozen, shelfOf(i)])), [[true, 60]]);
   const ids = await page.evaluate(() => fridge.map(i => [i.key, i.id]));
   const result = {};
   for (const [key, id] of ids) {
@@ -2462,13 +2503,14 @@ async function bigThawScenario(browser) {
   }
   console.log(JSON.stringify(result, null, 1));
   const src = 'USDA FSIS “The Big Thaw” (via MSU Extension E3259)';
-  for (const [key, days] of [['chicken', 2], ['shrimp', 2], ['steak', 5], ['beef', 2], ['salmon', 2], ['_fk_41', 2]]) {
+  for (const [key, days] of [['chicken', 2], ['shrimp', 2], ['steak', 5], ['beef', 2], ['salmon', 2], ['_fk_41', 2],
+                             ['_fk_102', 2], ['_fk_630', 2], ['_fk_638', 2], ['_fk_322', 2]]) {
     const r = result[key];
     expectEqual(`${key}: ${days} days from the thaw date`, r.slice(0, 2), [days, 0]);
     expectEqual(`${key}: source before thawing`, r[2], `Thawed ${days} days in the fridge — ${src}`);
     if (!r[3].startsWith(`thawed: ${src}, ${days} days in the fridge after thawing`)) throw new Error(`${key} source after: ${r[3]}`);
   }
-  expectEqual('broccoli and cooked shellfish ask for a date', [result.broccoli, result._fk_162], [['asks', null], ['asks', null]]);
+  expectEqual('broccoli, cooked shellfish and smoked bratwurst ask for a date', [result.broccoli, result._fk_162, result._fk_639], [['asks', null], ['asks', null], ['asks', null]]);
   // the source shows in the thawed item's popover too
   const text = await popoverText(page, 'steak');
   if (!text.includes('The Big Thaw')) throw new Error('thawed steak popover: ' + text);

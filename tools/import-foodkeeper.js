@@ -51,7 +51,9 @@ const HAND_ALIASES = new Map([
   [514, ['deli turkey', 'sliced turkey']],           // Turkey (pre-packaged, luncheon/deli meat)
   [515, ['deli ham', 'sliced ham']],                 // Ham (pre-packaged, luncheon/deli meat)
   [302, ['summer squash', 'yellow squash']],         // Squash (summer and zucchini)
-  [195, ['pita', 'naan']]                            // Commercial bread products (... flat breads ...)
+  [195, ['pita', 'naan']],                           // Commercial bread products (... flat breads ...)
+  [102, ['italian sausage']],                        // Sausage (raw bulk type or patties): raw sausage
+  [638, ['fresh bratwurst']]                         // Bratwurst (fresh): FoodKeeper spells it "brautwurst"
 ]);
 
 // Hand-kept exceptions to the ripeness reading, with the reason. A store

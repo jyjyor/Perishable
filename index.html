@@ -1425,7 +1425,7 @@ const FK_TABLE = [
 [96,"Ham (fresh, uncooked, half leg, bone-in)","half leg",7,"R",2],
 [97,"Ham (country ham (whole or half))","country ham",7,"R",2],
 [98,"Hot dogs","",14,"R",2],
-[102,"Sausage (raw bulk type or patties)","raw bulk type",2,"R",2],
+[102,"Sausage (raw bulk type or patties)","raw bulk type|italian sausage",2,"R",2],
 [103,"Sausage (fully cooked smoked links, kielbasa)","fully cooked smoked link|kielbasa|smoked link|fully cooked",7,"R",2],
 [104,"Sausage (hard, dry (pepperoni), sliced)","pepperoni|dry pepperoni",21,"R",2],
 [105,"Stuffed, raw pork chops","",2,"R",3],
@@ -1702,7 +1702,7 @@ const FK_TABLE = [
 [631,"Chorizo (smoked and processed, uncooked)","smoked chorizo|processed chorizo|uncooked processed chorizo|uncooked smoked chorizo",7,"R",2],
 [634,"Cinnamon rolls (unbaked, tube)","",null,"pkg",14],
 [636,"Cooking wine","",null,"pkg",19],
-[638,"Bratwurst (fresh)","fresh brautwurst",3,"R",1],
+[638,"Bratwurst (fresh)","fresh brautwurst|fresh bratwurst",3,"R",1],
 [639,"Bratwurst (smoked and processed)","smoked brautwurst|processed brautwurst",7,"R",2],
 [640,"Edamame (fresh)","fresh edamame",5,"R",16],
 [641,"Edamame (frozen)","frozen edamame",null,"F",17],
@@ -2379,10 +2379,13 @@ function freezerDays(it){
 // additional 1-2 days, red meat cuts (beef, pork or lamb roasts, chops and
 // steaks) 3-5 -- the upper end, 2 and 5, counted from the thaw date. By
 // FoodKeeper id, raw only: cooked fish and shellfish, surimi, caviar,
-// pasteurized crab, variety meats, rabbit and fresh sausage are none of
-// these, and still ask for a date. Cubes and stew pieces count as stew meat.
+// pasteurized crab, variety meats and rabbit are none of these, and still
+// ask for a date. Cubes and stew pieces count as stew meat; fresh raw
+// sausage (bulk or patties, Italian, uncooked links, fresh chorizo, fresh
+// bratwurst) is ground meat. Smoked or precooked sausage is not raw.
 const THAW_BIG = {};
 [43, 50, 59, 73, 78, 622, 115,                                   // ground
+ 102, 322, 630, 638,                                             // fresh raw sausage
  41, 49, 53, 69, 71, 75,                                         // stew meat, cubes
  113, 114, 116, 117, 118, 119, 120, 121, 123, 125, 126, 127, 128, 129, 130, // raw poultry
  144, 145, 146, 150, 151, 152, 153, 154, 157, 158, 160, 161      // raw seafood

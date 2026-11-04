@@ -108,14 +108,15 @@ consumer food app.
        fridge (it.thawed), the clock restarted today on the after-thawing
        value -- the one exception to "never the after-thawing values",
        made on purpose so a thawed item counts honestly. With no
-       FoodKeeper after-thawing value, raw poultry, ground meat, stew meat
-       (and cubes) and raw seafood take 2 days and red meat cuts (steaks,
+       FoodKeeper after-thawing value, raw poultry, ground meat (fresh raw
+       sausage too: Italian, fresh chorizo, fresh bratwurst, uncooked
+       links), stew meat (and cubes) and raw seafood take 2 days and red meat cuts (steaks,
        chops, roasts) 5, from the thaw date: USDA FSIS "The Big Thaw", as
        cited by MSU Extension E3259 "Thawing Foods Safely" -- thawed in
        the refrigerator they keep an additional 1-2 days, red meat cuts
        3-5; upper end (THAW_BIG, by FoodKeeper id). The popover names that
        source before and after thawing. Anything else (vegetables, cooked
-       fish and shellfish, variety meats, fresh sausage) asks for a
+       fish and shellfish, variety meats, smoked or precooked sausage) asks for a
        use-by date first; from the row, Thaw opens the popover on that
        date. A spirit has "Take out" instead, no clock change.
      - Frozen food never spoils. USDA FSIS "Freezing and Food Safety":
