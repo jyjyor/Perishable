@@ -2024,9 +2024,11 @@ async function addButtonScenario(browser) {
 
 // Fridge and Kitchen: two panels in one snap-scrolled swipe area, tabs in
 // sync both ways. The 18-item fixture plus bananas and an unripe avocado:
-// what's kept out of the fridge (onion, bread, avocados, bananas) and the
-// unripe avocado sit in the kitchen's bowl, not on the fridge shelves;
-// tonight's dish is drawn on the cutting board; the Kitchen tab carries
+// what's kept out of the fridge (onion, bread, bananas) and the unripe
+// avocado sit in the kitchen's bowl, not on the fridge shelves; the ripe
+// avocado is in the fridge; tonight's dish is drawn on the cutting board,
+// and counter food it uses (the onion) is on the board, not also in the
+// bowl; the dish says what it saves; the Kitchen tab carries
 // the count of counter items within 72 hours; All items still has all 20.
 const KITCHEN_20 = [...MIXED_18, ['banana', 1], ['avocado', 0, null, null, null, { ripening: true }]];
 async function kitchenScenario(browser) {
@@ -2048,8 +2050,9 @@ async function kitchenScenario(browser) {
       const name = id => food(fridge.find(i => i.id === id)).en + (fridge.find(i => i.id === id).ripening ? ' (not ripe)' : '');
       return {
         scrollLeft: tr.scrollLeft, snap: cs.scrollSnapType, overscroll: cs.overscrollBehaviorX,
-        fridgeIds: ids('#rfUnit [data-rf-item]'), bowl: ids('#kcBowlItems [data-rf-item]').map(name),
+        fridgeIds: ids('#rfUnit [data-rf-item]'), bowl: ids('#kcBowlItems [data-rf-item], #kcBowlBack [data-rf-item]').map(name),
         board: ids('#kcBoardItems [data-board-item]').map(name),
+        saves: (document.querySelector('#tonight .dish-saves') || {}).textContent || '',
         allItems: +document.getElementById('fridgeCount').textContent,
         countColor: getComputedStyle(document.getElementById('kitchenCount')).color,
         crit: getComputedStyle(document.documentElement).getPropertyValue('--crit').trim(),
@@ -2065,7 +2068,10 @@ async function kitchenScenario(browser) {
     expectEqual(`${tag}: native snapping`, st.snap, 'x mandatory');
     expectEqual(`${tag}: no back/forward from the swipe`, st.overscroll, 'contain');
     expectEqual(`${tag}: food taps never swipe`, st.touch, 'pan-y');
-    expectEqual(`${tag}: in the bowl`, st.bowl.slice().sort(), ['Avocados', 'Avocados (not ripe)', 'Banana', 'Bread', 'Onion']);
+    expectEqual(`${tag}: in the bowl`, st.bowl.slice().sort(), ['Avocados (not ripe)', 'Banana', 'Bread']);
+    expectEqual(`${tag}: the onion is on the board, drawn once`, [st.board.includes('Onion'), st.bowl.includes('Onion')], [true, false]);
+    expectEqual(`${tag}: the ripe avocado is in the fridge`, st.fridgeIds.includes(2), true);
+    if (!/^Saves about \d+\.\d kg · \$\d+\.\d\d$/.test(st.saves)) throw new Error(`${tag}: "Saves about … kg · $…" under the dish name, got "${st.saves}"`);
     const onShelves = st.fridgeIds.filter(id => st.counterIds.includes(id));
     if (onShelves.length) throw new Error(`${tag}: counter food still on the fridge shelves: ${onShelves}`);
     expectEqual(`${tag}: board`, st.board[0] !== undefined, true);
@@ -2077,6 +2083,12 @@ async function kitchenScenario(browser) {
       const peek = await page.$eval('#panelKitchen', p => Math.round(innerWidth - p.getBoundingClientRect().left - 16));
       console.log('phone: kitchen panel showing at the right edge (px):', peek);
       if (peek < 12 || peek > 20) throw new Error(`phone: about 16px of Kitchen should peek, got ${peek}`);
+      // what peeks is the counter's edge, not cut-off words
+      const pk = await page.evaluate(() => ({
+        counterAtEdge: Math.round(document.getElementById('kcUnit').getBoundingClientRect().left - document.getElementById('panelKitchen').getBoundingClientRect().left),
+        textOpacity: getComputedStyle(document.querySelector('#panelKitchen .kc-captions')).opacity,
+      }));
+      expectEqual('phone: the peek shows the counter, no text', pk, { counterAtEdge: 0, textOpacity: '0' });
     }
     await page.screenshot({ path: path.join(OUT, `kitchen-${tag}-fridge.png`) });
 

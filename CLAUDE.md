@@ -213,11 +213,18 @@ tap there never starts a swipe.
 Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
 top, a cutting board and a bowl, nothing else. The board carries
 Tonight's dish: its owned ingredients drawn with the same food drawings
-and decay, the dish name, the "uses up" line, Cook this and Show another.
-Tomorrow and The day after follow as text under the counter. The bowl
-holds what's kept out of the fridge (onCounter: store:'pantry' foods --
-potatoes, onions, garlic, bread, whole melons, coconut -- plus bananas)
-and anything marked "Not ripe yet"; those leave the fridge shelves. Past
+and decay, the dish name, "Saves about 0.9 kg · $11.20" under it (the
+at-risk ingredients, what Cook this credits), the "uses up" line, Cook
+this and Show another. Tomorrow and The day after follow as text under
+the counter. The bowl holds what's kept out of the fridge (onCounter:
+store:'pantry' foods -- potatoes, onions, garlic, bread, whole melons,
+coconut -- plus bananas) and anything marked "Not ripe yet"; those leave
+the fridge shelves. A ripe avocado goes in the fridge; only an unripe one
+is in the bowl. Counter food that tonight's dish uses is on the board,
+not also in the bowl. More than three in the bowl (two on a phone) heap
+in two rows, drawn larger on a phone. On a phone the peek beside the
+fridge is the counter's edge: the kitchen's text is hidden (opacity)
+until its panel is active. Past
 date, they go to the crisper with everything else past date, so Toss all
 stays one place. Counter food is never out of the count: the headline,
 the decay line and All items include everything.
