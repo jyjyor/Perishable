@@ -1976,8 +1976,11 @@ async function ripenessScenario(browser) {
 // FoodKeeper's after-opening 3 days and an unopened red its pantry 5
 // years; vodka keeps (#539, "Indefinitely"): no countdown, no decay, out
 // of the headline, the decay line and the at-risk count, still in All
-// items with Used and Tossed, and a toss still reaches the ledger. On
-// desktop they stand in the door bins. Guava (#262) counts from ripeness.
+// items with Used and Tossed, and a toss still reaches the ledger.
+// Placement follows the shelf-life column: refrigerated drinks (beer, an
+// opened wine) in the door bins on desktop; room-temperature ones
+// (vodka, unopened wine) upright on the counter behind the bowl, never
+// in it. Guava (#262) counts from ripeness.
 async function drinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- DRINKS: beer, wine, vodka; guava ---');
@@ -2033,9 +2036,18 @@ async function drinksScenario(browser) {
   // In the door bins on desktop.
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.waitForTimeout(300);
-  const inBins = await page.evaluate(() => [1, 2, 3].flatMap(n => [...document.querySelectorAll(`#rfDoorBin${n} [data-rf-item]`)])
-    .map(b => fridge.find(i => i.id === +b.dataset.rfItem).key).sort());
-  expectEqual('door bins (the opened white is on the eye-level shelf: urgency wins)', inBins, ['beer', 'redwine', 'vodka']);
+  const placed = await page.evaluate(() => {
+    const keysIn = sel => [...document.querySelectorAll(sel)].map(b => fridge.find(i => i.id === +(b.dataset.rfItem)).key).sort();
+    return {
+      bins: keysIn('[id^="rfDoorBin"] [data-rf-item]'),
+      counter: keysIn('#kcCounterBack [data-rf-item]'),
+      bowl: keysIn('#kcBowlItems [data-rf-item], #kcBowlBack [data-rf-item]'),
+    };
+  });
+  console.log('placed:', JSON.stringify(placed));
+  expectEqual('door bins: beer (the opened white is on the eye-level shelf: urgency wins)', placed.bins, ['beer']);
+  expectEqual('room-temperature drinks stand on the counter', placed.counter, ['redwine', 'vodka']);
+  expectEqual('no drink in the bowl', placed.bowl.filter(k => ['beer', 'redwine', 'whitewine', 'vodka'].includes(k)), []);
 
   // Vodka in All items: Tossed reaches the ledger like anything else.
   const before = await page.evaluate(() => ledger.wasteG);

@@ -180,8 +180,9 @@ a cork, a tall clear vodka bottle with a screw cap) are packages too: the
 glass never changes, a blank plain label fades, and an opened wine shows
 its wine darkening toward brown through the glass. No brands, no
 lettering. Their square is drawn larger in the illustrated fridge
-(BOTTLE_BOX), since a bottle is a narrow sliver of it; they live in the
-door bins (RF_DOOR_KEYS) unless urgency puts them at eye level.
+(BOTTLE_BOX), since a bottle is a narrow sliver of it. Refrigerated
+drinks live in the door bins (toDoorBin) unless urgency puts them at eye
+level; room-temperature ones stand on the kitchen counter (see Kitchen).
 
 Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
@@ -239,7 +240,11 @@ the counter. The bowl holds what's kept out of the fridge (onCounter:
 store:'pantry' foods -- potatoes, onions, garlic, bread, whole melons,
 coconut -- plus bananas) and anything marked "Not ripe yet"; those leave
 the fridge shelves. A ripe avocado goes in the fridge; only an unripe one
-is in the bowl. Counter food that tonight's dish uses is on the board,
+is in the bowl. Drinks never go in the bowl: one counted by a pantry
+figure (store:'pantry' -- vodka, unopened wine; drinkOnCounter) stands
+upright at the back of the counter behind the bowl; one counted in the
+refrigerator (beer, an opened wine) goes in the fridge's door bins, or
+the upper shelf on a phone. Counter food that tonight's dish uses is on the board,
 not also in the bowl. More than three in the bowl (two on a phone) heap
 in two rows, drawn larger on a phone. On a phone the peek beside the
 fridge is the counter's edge: the kitchen's text is hidden (opacity)

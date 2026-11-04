@@ -780,6 +780,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       <div class="kc-stage">
         <div class="kc-unit" id="kcUnit">
           <svg class="rf-svg" id="kcBackSvg" viewBox="0 0 360 150" aria-hidden="true"></svg>
+          <div class="rf-row kc-row" id="kcCounterBack"></div>
           <div class="rf-row kc-row" id="kcBoardItems"></div>
           <div class="rf-row kc-row" id="kcBowlBack"></div>
           <div class="rf-row kc-row" id="kcBowlItems"></div>
@@ -1095,7 +1096,12 @@ const FOODS = {
   // asks which of these two.
   flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, base:'#e6d8b6'},
   corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, base:'#e2c97e'},
-  // Drinks: bottles, kept in the door bins (RF_DOOR_KEYS). Glass doesn't
+  // Drinks (cat 'drinks'). Where they stand follows the shelf-life column,
+  // as onCounter does for food, but never in the bowl: a drink counted by
+  // a pantry figure (store:'pantry' -- vodka, unopened wine) stands on the
+  // kitchen counter behind the bowl; one counted in the refrigerator
+  // (beer, an opened wine) goes in the door bins, or the upper shelf on a
+  // phone. Glass doesn't
   // rot, so they are drawn as packages (BOTTLES): the bottle keeps its own
   // colour and outline, and decay shows only as small signs -- the blank
   // label fading, and an opened wine darkening toward brown. One bottle
@@ -1110,13 +1116,13 @@ const FOODS = {
   // entry ("Opened" / "Unopened", the last choice per wine the default);
   // an opened bottle counts by Refrigerate_After_Opening, 1-3 days, from
   // the day it was bought (opens). "Wine" alone asks which.
-  redwine:       {en:'Red wine',          aliases:['wine','wines','red wines','bottle of wine','bottle of red'], shelf:1825, opens:3, fk:462, g:750, usd:14.99, estPrice:true, cat:'drinks', shape:'redwine', base:'#2f5d43'},
-  whitewine:     {en:'White wine',        aliases:['wine','wines','white wines','bottle of wine','bottle of white'], shelf:730, opens:3, fk:463, g:750, usd:12.99, estPrice:true, cat:'drinks', shape:'whitewine', base:'#2f5d43'},
+  redwine:       {en:'Red wine',          aliases:['wine','wines','red wines','bottle of wine','bottle of red'], shelf:1825, opens:3, fk:462, store:'pantry', g:750, usd:14.99, estPrice:true, cat:'drinks', shape:'redwine', base:'#2f5d43'},
+  whitewine:     {en:'White wine',        aliases:['wine','wines','white wines','bottle of wine','bottle of white'], shelf:730, opens:3, fk:463, store:'pantry', g:750, usd:12.99, estPrice:true, cat:'drinks', shape:'whitewine', base:'#2f5d43'},
   // #539 Hard liquors: pantry "Indefinitely", no other figure -- no
   // spoilage limit, so vodka keeps: no countdown, no decay, and it stays
   // out of the headline, the decay line and every at-risk count (keeps).
   // It is still in All items, with Used and Tossed, and in the ledger.
-  vodka:         {en:'Vodka',             aliases:['bottle of vodka'], shelf:null, keeps:true, fk:539, g:750, usd:19.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'}
+  vodka:         {en:'Vodka',             aliases:['bottle of vodka'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:19.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'}
 };
 
 const DISHES = [
@@ -4379,8 +4385,15 @@ function staggerFridgeLabels(shelf){
 // date, so Toss all stays one place.
 function onCounter(it){
   const f = food(it);
+  if (f.cat === 'drinks') return drinkOnCounter(it);
   if (it.ripening || it.key === 'banana') return true;
   return f.store === 'pantry' && !f.ripens;
+}
+// A drink counted by a pantry figure (spirits, unopened wine, cream
+// liqueur) stands on the counter behind the bowl, never in it; one
+// counted in the refrigerator (beer, cans, an opened wine) is in the fridge.
+function drinkOnCounter(it){
+  return food(it).cat === 'drinks' && food(it).store === 'pantry' && !it.opened;
 }
 function inFridgeAt(it, day){ return leftAt(it, day) < 0 || !onCounter(it); }
 
@@ -4409,7 +4422,8 @@ const RF = {
 };
 // Carton, tub, box and bottle items live in the door bins -- unless urgency has
 // already put them on the eye-level shelf, which always wins.
-const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt', 'beer', 'redwine', 'whitewine', 'vodka']);
+const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt']);
+const toDoorBin = it => RF_DOOR_KEYS.has(it.key) || food(it).cat === 'drinks';
 // Must match the phone breakpoint in the .rf CSS, where the door only
 // opens to square and its bins can't be seen.
 const RF_PHONE = window.matchMedia('(max-width:720px)');
@@ -4691,7 +4705,7 @@ function renderRealFridge(){
   // assigned stays empty.
   const eyeItems = active.filter(it => state(leftAt(it, day)) === 'crit');
   const rest = active.filter(it => state(leftAt(it, day)) !== 'crit');
-  const toDoor = it => RF_DOOR_KEYS.has(it.key) && !RF_PHONE.matches;
+  const toDoor = it => toDoorBin(it) && !RF_PHONE.matches;
   const doorItems = rest.filter(toDoor);
   const upperItems = rest.filter(it => !toDoor(it));
 
@@ -4925,7 +4939,13 @@ function renderKitchen(){
   // Counter food that tonight's dish uses is on the board, not also in the
   // bowl: one thing, drawn once.
   const onBoard = new Set(boardItems.map(it => it.id));
-  const bowl = counter.filter(it => !onBoard.has(it.id));
+  // Drinks kept at room temperature stand upright at the back of the
+  // counter, behind the bowl -- never in it.
+  const upright = counter.filter(it => drinkOnCounter(it));
+  const bowl = counter.filter(it => !onBoard.has(it.id) && !drinkOnCounter(it));
+  const uprightEl = document.getElementById('kcCounterBack');
+  rfPlaceRow(uprightEl, w.cx - w.rx - 20, KC.W - 6, w.cy - w.ry - 4, KC.W, KC.H);
+  rfFillRow(uprightEl, rfFitRow(upright, day, KC.W - 6 - (w.cx - w.rx - 20), KC.scale), day, {z: (i, n) => n - i});
 
   rfPlaceRow(boardEl, b.fx0 + 12, b.fx1 - 12, b.fy - 10, KC.W, KC.H);
   rfFillRow(boardEl, rfFitRow(boardItems, day, b.fx1 - b.fx0 - 24, KC.scale), day);
