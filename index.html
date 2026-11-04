@@ -165,11 +165,9 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    page palette: two body options (data-body) are kept side by side for
    review until one is chosen. */
 .rf{padding:30px 0 10px}
-/* On desktop the drawing is capped at about a phone's size: 300px
-   wide, about 420 with the door open, and never taller than about 80% of the
-   window (the unit is 360:640, so 45vh wide is 80vh tall). Scaled past that,
-   the whole fridge didn't fit on one screen and the line work, which
-   scales with the drawing, read heavy. The phone has its own size below. */
+/* --rf-w, the unit's width, is set where the stage sits: in the Fridge
+   panel it scales to fit its column, capped by the window's height
+   (.fridge-panel .rf-stage); the phone has its own size below. */
 .rf-stage{display:flex;justify-content:center;padding:4px 0 34px;--rf-w:min(300px,45vh)}
 .rf-unit{
   position:relative;width:var(--rf-w);aspect-ratio:360/640;
@@ -736,24 +734,72 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 #panelKitchen .tonight.projected{margin-top:calc(var(--gap-in) * 1.5);border-top:none;padding-top:0}
 #panelKitchen .dish-sub{margin-top:12px;border-top:none;padding-top:0}
 
-/* 3 */
+/* 2 */
 .part-turning .hero{padding:0}
 .part-turning .sub-title{margin-top:calc(var(--gap-in) * 1.5)}
 .part-turning .chart{margin-top:8px}
 
-/* 2: a faint tinted panel -- flat, square, no shadow -- so it reads as
-   the place you do something. It replaces the rule above it. */
-.part.part-add{border-top:none;background:var(--panel);padding:var(--gap-in) 28px 28px}
-.part-add .add{margin-top:var(--gap-in)}
-.part-add .add input{background:var(--paper)}
+/* The Fridge panel: two top-aligned columns, the fridge about 60% and
+   the Add column the rest; on a phone the Add column stacks under the
+   fridge, the Tonight line between them. */
+.fridge-panel{
+  display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);column-gap:32px;
+  grid-template-areas:"fridge add" "fridge tonight";grid-template-rows:auto 1fr;align-items:start;
+}
+.fridge-panel > .rf{grid-area:fridge;container-type:inline-size}
+.fridge-panel > .add-col{grid-area:add}
+.fridge-panel > .tonight-line{grid-area:tonight}
+/* The fridge keeps its aspect ratio and scales to fit its column (the
+   unit plus the open door's room, 1.5 x --rf-w), capped at about 80% of
+   the window height -- and lower on a short screen, so that the whole
+   fridge, freezer to crisper, is in the window under the bar and the
+   tabs (about 190px above it). The unit is 360:640: tall = 1.78 x wide. */
+.fridge-panel .rf-stage{--rf-w:min(calc(100cqw / 1.5), 45vh, calc((100vh - 210px) * .5625))}
+/* The Add column: a faint tinted panel -- flat, square, no shadow -- so
+   it reads as the place you do something. */
+.add-col{background:var(--panel);padding:var(--gap-in) 28px 28px;margin-top:var(--gap-in)}
+.add-title{
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;
+  font-weight:400;font-size:22px;line-height:1.2;color:var(--ink);
+}
+.add-col .add{margin-top:var(--gap-in)}
+/* The field, Add and Scan receipt on one row, so the suggestions open
+   over the usuals, never over Add. */
+.add-col .add .entrywrap{flex:1 1 140px;min-width:140px}
+.add-col .add input{background:var(--paper)}
+.add-col .usuals{margin-top:calc(var(--gap-in) * 1.25)}
+/* Six usuals, the rest behind "+N more": expanded they wrap into short
+   rows inside the column, never sideways. */
+.rescue .more{font-size:11px;padding:6px 8px}
+.tonight-line{
+  justify-self:start;margin-top:14px;border:none;background:none;padding:6px 0;
+  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;font-size:17px;
+  text-transform:none;letter-spacing:0;color:var(--ink);text-align:left;
+  border-bottom:1px solid var(--line);
+}
+.tonight-line:hover{background:none;border-bottom-color:var(--ink)}
+.tonight-line[hidden]{display:none}
+.tonight-line .mono{color:var(--ink-2);margin-right:6px}
+/* The fridge items tonight's dish uses: a thin ink line traced around
+   each one's own outline (a filter, not a box), no urgency colour. */
+.rf-fooditem.rf-tonight{filter:url(#rfTonightRing)}
 
-/* 4 */
+/* 3 */
 .part-sofar .ledger{margin-top:0;border-top:none;padding-top:0}
 
 @media (max-width:720px){
   :root{--gap-in:20px;--gap-out:60px}
   .part-title,.room-tab{font-size:20px}
-  .part.part-add{margin-left:-16px;margin-right:-16px;padding:var(--gap-in) 16px 24px}
+  .fridge-panel{grid-template-columns:minmax(0,1fr);grid-template-areas:"fridge" "tonight" "add";grid-template-rows:auto}
+  .fridge-panel .rf-stage{--rf-w:min(82vw,440px)}
+  .add-col{padding:var(--gap-in) 16px 24px}
+  /* On a phone the field has its own row, and the suggestions sit in the
+     flow under it (pushing Add down, never covering it): the swipe area
+     clips anything that hangs out of its panel. */
+  .add-col .add .entrywrap{flex-basis:100%}
+  .add-col .suggest{position:static}
+  .add-title{font-size:20px}
+  .tonight-line{margin:0 0 4px}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -793,6 +839,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   </div>
   <div class="rooms-track" id="roomsTrack">
   <div class="room" role="tabpanel" id="panelFridge" aria-labelledby="tabFridge">
+  <div class="fridge-panel">
   <section class="rf" id="rf">
     <div class="rf-stage">
       <div class="rf-unit" id="rfUnit" data-body="cream">
@@ -857,6 +904,31 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       </div>
     </div>
   </section>
+      <!-- The Add column: beside the fridge on desktop, under it on a
+           phone. The top bar's Add switches to this panel and focuses the
+           entry field. -->
+      <section class="add-col" id="addFood" aria-labelledby="addTitle">
+        <h2 class="add-title" id="addTitle">Add food</h2>
+        <div class="add">
+          <div class="entrywrap">
+            <input id="entry" placeholder="what did you buy?" autocomplete="off">
+            <div class="suggest" id="suggest" style="display:none"></div>
+          </div>
+          <button class="solid" id="addbtn">Add</button>
+          <button id="scanReceiptBtn">Scan receipt</button>
+          <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
+        </div>
+        <div class="missing" id="entryPreview" style="display:none"></div>
+        <div class="missing" id="receiptPreview" style="display:none"></div>
+        <div class="usuals">
+          <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit" hidden>Edit</button></div>
+          <div class="rescue" id="restock"></div>
+        </div>
+      </section>
+      <!-- Tonight stays one tap away from the fridge: the dish's name,
+           switching to Kitchen. Nothing when there's no dish. -->
+      <button type="button" class="tonight-line" id="tonightLine" hidden></button>
+  </div>
   </div>
 
   <!-- The kitchen counter: a cutting board with tonight's dish on it, and
@@ -902,27 +974,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   </details>
   </section>
 
-  <!-- 2. Add food: the place where you do something. The top bar's Add
-       jumps here. -->
-  <section class="part part-add" id="addFood" aria-labelledby="addTitle">
-    <h2 class="part-title" id="addTitle">Add food</h2>
-    <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit">Edit</button></div>
-    <div class="rescue" id="restock"></div>
-
-    <div class="add">
-      <div class="entrywrap">
-        <input id="entry" placeholder="what did you buy?" autocomplete="off">
-        <div class="suggest" id="suggest" style="display:none"></div>
-      </div>
-      <button class="solid" id="addbtn">Add</button>
-      <button id="scanReceiptBtn">Scan receipt</button>
-      <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
-    </div>
-    <div class="missing" id="entryPreview" style="display:none"></div>
-    <div class="missing" id="receiptPreview" style="display:none"></div>
-  </section>
-
-  <!-- 3. What's turning: the headline, its subline, the decay line. -->
+  <!-- 2. What's turning: the headline, its subline, the decay line. -->
   <section class="part part-turning" aria-labelledby="turningTitle">
     <h2 class="part-title" id="turningTitle">What's turning</h2>
     <div class="hero">
@@ -938,7 +990,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     </div>
   </section>
 
-  <!-- 4. So far: the ledger. -->
+  <!-- 3. So far: the ledger. -->
   <section class="part part-sofar" aria-labelledby="sofarTitle">
   <h2 class="part-title" id="sofarTitle">So far</h2>
   <div class="ledger">
@@ -2760,11 +2812,12 @@ function render(){
   document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
 
   renderFridgeView();
+  renderTonight(); // before the fridge: it outlines what tonight's dish uses
   renderRealFridge();
   renderHeadline();
   renderChart();
-  renderTonight();
   renderKitchen();
+  renderTonightLine();
   renderRestock();
   saveState();
 }
@@ -5213,6 +5266,16 @@ function rfDrawCabinet(){
         <feTurbulence type="fractalNoise" baseFrequency="0.027" numOctaves="2" seed="11"/>
         <feDisplacementMap in="SourceGraphic" scale="2.8" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
+      <!-- Tonight's dish: a thin line traced around the food's own
+           outline, a little off it (the ring between two dilations). -->
+      <filter id="rfTonightRing" x="-12%" y="-12%" width="124%" height="124%">
+        <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="outer"/>
+        <feMorphology in="SourceAlpha" operator="dilate" radius="2.7" result="inner"/>
+        <feComposite in="outer" in2="inner" operator="out" result="ring"/>
+        <feFlood flood-color="#5C6664"/>
+        <feComposite in2="ring" operator="in" result="line"/>
+        <feMerge><feMergeNode in="line"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
       <clipPath id="rfBodyClip"><path d="${bodyD}"/></clipPath>
     </defs>
     <g filter="url(#rfWobble)">
@@ -5619,6 +5682,7 @@ function renderRealFridge(){
   // each one down by the empty space under its outline so it rests on the
   // surface.
   rfWireItems(unit);
+  rfMarkTonight(unit);
   // The drawer front: how many are past date, and Toss all, which opens
   // the same confirmation as the list's "Toss N expired".
   // The drawer front: how many are past date, and Toss all, which asks
@@ -5655,6 +5719,27 @@ function rfRenderFreezer(day){
   rfFillRow(row, rfFitRow(items, day, x1 - x0, 1, sizeU), day, {z: (i, n) => n - i});
 }
 // Every drawn item opens its popover (fridge, freezer and door bins).
+// The fridge items tonight's dish uses get a thin traced outline.
+function rfMarkTonight(unit){
+  const ids = new Set(boardItems.map(it => it.id));
+  unit.querySelectorAll('.rf-cavity [data-rf-item], .rf-door [data-rf-item]').forEach(b => b.classList.toggle('rf-tonight', ids.has(+b.dataset.rfItem)));
+}
+
+// "Tonight: <dish> →" at the foot of the Add column (under the fridge on a
+// phone): switches to the Kitchen panel. Nothing when there's no dish.
+function renderTonightLine(){
+  const line = document.getElementById('tonightLine');
+  line.hidden = !tonightDish;
+  if (!tonightDish) return;
+  line.innerHTML = `<span class="mono">Tonight</span>${esc(tonightDish)} →`;
+  line.setAttribute('aria-label', `Tonight: ${tonightDish}. Show the kitchen`);
+  line.onclick = () => {
+    showRoom(1);
+    const tabs = document.getElementById('roomTabs');
+    if (tabs.getBoundingClientRect().top < 0) tabs.scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  };
+}
+
 function rfWireItems(unit){
   unit.querySelectorAll('.rf-foodshape').forEach(span => {
     if (span.dataset.rested) return;
@@ -6019,6 +6104,9 @@ function rfInit(){
 
 // Tonight's dish's owned ingredients, set by renderTodayCard.
 let boardItems = [];
+// Tonight's dish name when the Kitchen shows one (a recommendation or the
+// closest match), else null: the Fridge panel's Tonight line reads it.
+let tonightDish = null;
 // The counter's geometry, in its SVG's own units (360 x 150; the same 360
 // wide as the fridge drawing, so rfBuildFoodItem's cqw sizes carry over).
 const KC = {
@@ -6124,6 +6212,9 @@ function renderKitchen(){
 
 // Tabs and the swipe area, kept in sync both ways: a swipe moves the
 // underline, a tab scrolls to its panel. Always opens on Fridge.
+// Switches Fridge (0) / Kitchen (1) from outside the tabs -- the top
+// bar's Add, the Tonight line. Set by initRooms.
+let showRoom = () => {};
 function initRooms(){
   const track = document.getElementById('roomsTrack');
   const tabs = [...document.querySelectorAll('#roomTabs [role="tab"]')];
@@ -6144,6 +6235,7 @@ function initRooms(){
     track.scrollTo({left: offsetOf(i), behavior: reduce.matches ? 'auto' : 'smooth'});
   };
   tabs.forEach((t, i) => { t.onclick = () => select(i); });
+  showRoom = i => select(i);
   document.getElementById('roomTabs').addEventListener('keydown', e => {
     const i = tabs.indexOf(document.activeElement);
     if (i < 0) return;
@@ -6451,6 +6543,7 @@ function renderTodayCard(entry){
   // The ingredients are drawn on the cutting board (renderKitchen), not
   // listed: what you own of the dish, soonest to turn first.
   boardItems = r.matched.map(k => r.have[k]).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  tonightDish = r.dish.name;
   box.innerHTML = `
     <div>
       <div class="eyebrow mono">${eyebrow}</div>
@@ -6555,6 +6648,7 @@ function renderProjectedCard(entry, boxId, skipSet){
 
 function renderTonight(){
   boardItems = [];
+  tonightDish = null;
   const box = document.getElementById('tonight');
   const tomorrowBox = document.getElementById('tomorrow');
   const dayAfterBox = document.getElementById('dayAfter');
@@ -6611,10 +6705,24 @@ function compareStanding(a, b){
   return B.lastBought - A.lastBought;
 }
 
+// Usuals: the six most-bought, the rest behind "+N more". Open or closed
+// is remembered on this device (localStorage, which may be unavailable).
+const USUALS_SHOWN = 6, USUALS_KEY = 'perishable.usualsOpen';
+let usualsOpen = (() => { try { return localStorage.getItem(USUALS_KEY) === '1'; } catch (e) { return false; } })();
+function setUsualsOpen(open){
+  usualsOpen = open;
+  try { localStorage.setItem(USUALS_KEY, open ? '1' : '0'); } catch (e) {}
+  if (!open) editingRestock = false;
+  renderRestock();
+}
 function renderRestock(){
   const box = document.getElementById('restock');
-  document.getElementById('restockEdit').textContent = editingRestock ? 'Done' : 'Edit';
+  const edit = document.getElementById('restockEdit');
+  edit.textContent = editingRestock ? 'Done' : 'Edit';
   const keys = Object.keys(standing).sort(compareStanding);
+  // Edit lives in the expanded state (or when all of them already show).
+  const extra = Math.max(0, keys.length - USUALS_SHOWN);
+  edit.hidden = !keys.length || (extra > 0 && !usualsOpen);
   if (!keys.length){
     box.innerHTML = `<div class="mono" style="color:var(--ink-3)">—</div>`;
     return;
@@ -6628,7 +6736,8 @@ function renderRestock(){
     box.querySelectorAll('[data-remove-standing]').forEach(b => b.onclick = () => removeStanding(b.dataset.removeStanding));
     return;
   }
-  box.innerHTML = keys.map(key => {
+  const shown = usualsOpen ? keys : keys.slice(0, USUALS_SHOWN);
+  box.innerHTML = shown.map(key => {
     const matches = fridge.filter(it => it.key === key);
     const freshest = matches.reduce((best, it) => (!best || left(it) > left(best)) ? it : best, null);
     const label = labelOf(key);
@@ -6638,8 +6747,10 @@ function renderRestock(){
       else { cls = ' use'; }
     }
     return `<button class="chip${cls}" data-restock="${key}"${style}>${label}</button>`;
-  }).join('');
+  }).join('') + (extra ? `<button type="button" class="ghost mono more" id="usualsMore" aria-expanded="${usualsOpen}">${usualsOpen ? 'Show fewer' : `+${extra} more`}</button>` : '');
   box.querySelectorAll('[data-restock]').forEach(b => b.onclick = () => restock(b.dataset.restock));
+  const more = document.getElementById('usualsMore');
+  if (more) more.onclick = () => setUsualsOpen(!usualsOpen);
 }
 
 /* ---------- actions ---------- */
@@ -7233,7 +7344,12 @@ function setApiKey(k){
 // The top bar's Add: down to Add food, cursor in the entry field.
 function jumpToAdd(){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.getElementById('addFood').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+  showRoom(0); // the Add column is in the Fridge panel
+  // The window scrolls, not scrollIntoView: that would also scroll the
+  // swipe area itself vertically, which initRooms then snaps back.
+  const add = document.getElementById('addFood');
+  const top = scrollY + add.getBoundingClientRect().top - parseFloat(getComputedStyle(add).scrollMarginTop || 0);
+  window.scrollTo({top, behavior: reduce ? 'auto' : 'smooth'});
   document.getElementById('entry').focus({preventScroll: true});
 }
 

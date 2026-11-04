@@ -232,6 +232,7 @@ async function recommendationScenario(browser) {
   if (eyebrow.trim() !== 'Tonight · rescues 3 items') throw new Error(`eyebrow was "${eyebrow.trim()}", expected "Tonight · rescues 3 items" (onion isn't at risk)`);
 
   await page.click('#tabKitchen');
+  await page.waitForTimeout(900); // the panel switch settles before Cook this is clicked
   await page.click('#tonight .js-cook');
   await page.waitForTimeout(150);
   const savedG = await page.textContent('#savedG');
@@ -3149,12 +3150,147 @@ async function kitchenScenario(browser) {
   await ctx.close();
 }
 
-// The page in four parts -- Fridge / Kitchen, What's turning, Add food,
-// So far -- each titled in Caslonian (the tabs are the first part's
-// title), never in the mono caps that label data. Food names keep their
+// The Fridge panel's layout, at every size: each panel the swipe area's
+// width (less the 16px peek on a phone); on desktop two top-aligned columns, the fridge about 60% (never
+// stretched, the whole of it inside the window, even on a short laptop
+// screen) and the Add column beside it; on a phone the Add column under
+// the fridge, the Tonight line between them. Usuals: six, "+N more" with
+// the real count, expanding in short rows inside the column (Edit only
+// there), collapsing again, remembered on reload -- and still working when
+// storage throws. The Tonight line opens Kitchen; the fridge items the
+// dish uses are outlined; with no dish, no line. The top bar's Add
+// switches back to Fridge and focuses the field.
+async function panelsScenario(browser) {
+  console.log('\n--- PANELS: the Fridge panel\'s columns, usuals, Tonight line, top bar Add ---');
+  const geo = () => {
+    const r = el => (typeof el === 'string' ? document.querySelector(el) : el).getBoundingClientRect();
+    const u = r('#rfUnit'), door = r('#rfDoor'), add = r('#addFood'), stage = r('#rf .rf-stage'), panel = r('#panelFridge');
+    return {
+      fridge: [Math.round(u.top), Math.round(u.bottom), Math.round(Math.max(u.right, door.right))],
+      inWindow: u.top >= 0 && u.bottom <= innerHeight,
+      ratio: +(u.width / u.height).toFixed(3),
+      rfShare: +(r('#rf').width / panel.width).toFixed(2),
+      // a phone keeps its 16px peek of the other panel
+      panelIsArea: Math.round(panel.width) === document.getElementById('roomsTrack').clientWidth - (innerWidth <= 720 ? 16 : 0),
+      add: [Math.round(add.top), Math.round(add.left), Math.round(add.bottom)],
+      stageTop: Math.round(stage.top),
+      tonight: (t => [Math.round(t.top), Math.round(t.bottom)])(r('#tonightLine')),
+    };
+  };
+  for (const vp of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }, { width: 1280, height: 680 }, { width: 390, height: 844 }]) {
+    const tag = `${vp.width}x${vp.height}`, phone = vp.width < 720;
+    const ctx = await browser.newContext({ viewport: vp });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, KITCHEN_20);
+    await page.evaluate(() => localStorage.removeItem('perishable.usualsOpen'));
+    await page.reload();
+    await page.waitForSelector('#headline');
+    await page.waitForTimeout(1300);
+    const g = await page.evaluate(geo);
+    console.log(`${tag}:`, JSON.stringify(g));
+    expectEqual(`${tag}: each panel is the swipe area's width`, g.panelIsArea, true);
+    expectEqual(`${tag}: the fridge keeps its aspect ratio`, g.ratio, +(360 / 640).toFixed(3));
+    if (!phone) {
+      expectEqual(`${tag}: the whole fridge is inside the window`, g.inWindow, true);
+      if (g.fridge[1] - g.fridge[0] > vp.height * 0.8 + 1) throw new Error(`${tag}: the fridge is taller than 80% of the window`);
+      if (g.rfShare < 0.55 || g.rfShare > 0.65) throw new Error(`${tag}: the fridge column should be about 60%, got ${g.rfShare}`);
+      if (g.add[1] < g.fridge[2]) throw new Error(`${tag}: the Add column should sit beside the fridge, right of its door`);
+      if (Math.abs(g.add[0] - g.stageTop) > 8) throw new Error(`${tag}: the columns should be top-aligned: ${g.add[0]} vs ${g.stageTop}`);
+      if (g.tonight[0] < g.add[2]) throw new Error(`${tag}: the Tonight line should be at the foot of the Add column`);
+    } else {
+      if (g.add[0] < g.fridge[1]) throw new Error(`${tag}: the Add column should be under the fridge`);
+      if (!(g.tonight[0] >= g.fridge[1] && g.tonight[1] <= g.add[0])) throw new Error(`${tag}: the Tonight line should sit under the fridge, above Add: ${JSON.stringify(g)}`);
+    }
+
+    // Usuals: six, then "+N more" with the real count.
+    const usuals = () => page.evaluate(() => {
+      const box = document.getElementById('restock'), col = document.getElementById('addFood').getBoundingClientRect();
+      const chips = [...box.querySelectorAll('[data-restock]')];
+      const more = document.getElementById('usualsMore');
+      return {
+        chips: chips.length, total: Object.keys(standing).length,
+        more: more && more.textContent, expanded: more && more.getAttribute('aria-expanded'),
+        edit: !document.getElementById('restockEdit').hidden,
+        inside: chips.every(c => { const r = c.getBoundingClientRect(); return r.left >= col.left && r.right <= col.right; }),
+        sideways: box.scrollWidth > box.clientWidth,
+        rows: new Set(chips.map(c => Math.round(c.getBoundingClientRect().top))).size,
+      };
+    });
+    let u = await usuals();
+    expectEqual(`${tag}: six usuals and the rest behind +N more`, [u.chips, u.more, u.expanded, u.edit], [6, `+${u.total - 6} more`, 'false', false]);
+    await page.click('#usualsMore');
+    u = await usuals();
+    console.log(`${tag}: usuals open`, JSON.stringify(u));
+    expectEqual(`${tag}: expanded, Edit inside it`, [u.chips, u.more, u.expanded, u.edit], [u.total, 'Show fewer', 'true', true]);
+    expectEqual(`${tag}: wraps inside the column, never sideways`, [u.inside, u.sideways, u.rows > 1], [true, false, true]);
+    if (!phone) await page.screenshot({ path: path.join(OUT, `panels-${vp.width}-usuals-open.png`) });
+    await page.reload();
+    await page.waitForSelector('#headline');
+    expectEqual(`${tag}: remembered open`, (await usuals()).chips, u.total);
+    await page.click('#usualsMore');
+    u = await usuals();
+    expectEqual(`${tag}: collapsed again`, [u.chips, u.expanded, u.edit], [6, 'false', false]);
+    await page.reload();
+    await page.waitForSelector('#headline');
+    expectEqual(`${tag}: remembered closed`, (await usuals()).chips, 6);
+    // storage that throws: the toggle still works, no error
+    await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('quota'); }; });
+    await page.click('#usualsMore');
+    expectEqual(`${tag}: toggles with storage failing`, (await usuals()).chips, u.total);
+    await page.click('#usualsMore');
+
+    // The Tonight line, and the outline on what the dish uses.
+    const t = await page.evaluate(() => ({
+      line: document.getElementById('tonightLine').textContent.replace(/\s+/g, ' ').trim(),
+      dish: document.querySelector('#tonight h2').textContent.trim(),
+      outlined: [...document.querySelectorAll('#rfUnit .rf-tonight')].map(b => +b.dataset.rfItem).sort(),
+      uses: boardItems.filter(it => document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`)).map(it => it.id).sort(),
+      filter: (b => b && getComputedStyle(b).filter)(document.querySelector('#rfUnit .rf-tonight')),
+    }));
+    console.log(`${tag}: tonight`, JSON.stringify(t));
+    expectEqual(`${tag}: Tonight line`, t.line, `Tonight${t.dish} →`);
+    if (!t.uses.length) throw new Error(`${tag}: the fixture's dish should use something in the fridge`);
+    expectEqual(`${tag}: the fridge items the dish uses are outlined`, t.outlined, t.uses);
+    if (!/rfTonightRing/.test(t.filter)) throw new Error(`${tag}: outline should be the traced ring, got ${t.filter}`);
+    await page.click('#tonightLine');
+    await page.waitForTimeout(900);
+    const k = await page.evaluate(() => [[...document.querySelectorAll('#roomTabs [role=tab]')].map(x => x.getAttribute('aria-selected')), document.getElementById('roomsTrack').scrollLeft > 50]);
+    expectEqual(`${tag}: the Tonight line opens Kitchen`, k, [['false', 'true'], true]);
+    await page.screenshot({ path: path.join(OUT, `panels-${tag}-kitchen.png`) });
+
+    // From Kitchen, the top bar's Add: back to Fridge, the field focused.
+    await page.click('#addJumpBtn');
+    await page.waitForTimeout(900);
+    const a = await page.evaluate(() => ({
+      sel: [...document.querySelectorAll('#roomTabs [role=tab]')].map(x => x.getAttribute('aria-selected')),
+      left: document.getElementById('roomsTrack').scrollLeft, focused: document.activeElement.id,
+      visible: (r => r.top >= 0 && r.bottom <= innerHeight)(document.getElementById('entry').getBoundingClientRect()),
+    }));
+    expectEqual(`${tag}: top bar Add switches to Fridge and focuses the field`, a, { sel: ['true', 'false'], left: 0, focused: 'entry', visible: true });
+    await page.evaluate(() => { document.activeElement.blur(); scrollTo(0, 0); });
+    await page.screenshot({ path: path.join(OUT, `panels-${tag}-fridge.png`) });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+  // With no dish there's no Tonight line.
+  const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+  await seedMixed18(page, [['beets', 0], ['carrot', 0]]);
+  await page.waitForSelector('#headline');
+  const none = await page.evaluate(() => [tonightDish, document.getElementById('tonightLine').hidden, document.querySelectorAll('.rf-tonight').length]);
+  expectEqual('no dish, no Tonight line, nothing outlined', none, [null, true, 0]);
+  await page.context().close();
+}
+
+// The page in three parts -- Fridge / Kitchen (Add food inside the Fridge
+// panel), What's turning, So far -- each titled in Caslonian (the tabs
+// are the first part's title; Add food's own heading too), never in the
+// mono caps that label data. What's turning and So far are outside the
+// swipe area. Food names keep their
 // own capitals in labels: "Chinese broccoli", never "chinese broccoli".
 async function pageStructureScenario(browser) {
-  console.log('\n--- PAGE: four parts in order, no voice entry, titles in Caslonian, food names capitalized ---');
+  console.log('\n--- PAGE: three parts in order, Add food in the Fridge panel, no voice entry, titles in Caslonian, food names capitalized ---');
   const items = [...KITCHEN_20, ['gailan', 2]];
   for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport: vp });
@@ -3167,9 +3303,13 @@ async function pageStructureScenario(browser) {
     const st = await page.evaluate(() => {
       const parts = [...document.querySelectorAll('.wrap > .part')];
       const titleOf = p => p.querySelector('.part-title') || p.querySelector('[role=tab]');
+      const track = document.getElementById('roomsTrack');
       return {
         titles: parts.map(p => titleOf(p).textContent.trim()),
-        fonts: parts.map(p => { const cs = getComputedStyle(titleOf(p)); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
+        fonts: [...parts.map(titleOf), document.getElementById('addTitle')].map(t => { const cs = getComputedStyle(t); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
+        addTitle: document.getElementById('addTitle').textContent,
+        addInFridge: !!document.querySelector('#panelFridge #addFood'),
+        outside: ['headline', 'chart', 'wasteG', 'allItems'].map(id => track.contains(document.getElementById(id))),
         gaps: parts.slice(1).map((p, i) => Math.round(p.getBoundingClientRect().top - parts[i].getBoundingClientRect().bottom)),
         addTint: getComputedStyle(document.getElementById('addFood')).backgroundColor,
         usuals: document.querySelector('#addFood .sub-title').textContent,
@@ -3182,7 +3322,9 @@ async function pageStructureScenario(browser) {
       };
     });
     console.log(`${tag}:`, JSON.stringify({ ...st, chart: undefined }));
-    expectEqual(`${tag}: four parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', 'Add food', "What's turning", 'So far']);
+    expectEqual(`${tag}: three parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', "What's turning", 'So far']);
+    expectEqual(`${tag}: Add food in the Fridge panel`, [st.addTitle, st.addInFridge], ['Add food', true]);
+    expectEqual(`${tag}: What's turning, So far and All items outside the swipe area`, st.outside, [false, false, false, false]);
     expectEqual(`${tag}: no Speak button`, st.speak, false);
     expectEqual(`${tag}: no hint under the entry field`, st.hint, false);
     expectEqual(`${tag}: placeholder`, st.placeholder, 'what did you buy?');
@@ -3276,6 +3418,7 @@ async function pageStructureScenario(browser) {
     () => addButtonScenario(browser),
     () => kitchenScenario(browser),
     () => lastDayScenario(browser),
+    () => panelsScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),

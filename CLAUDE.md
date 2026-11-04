@@ -279,15 +279,13 @@ chips and buttons, so a title never reads as data. Food names keep their
 own capitals wherever they appear ("Chinese broccoli", never lowercased
 mid-list).
 
-The page is four parts, in this order, about three times as far apart
+The page is three parts, in this order, about three times as far apart
 as anything within one, with rules only between parts: Fridge / Kitchen
-(the tabs are its title, All items under it); Add food (a faint flat
-tinted panel: Your usuals with Edit, then the entry field, placeholder
-"what did you buy?", with Add and Scan receipt -- the top bar's Add
-jumps here; no hint under it, and "2d" after an item still dates it two
-days back); What's turning (the headline, its subline, and the decay
-line under its own small title); and So far (the ledger). There is no
-voice entry. Both come from an Adobe Fonts web project tied to a
+(the tabs are its title; Add food is inside the Fridge panel; All items
+under the swipe area); What's turning (the headline, its subline, and
+the decay line under its own small title); and So far (the ledger). All
+items, What's turning and So far are full width, below and outside the
+swipe area. There is no voice entry. Both come from an Adobe Fonts web project tied to a
 Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
 CDN — fallbacks are Georgia/serif for Caslonian and ui-monospace for
 Tonos Mono, so the page still holds together if that stops being served.
@@ -308,14 +306,40 @@ only. Both read from the same shelf-life math (leftAt, pos) and must
 never disagree with each other.
 
 Fridge and Kitchen are two panels side by side in one horizontal swipe
-area (native scroll snapping, overscroll-behavior-x: contain so a swipe
-never triggers back/forward), with tabs above in the small label style,
-the active one underlined, in sync both ways (initRooms): a swipe moves
-the underline, a tab or an arrow key scrolls to its panel, instantly
-under prefers-reduced-motion. The page always opens on Fridge; the area
-is as tall as the active panel; on a phone about 16 px of the other panel
+area on every screen size, desktop included (native scroll snapping,
+scroll-snap-type: x mandatory, each panel the area's full width,
+overscroll-behavior-x: contain so a swipe never triggers back/forward),
+with tabs above ("Fridge", "Kitchen · 2") in Caslonian, the active one
+underlined, in sync both ways (initRooms): a swipe moves the underline,
+a tab or an arrow key scrolls to its panel, instantly under
+prefers-reduced-motion. The page always opens on Fridge; the area is as
+tall as the active panel; on a phone about 16 px of the other panel
 shows at the edge. Food and the fridge door are touch-action: pan-y, so a
-tap there never starts a swipe.
+tap there never starts a swipe. showRoom(i) switches panels from outside
+the tabs. Nothing scrolls the area vertically: jumpToAdd scrolls the
+window, never scrollIntoView, which would scroll the area itself.
+
+The Fridge panel, on desktop, is two top-aligned columns: the fridge
+about 60% of the width, the Add column the rest. On a phone the Add
+column stacks under the fridge in the same panel. The Add column is a
+faint flat tinted panel, top to bottom: the "Add food" heading, the entry
+field (placeholder "what did you buy?") with Add and Scan receipt on one
+row (on a phone the field has its own row and its suggestions sit in the
+flow under it, since the swipe area clips anything hanging out of a
+panel; no hint under it, and "2d" after an item still dates it two days
+back), then Your usuals: the six most-bought chips, the rest behind "+N
+more" (the real count), which expands them in short wrapping rows inside
+the column, never sideways, and "Show fewer" collapses them; Edit lives
+in the expanded state (or shows whenever all of them already fit). Open
+or closed is remembered per device (localStorage perishable.usualsOpen,
+in try/catch). The top bar's Add switches to the Fridge panel first, then
+scrolls to the Add column and focuses the field. Tonight stays reachable
+from the Fridge panel: at the foot of the Add column (on a phone between
+the fridge and the Add column), one line "Tonight <dish> →" that switches
+to the Kitchen panel, and in the fridge the items tonight's dish uses get
+a thin ink line traced around their own outline (rfTonightRing, an SVG
+filter, not a box; no urgency colour). With no dish (tonightDish null),
+no line and no outline.
 
 Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
 top, a cutting board and a bowl, nothing else. The board carries
@@ -344,10 +368,11 @@ Two fridge views, one after the other, from the same `fridge` array.
 
 The illustrated fridge opens the page: a literal drawing of a fridge
 (door, shelves, crisper, door bins, and the freezer compartment at the
-top). On desktop it is capped at about a phone's size (--rf-w: 300 px
-wide, about 420 with the door open, never taller than about 80% of the
-window), so the whole fridge, freezer to crisper, fits on one screen and
-its line work, which scales with the drawing, stays light. The freezer has its own door on the same right-hand hinge, closed
+top). On desktop it keeps its aspect ratio (360:640, never stretched)
+and scales to fit its column (the unit plus the open door's room, 1.5 x
+--rf-w), capped at about 80% of the window height -- a cap, not a fixed
+height -- and lower on a short screen, so the whole fridge, freezer to
+crisper, is inside the window under the bar and the tabs. The freezer has its own door on the same right-hand hinge, closed
 on every load, opened and closed by its handle (or its inside face once
 open); the door front carries a small count ("3 inside", "empty"),
 which opens it too when tapped.
