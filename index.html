@@ -122,7 +122,7 @@ button.recording{background:var(--ink);color:var(--paper);border-color:var(--ink
 button.fridge-shape{background:none;border:none;padding:0;font:inherit;cursor:pointer;transition:transform .15s ease-out}
 button.fridge-shape:hover{background:none;transform:translateY(-3px)}
 button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-.fridge-acts{display:flex;gap:2px;justify-content:center;margin-top:1px}
+.fridge-acts{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:1px}
 .fridge-act{
   font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;letter-spacing:.04em;
   color:var(--ink-2);background:none;border:none;padding:2px 4px;text-decoration:underline;text-underline-offset:2px;
@@ -230,7 +230,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 /* Every item is a button: it lifts a little under the pointer and shows
    a ring when reached by keyboard. */
-.rf-fooditem:hover{transform:translateY(-3px)}
+.rf-fooditem:hover{transform:translateY(-3px);background:none}
 .rf-fooditem:focus{outline:none}
 .rf-fooditem:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .rf-foodshape{display:block;position:relative;z-index:1;filter:url(#rfWobblePx)}
@@ -363,7 +363,8 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rf-fz-handle:hover .handle{fill:var(--rf-bh)}
 .rf-fz-handle:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .rf-fz-count{
-  position:absolute;right:12%;top:72%;color:var(--ink-2);pointer-events:none;
+  position:absolute;right:9%;top:66%;color:var(--ink-2);cursor:pointer;
+  background:none;border:none;padding:6px 8px;text-decoration:underline;text-underline-offset:2px;
   font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
 }
 .rf-unit.fz-open .rf-fz-inside,.rf-unit.fz-open .rf-fz-edge{cursor:pointer}
@@ -799,7 +800,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
             <div class="rf-fz-edge"><svg class="rf-svg" id="rfFzEdgeSvg" viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true"></svg></div>
             <div class="rf-fz-front">
               <svg class="rf-svg" id="rfFzFrontSvg" viewBox="0 0 320 104" aria-hidden="true"></svg>
-              <div class="rf-fz-count" id="rfFzCount"></div>
+              <button type="button" class="rf-fz-count" id="rfFzCount" tabindex="-1" aria-label="Open freezer"></button>
               <button class="rf-fz-handle" id="rfFzHandle" aria-label="Open freezer door" aria-pressed="false">
                 <svg class="rf-svg" viewBox="16 76 69 23" aria-hidden="true">
                   <g filter="url(#rfWobble)">
@@ -2372,7 +2373,28 @@ function freezerDays(it){
   const v = freezeGuide(it.key);
   return !v ? null : typeof v[0] === 'number' ? v[0] : v[0] === 'keeps' ? Infinity : null;
 }
-const thawDays = it => { const v = freezeGuide(it.key); return v ? v[1] : null; };
+// After thawing, where FoodKeeper has no figure: USDA FSIS "The Big Thaw"
+// (as cited by MSU Extension E3259, "Thawing Foods Safely"): thawed in the
+// refrigerator, ground meat, stew meat, poultry and seafood keep an
+// additional 1-2 days, red meat cuts (beef, pork or lamb roasts, chops and
+// steaks) 3-5 -- the upper end, 2 and 5, counted from the thaw date. By
+// FoodKeeper id, raw only: cooked fish and shellfish, surimi, caviar,
+// pasteurized crab, variety meats, rabbit and fresh sausage are none of
+// these, and still ask for a date. Cubes and stew pieces count as stew meat.
+const THAW_BIG = {};
+[43, 50, 59, 73, 78, 622, 115,                                   // ground
+ 41, 49, 53, 69, 71, 75,                                         // stew meat, cubes
+ 113, 114, 116, 117, 118, 119, 120, 121, 123, 125, 126, 127, 128, 129, 130, // raw poultry
+ 144, 145, 146, 150, 151, 152, 153, 154, 157, 158, 160, 161      // raw seafood
+].forEach(id => (THAW_BIG[id] = 2));
+[34, 35, 36, 37, 38, 39, 40, 42, 44, 45, 46, 47, 48, 51, 52, 54, 55, 56, 57, 58,
+ 60, 61, 63, 64, 65, 66, 67, 70, 72, 74, 76, 621, 677             // red meat cuts
+].forEach(id => (THAW_BIG[id] = 5));
+const BIG_THAW_SRC = 'USDA FSIS “The Big Thaw” (via MSU Extension E3259)';
+const bigThawDays = it => { const f = foodOf(it.key); return f && f.fk != null && THAW_BIG[f.fk] != null ? THAW_BIG[f.fk] : null; };
+// FoodKeeper's after-thawing figure first, then The Big Thaw's.
+const thawDays = it => { const v = freezeGuide(it.key); return v && v[1] != null ? v[1] : bigThawDays(it); };
+const thawSourceOf = it => { const v = freezeGuide(it.key); return v && v[1] != null ? 'FoodKeeper #' + foodOf(it.key).fk : BIG_THAW_SRC; };
 const freezeNotRecommended = key => { const v = freezeGuide(key); return !!v && v[0] === 'no'; };
 // Freeze, from the popover: a FoodKeeper freezer value, or a spirit (it
 // keeps, so the move changes no clock).
@@ -2451,6 +2473,9 @@ function setBought(id, iso){
 function freezeItem(id){
   const it = fridge.find(x => x.id === id);
   if (!it || !canFreeze(it)) return;
+  // the rot it has now stays, under the frost (decayFraction)
+  const decay = decayFraction(it, today());
+  if (decay > 0) it.decayFrom = decay; else delete it.decayFrom;
   it.frozen = true;
   delete it.thawed;
   it.crossed = false;
@@ -2503,9 +2528,15 @@ const COLOR = {gone:'var(--gone)', crit:'var(--crit)', turn:'var(--turn)', fresh
 // purchase, 1 by its last day, clamped there for anything already past
 // date. The fridge view's only decay math; everything else (darken, sag,
 // shrink, mold) is this one number driving continuous CSS/SVG output.
+// Freezing pauses decay, it doesn't undo it: a frozen item stays at the
+// fraction it had when it went in (it.decayFrom), under the frost; once
+// thawed it carries on from there and reaches 1 at its thawed use-by date.
 function decayFraction(it, day){
-  if (keeps(it) || it.frozen) return 0;
-  return Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
+  if (keeps(it)) return 0;
+  const from = it.decayFrom || 0;
+  if (it.frozen) return from;
+  const f = Math.max(0, Math.min(1, 1 - leftAt(it, day) / shelfOf(it)));
+  return from + (1 - from) * f;
 }
 
 function fmtDate(epochDay){
@@ -4996,7 +5027,10 @@ function buildShelfItem(p, day){
 // controls, not a label.
 const fridgeActs = (it, f) => `<span class="fridge-acts">` +
   `<button type="button" class="fridge-act" data-fridge-used="${it.id}" aria-label="Used: ${f.en}">Used</button>` +
-  `<button type="button" class="fridge-act" data-fridge-tossed="${it.id}" aria-label="Tossed: ${f.en}">Tossed</button></span>`;
+  `<button type="button" class="fridge-act" data-fridge-tossed="${it.id}" aria-label="Tossed: ${f.en}">Tossed</button>` +
+  (it.frozen ? `<button type="button" class="fridge-act" data-fridge-thaw="${it.id}" aria-label="${thawLabel(it)}: ${f.en}">${thawLabel(it)}</button>` : '') + `</span>`;
+// A frozen spirit is taken out; anything else is thawed.
+const thawLabel = it => food(it).keeps && it.clockFrom == null ? 'Take out' : 'Thaw';
 
 // Gone items skip the shelf's urgency scale entirely -- fixed size, always
 // fully decayed (fraction capped at 1 regardless of how long ago it
@@ -5582,6 +5616,7 @@ function rfRenderFreezer(day){
   const items = fridge.filter(it => it.frozen);
   const count = document.getElementById('rfFzCount');
   count.textContent = items.length ? items.length + ' inside' : 'empty';
+  count.setAttribute('aria-label', 'Open freezer, ' + count.textContent);
   document.getElementById('rfFzEmpty').hidden = items.length > 0;
   const row = document.getElementById('rfFzShelf'), o = FZ.open;
   const x0 = fzP(o.x0 + 8, FZ.rackY, 0.05)[0], x1 = fzP(o.x1 - 8, FZ.rackY, 0.05)[0];
@@ -5607,7 +5642,7 @@ function rfWireItems(unit){
   });
 }
 
-function rfShowPopover(id, anchorEl){
+function rfShowPopover(id, anchorEl, opts = {}){
   const it = fridge.find(x => x.id === id);
   if (!it) return;
   const day = today();
@@ -5616,7 +5651,7 @@ function rfShowPopover(id, anchorEl){
   // Frozen: no urgency, only how much freezer time is left.
   const fl = it.frozen ? frozenLeftAt(it, day) : null;
   const leftLabel = it.frozen ? (keeps(it) || fl === Infinity ? 'in the freezer — no limit'
-      : fl < 0 ? `past its freezer time by ${dayCount(-fl)}` : `${dayCount(fl)} of freezer time left`)
+      : fl < 0 ? 'Best quality passed' : `${dayCount(fl)} of best quality left`)
     : keeps(it) ? 'keeps — no countdown' : it.ripening ? 'ripening — no countdown yet' : d < 0 ? `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} past date`
     : d === 0 ? 'last day' : `${d} ${d === 1 ? 'day' : 'days'} left`;
   const statusName = it.frozen ? 'Frozen' : keeps(it) ? 'Keeps' : {fresh: 'Fresh', turn: 'Use soon', crit: 'Critical', gone: 'Past date'}[state(d)];
@@ -5628,9 +5663,11 @@ function rfShowPopover(id, anchorEl){
   // is just taken out.
   const freezeBtn = canFreeze(it) && d >= 0 ? `
     <button type="button" class="ghost rf-pop-freeze">Freeze</button>` : '';
-  const takeOut = it.frozen && food(it).keeps && it.clockFrom == null;
+  const takeOut = it.frozen && thawLabel(it) === 'Take out';
   const thawAsks = it.frozen && !takeOut && thawDays(it) == null;
-  const thawBtn = it.frozen ? `
+  const thawNote = it.frozen && !takeOut && !thawAsks ? `
+    <div class="rf-pop-row rf-pop-thawnote"><span>Thawed</span><span>${dayCount(thawDays(it))} in the fridge — ${esc(thawSourceOf(it))}</span></div>` : '';
+  const thawBtn = it.frozen ? `${thawNote}
     <button type="button" class="ghost rf-pop-thaw">${takeOut ? 'Take out' : 'Thaw'}</button>${thawAsks ? `
     <label class="rf-pop-row rf-pop-thawask" hidden><span>No thawed figure — use by</span><input type="date" class="rf-pop-thawdate" min="${isoOfDay(day)}"></label>` : ''}` : '';
   const pop = document.getElementById('rfPopover');
@@ -5641,7 +5678,7 @@ function rfShowPopover(id, anchorEl){
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <div class="rf-pop-row"><span>Est. weight</span><span class="rf-pop-weight">${estWeightOf(it)}</span></div>
-    <label class="rf-pop-row"><span>Use by</span><input type="date" class="rf-pop-date" value="${useBy == null ? '' : isoOfDay(useBy)}" min="${isoOfDay(it.clockFrom != null ? it.clockFrom : it.bought)}"></label>${it.ripening && !it.frozen ? `
+    <label class="rf-pop-row"><span>${it.frozen ? 'Best by' : 'Use by'}</span><input type="date" class="rf-pop-date" value="${useBy == null ? '' : isoOfDay(useBy)}" min="${isoOfDay(it.clockFrom != null ? it.clockFrom : it.bought)}"></label>${it.ripening && !it.frozen ? `
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${freezeBtn}${thawBtn}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
@@ -5663,6 +5700,8 @@ function rfShowPopover(id, anchorEl){
     ask.hidden = false;
     ask.querySelector('input').focus();
   };
+  // Thaw from the All items row, with no thawed figure: straight to the date
+  if (thawAsks && opts.thaw){ pop.querySelector('.rf-pop-thaw').hidden = true; pop.querySelector('.rf-pop-thawask').hidden = false; }
   if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value); };
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
@@ -5724,6 +5763,11 @@ function rfInit(){
   fzHandle.addEventListener('click', e => {
     e.stopPropagation();
     setFreezer(!unit.classList.contains('fz-open'));
+  });
+  // The count on the closed door opens it too.
+  document.getElementById('rfFzCount').addEventListener('click', e => {
+    e.stopPropagation();
+    setFreezer(true);
   });
   document.querySelectorAll('.rf-fz-inside, .rf-fz-edge').forEach(el => {
     el.addEventListener('click', e => {
@@ -5948,6 +5992,15 @@ function renderFridgeView(){
   const view = document.getElementById('fridgeview').parentElement;
   view.querySelectorAll('[data-fridge-used]').forEach(b => b.onclick = () => useItem(+b.dataset.fridgeUsed, false));
   view.querySelectorAll('[data-fridge-tossed]').forEach(b => b.onclick = () => useItem(+b.dataset.fridgeTossed, true));
+  // Thaw from the row: straight away with a thawed figure (or a spirit);
+  // with none, the item's popover opens on its date
+  view.querySelectorAll('[data-fridge-thaw]').forEach(b => b.onclick = e => {
+    const id = +b.dataset.fridgeThaw, it = fridge.find(x => x.id === id);
+    if (!it) return;
+    if (thawLabel(it) === 'Take out' || thawDays(it) != null){ thawItem(id); return; }
+    e.stopPropagation();
+    rfShowPopover(id, b.closest('.fridge-item').querySelector('.fridge-shape'), {thaw: true});
+  });
   view.querySelectorAll('[data-fridge-item]').forEach(b => b.onclick = e => { e.stopPropagation(); rfShowPopover(+b.dataset.fridgeItem, b); });
 }
 
@@ -6673,9 +6726,9 @@ function shelfSourceOf(it){
   if (keeps(it)) return 'keeps: FoodKeeper #' + f.fk + ' gives no limit (“Indefinitely”)' + (it.frozen ? ', in the freezer' : '');
   if (it.frozen && it.shelf == null) return shelfOf(it) === Infinity
     ? 'frozen: FoodKeeper #' + f.fk + ' gives no freezer limit'
-    : 'frozen: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' in the freezer from ' + fmtDate(clockStart(it));
-  if (it.thawed && it.shelf == null) return 'thawed: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' in the fridge after thawing, from ' + fmtDate(clockStart(it));
-  if (it.thawed && it.shelfFrom === 'date') return 'thawed: date given when thawed (FoodKeeper has no after-thawing figure)';
+    : 'frozen: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' of best quality from ' + fmtDate(clockStart(it)) + ' (quality only: safe while frozen, USDA FSIS)';
+  if (it.thawed && it.shelf == null) return 'thawed: ' + thawSourceOf(it) + ', ' + dayCount(shelfOf(it)) + ' in the fridge after thawing, from ' + fmtDate(clockStart(it));
+  if (it.thawed && it.shelfFrom === 'date') return 'thawed: date given when thawed (no after-thawing figure)';
   if (it.opened && it.shelf == null && f.opens != null) return f.fk != null
     ? 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening'
     : 'opened: estimated, ' + dayCount(f.opens) + ' after opening — ' + f.note;
@@ -6862,7 +6915,7 @@ function restock(key, shelf){
     existing.bought = today();
     existing.crossed = false;
     delete existing.ripeOn;
-    delete existing.clockFrom; delete existing.thawed; // a fresh one, not the thawed one
+    delete existing.clockFrom; delete existing.thawed; delete existing.decayFrom; // a fresh one, not the thawed one
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
     if (opensKey(key) && lastOpenChoice(key) === 'opened') existing.opened = true; else delete existing.opened;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one

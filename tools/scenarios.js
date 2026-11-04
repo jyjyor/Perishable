@@ -2171,9 +2171,9 @@ async function freezeScenario(browser) {
   expectEqual('headline drops it (spinach still counts)', [before.headline, st.headline], ['2 things become waste within 72 hours.', '1 thing becomes waste within 72 hours.']);
   expectEqual('decay line drops it', [before.dots, st.dots], [2, 1]);
   expectEqual('at-risk count drops it', [before.atRisk, st.atRisk], [2, 1]);
-  if (!st.source.startsWith('frozen: FoodKeeper #117, 270 days in the freezer')) throw new Error('source: ' + st.source);
+  if (!st.source.startsWith('frozen: FoodKeeper #117, 270 days of best quality')) throw new Error('source: ' + st.source);
   const text = await popoverText(page, 'chicken');
-  if (!text.includes('Frozen') || !text.includes('270 days of freezer time left') || !text.includes('Thaw') || text.includes('Freeze')) throw new Error('frozen popover: ' + text);
+  if (!text.includes('Frozen') || !text.includes('270 days of best quality left') || !text.includes('Thaw') || text.includes('Freeze')) throw new Error('frozen popover: ' + text);
   const inv = await readInventory(page);
   expectRow(inv, 'Chicken breast', 'frozen');
   const color = await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#fridgeShelf .fridge-label')].find(l => l.textContent.startsWith('Chicken breast'))).color);
@@ -2197,7 +2197,7 @@ async function freezeScenario(browser) {
 
 // Thaw: with FoodKeeper's after-thawing value (#134 chicken nuggets, 2
 // days) straight back to the fridge, the clock restarted today; without
-// one (chicken breast) a date is asked first. A spirit comes out with no
+// one or a Big Thaw figure (broccoli) a date is asked first. A spirit comes out with no
 // clock change ("Take out").
 async function thawScenario(browser) {
   const { page, errors } = await freshPage(browser);
@@ -2206,7 +2206,7 @@ async function thawScenario(browser) {
     const t = today();
     fridge = [
       {id: ++uid, key: '_fk_134', name: 'Chicken nuggets', bought: t - 40, custom: null, frozen: true},
-      {id: ++uid, key: 'chicken', bought: t - 30, custom: null, frozen: true, clockFrom: t - 20},
+      {id: ++uid, key: 'broccoli', bought: t - 30, custom: null, frozen: true, clockFrom: t - 20},
       {id: ++uid, key: 'vodka', bought: t - 10, custom: null, frozen: true},
     ];
     render();
@@ -2225,12 +2225,12 @@ async function thawScenario(browser) {
   await openPopover(page, chk);
   await page.click('#rfPopover .rf-pop-thaw');
   await page.waitForTimeout(80);
-  expectEqual('chicken breast: no thawed figure, still frozen until a date', await page.evaluate(id => [!fridge.find(i => i.id === id).frozen, !document.querySelector('#rfPopover .rf-pop-thawask').hidden], chk), [false, true]);
+  expectEqual('broccoli: no thawed figure, still frozen until a date', await page.evaluate(id => [!fridge.find(i => i.id === id).frozen, !document.querySelector('#rfPopover .rf-pop-thawask').hidden], chk), [false, true]);
   await page.fill('#rfPopover .rf-pop-thawdate', await isoIn(page, 2));
   await page.dispatchEvent('#rfPopover .rf-pop-thawdate', 'change');
   await page.waitForTimeout(120);
   st = await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, it.clockFrom - today(), left(it), it.shelfFrom]; }, chk);
-  expectEqual('chicken breast thawed by the date given', st, [false, 0, 2, 'date']);
+  expectEqual('broccoli thawed by the date given', st, [false, 0, 2, 'date']);
 
   await openPopover(page, vod);
   expectEqual('a spirit: Take out', (await popButtons(page)).filter(b => /Freeze|Thaw|Take out/.test(b)), ['Take out']);
@@ -2353,6 +2353,192 @@ async function frozenReceiptScenario(browser) {
     [['shrimp', true, 540], ['broccoli', true, 360], ['beef', true, 120], ['romaine', false, 14]]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
+}
+
+// Frozen food never spoils (USDA FSIS "Freezing and Food Safety": kept at
+// 0 °F it is always safe; storage times are for quality only). Chicken
+// breast frozen 300 days ago, past its 270 days: never past date, not in
+// the crisper or the gone drawer, not in Toss all or any count, still in
+// the freezer after a reload; the popover says "Best quality passed" and
+// the freezer burn is at its heaviest. Thaw still works.
+async function frozenNeverSpoilsScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: frozen food never spoils ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = [{id: ++uid, key: 'chicken', bought: t - 310, custom: null, frozen: true, clockFrom: t - 300},
+              {id: ++uid, key: 'milk', bought: t - 9, custom: null, shelf: 7, shelfFrom: 'date'}];
+    lastVisit = t - 40; render(); saveState();
+  });
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(200);
+  const id = await page.evaluate(() => fridge.find(i => i.key === 'chicken').id);
+  const st = await page.evaluate(id => {
+    const it = fridge.find(i => i.id === id);
+    return {left: leftAt(it, today()), crossed: !!it.crossed, burn: burnFraction(it, today()), frozen: !!it.frozen,
+      inFreezer: !!document.querySelector(`#rfFzShelf [data-rf-item="${id}"]`),
+      inCrisper: !!document.querySelector(`#rfCrisperItems [data-rf-item="${id}"]`),
+      inDrawer: !!document.querySelector(`#fridgeDrawerItems [data-fridge-item="${id}"]`),
+      crisperFront: (document.querySelector('.rf-crisper-front, #rfCrisperFront') || {}).textContent || '',
+      atRisk: rfAtRiskCount(today()), counted: counted(fridge).map(i => i.key)};
+  }, id);
+  console.log(JSON.stringify(st));
+  expectEqual('never past date', [st.left, st.crossed, st.frozen], [null, false, true]); // Infinity
+  expectEqual('stays in the freezer, not the crisper or the gone drawer', [st.inFreezer, st.inCrisper, st.inDrawer], [true, false, false]);
+  expectEqual('freezer burn at its heaviest', st.burn, 1);
+  expectEqual('only the milk counts', st.counted, ['milk']);
+  const text = await popoverText(page, 'chicken');
+  if (!text.includes('Best quality passed') || !text.includes('Frozen') || !text.includes('Thaw') || text.includes('past date')) throw new Error('popover: ' + text);
+  // Toss all takes the past-date milk only
+  const tossAll = await page.evaluate(() => fridge.filter(i => left(i) < 0).map(i => i.key));
+  expectEqual('Toss all: the milk only', tossAll, ['milk']);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Freezing pauses decay, it doesn't undo it. Chicken breast (2 days)
+// bought yesterday is half decayed; frozen, it stays at 0.5 under the
+// frost however long it's in; thawed (The Big Thaw, 2 days) it carries on
+// from 0.5 and reaches 1 at its thawed use-by -- never back to fresh. The
+// drawing follows the same number.
+async function freezePausesDecayScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: freezing pauses decay ---');
+  await page.evaluate(() => { fridge = [{id: ++uid, key: 'chicken', bought: today() - 1, custom: null}]; render(); });
+  const id = await page.evaluate(() => fridge[0].id);
+  const before = await page.evaluate(() => decayFraction(fridge[0], today()));
+  expectEqual('half decayed before freezing', before, 0.5);
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-freeze');
+  await page.waitForTimeout(120);
+  const frozen = await page.evaluate(() => { const it = fridge[0]; return [it.decayFrom, decayFraction(it, today()), decayFraction(it, today() + 200), decayFraction(it, today() + 400)]; });
+  expectEqual('frozen at 0.5, held there', frozen, [0.5, 0.5, 0.5, 0.5]);
+  // the freezer draws it at 0.5: the same colour the fridge drew it with
+  const colours = await page.evaluate(() => [foodBodyColor(fridge[0], 0.5), document.querySelector('#rfFzShelf [data-rf-item] svg').outerHTML.includes(foodBodyColor(fridge[0], 0.5))]);
+  expectEqual('drawn half decayed under the frost', colours[1], true);
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-thaw');
+  await page.waitForTimeout(120);
+  const thawed = await page.evaluate(() => { const it = fridge[0]; return [!!it.thawed, left(it), decayFraction(it, today()), decayFraction(it, today() + 1), decayFraction(it, today() + 2)]; });
+  console.log(JSON.stringify(thawed));
+  expectEqual('thawed: continues from 0.5, 1 at the thawed use-by', thawed, [true, 2, 0.5, 0.75, 1]);
+  // frozen again: held at the level it had then
+  await openPopover(page, id);
+  await page.evaluate(() => { fridge[0].clockFrom = today() - 1; render(); });
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-freeze');
+  await page.waitForTimeout(120);
+  expectEqual('frozen again at 0.75', await page.evaluate(() => [fridge[0].decayFrom, decayFraction(fridge[0], today() + 30)]), [0.75, 0.75]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Thaw with no FoodKeeper after-thawing value: USDA FSIS "The Big Thaw"
+// (via MSU Extension E3259), upper end, from the thaw date -- poultry,
+// ground meat, stew meat and seafood 2 days, red meat cuts 5. The popover
+// says so before and after. Anything else (broccoli, cooked shellfish)
+// still asks for a date.
+async function bigThawScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FREEZER: The Big Thaw ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = ['chicken', 'shrimp', 'steak', 'beef', 'salmon', 'broccoli', '_fk_162', '_fk_41'].map(key =>
+      ({id: ++uid, key, bought: t - 20, custom: null, frozen: true, clockFrom: t - 10, ...(key === '_fk_162' ? {name: 'Cooked shellfish'} : key === '_fk_41' ? {name: 'Stew beef'} : {})}));
+    render();
+  });
+  const ids = await page.evaluate(() => fridge.map(i => [i.key, i.id]));
+  const result = {};
+  for (const [key, id] of ids) {
+    await openPopover(page, id);
+    const note = await page.evaluate(() => { const n = document.querySelector('#rfPopover .rf-pop-thawnote'); return n ? [...n.children].map(c => c.textContent.trim()).join(' ') : null; });
+    const asks = await page.evaluate(() => !!document.querySelector('#rfPopover .rf-pop-thawask'));
+    if (asks) { result[key] = ['asks', note]; await page.click('#headline'); continue; }
+    await page.click('#rfPopover .rf-pop-thaw');
+    await page.waitForTimeout(80);
+    const after = await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [left(it), it.clockFrom - today(), shelfSourceOf(it)]; }, id);
+    result[key] = [after[0], after[1], note, after[2]];
+  }
+  console.log(JSON.stringify(result, null, 1));
+  const src = 'USDA FSIS “The Big Thaw” (via MSU Extension E3259)';
+  for (const [key, days] of [['chicken', 2], ['shrimp', 2], ['steak', 5], ['beef', 2], ['salmon', 2], ['_fk_41', 2]]) {
+    const r = result[key];
+    expectEqual(`${key}: ${days} days from the thaw date`, r.slice(0, 2), [days, 0]);
+    expectEqual(`${key}: source before thawing`, r[2], `Thawed ${days} days in the fridge — ${src}`);
+    if (!r[3].startsWith(`thawed: ${src}, ${days} days in the fridge after thawing`)) throw new Error(`${key} source after: ${r[3]}`);
+  }
+  expectEqual('broccoli and cooked shellfish ask for a date', [result.broccoli, result._fk_162], [['asks', null], ['asks', null]]);
+  // the source shows in the thawed item's popover too
+  const text = await popoverText(page, 'steak');
+  if (!text.includes('The Big Thaw')) throw new Error('thawed steak popover: ' + text);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Getting food out of the freezer, at desktop and phone: a frozen item's
+// popover shows Thaw (a spirit "Take out") inside the window; All items
+// has Thaw / Take out on each frozen item's row (with no thawed figure it
+// opens the popover on its date); the count on the closed door opens the
+// freezer.
+async function thawReachScenario(browser) {
+  console.log('\n--- FREEZER: Thaw is easy to find ---');
+  for (const [name, vp] of [['desktop', { width: 1200, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await browser.newContext({ viewport: vp, reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(`http://localhost:${PORT}/index.html`);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('#headline');
+    await page.evaluate(() => {
+      const t = today();
+      fridge = [{id: ++uid, key: 'chicken', bought: t - 5, custom: null, frozen: true, clockFrom: t - 3},
+                {id: ++uid, key: 'vodka', bought: t - 5, custom: null, frozen: true},
+                {id: ++uid, key: 'broccoli', bought: t - 5, custom: null, frozen: true, clockFrom: t - 3},
+                {id: ++uid, key: 'steak', bought: t - 1, custom: null}];
+      render();
+    });
+    const [chk, vod, bro] = await page.evaluate(() => fridge.map(i => i.id));
+    // the door count opens the freezer
+    expectEqual(`${name}: closed on load`, await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), false);
+    expectEqual(`${name}: count`, await page.textContent('#rfFzCount'), '3 inside');
+    await page.click('#rfFzCount');
+    await page.waitForTimeout(150);
+    expectEqual(`${name}: tapping the count opens it`, [await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), await page.getAttribute('#rfFzHandle', 'aria-pressed')], [true, 'true']);
+    // popover: Thaw / Take out, inside the window
+    for (const [id, label] of [[chk, 'Thaw'], [vod, 'Take out']]) {
+      await page.click(`#rfFzShelf [data-rf-item="${id}"]`);
+      await page.waitForTimeout(120);
+      const b = await page.evaluate(() => { const b = document.querySelector('#rfPopover .rf-pop-thaw'); const r = b.getBoundingClientRect(); return {text: b.textContent.trim(), inside: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, visible: r.width > 0 && r.height > 0}; });
+      expectEqual(`${name}: popover shows ${label} in the window`, [b.text, b.inside, b.visible], [label, true, true]);
+      await page.click('#headline');
+    }
+    // All items: Thaw on the frozen rows, none on the steak
+    await page.evaluate(() => { document.getElementById('allItems').open = true; render(); });
+    await page.waitForTimeout(150);
+    const rowActs = await page.evaluate(() => fridge.map(it => { const b = document.querySelector(`[data-fridge-thaw="${it.id}"]`); return b ? b.textContent : null; }));
+    expectEqual(`${name}: row Thaw / Take out`, rowActs, ['Thaw', 'Take out', 'Thaw', null]);
+    const tap = await page.$eval(`[data-fridge-thaw="${chk}"]`, b => { const r = b.getBoundingClientRect(); return [Math.round(r.width) >= (innerWidth < 720 ? 44 : 1), Math.round(r.height) >= (innerWidth < 720 ? 44 : 1)]; });
+    expectEqual(`${name}: row Thaw is a full tap target`, tap, [true, true]);
+    await page.click(`[data-fridge-thaw="${chk}"]`);
+    await page.waitForTimeout(150);
+    expectEqual(`${name}: row Thaw thaws chicken (The Big Thaw, 2 days)`, await page.evaluate(id => { const it = fridge.find(i => i.id === id); return [!!it.frozen, !!it.thawed, left(it)]; }, chk), [false, true, 2]);
+    await page.click(`[data-fridge-thaw="${bro}"]`);
+    await page.waitForTimeout(150);
+    const ask = await page.evaluate(() => { const p = document.getElementById('rfPopover'); const a = p.querySelector('.rf-pop-thawask'); return [!p.hidden, !!a && !a.hidden]; });
+    expectEqual(`${name}: broccoli's row Thaw opens the popover on its date`, ask, [true, true]);
+    await page.fill('#rfPopover .rf-pop-thawdate', await isoIn(page, 3));
+    await page.dispatchEvent('#rfPopover .rf-pop-thawdate', 'change');
+    await page.waitForTimeout(120);
+    await page.click(`[data-fridge-thaw="${vod}"]`);
+    await page.waitForTimeout(120);
+    expectEqual(`${name}: broccoli thawed by its date, vodka taken out`, await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen])), [['chicken', false], ['vodka', false], ['broccoli', false], ['steak', false]]);
+    expectEqual(`${name}: freezer empty`, await page.textContent('#rfFzCount'), 'empty');
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
 }
 
 // Saved data from before the freezer (the drinks commit, ad0d0c0) loads
@@ -2695,6 +2881,10 @@ async function pageStructureScenario(browser) {
     () => frozenEntryScenario(browser),
     () => frozenReceiptScenario(browser),
     () => freezerMigrationScenario(browser),
+    () => frozenNeverSpoilsScenario(browser),
+    () => freezePausesDecayScenario(browser),
+    () => bigThawScenario(browser),
+    () => thawReachScenario(browser),
   ];
   let passed = 0;
   const failed = [];

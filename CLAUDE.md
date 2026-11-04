@@ -104,11 +104,32 @@ consumer food app.
        date: into the freezer (it.frozen), the clock restarted today
        (it.clockFrom) on the freezer value; a date set before no longer
        applies. A spirit can go in too, its clock untouched.
-     - Thaw (popover): back to the fridge (it.thawed), the clock
-       restarted today on the after-thawing value -- the one exception to
-       "never the after-thawing values", made on purpose so a thawed
-       item counts honestly. With no after-thawing value, Thaw asks for a
-       use-by date first. A spirit has "Take out" instead, no clock change.
+     - Thaw (popover, or the frozen item's row in All items): back to the
+       fridge (it.thawed), the clock restarted today on the after-thawing
+       value -- the one exception to "never the after-thawing values",
+       made on purpose so a thawed item counts honestly. With no
+       FoodKeeper after-thawing value, raw poultry, ground meat, stew meat
+       (and cubes) and raw seafood take 2 days and red meat cuts (steaks,
+       chops, roasts) 5, from the thaw date: USDA FSIS "The Big Thaw", as
+       cited by MSU Extension E3259 "Thawing Foods Safely" -- thawed in
+       the refrigerator they keep an additional 1-2 days, red meat cuts
+       3-5; upper end (THAW_BIG, by FoodKeeper id). The popover names that
+       source before and after thawing. Anything else (vegetables, cooked
+       fish and shellfish, variety meats, fresh sausage) asks for a
+       use-by date first; from the row, Thaw opens the popover on that
+       date. A spirit has "Take out" instead, no clock change.
+     - Frozen food never spoils. USDA FSIS "Freezing and Food Safety":
+       food kept at 0 °F is always safe, freezer storage times are for
+       quality only, and freezer burn doesn't make food unsafe. So a
+       frozen item never becomes past date and never goes to the crisper,
+       Toss all or the gone count. When its freezer time runs out the
+       popover reads "Best quality passed" (its date is "Best by", not
+       "Use by") and the freezer burn is at its heaviest; it stays in the
+       freezer until the person thaws, uses or tosses it.
+     - Freezing pauses decay, it doesn't undo it: the item keeps the
+       decay it had when frozen (it.decayFrom), drawn under the frost.
+       After Thaw it carries on from that level and reaches 100% at the
+       thawed use-by date (decayFraction); it never jumps back to fresh.
      - Entering frozen food: "frozen" in a typed or scanned name ("frozen
        shrimp"; a receipt line printed or expanded with it) puts it in the
        freezer, its freezer value counted from purchase; the entry
@@ -236,7 +257,8 @@ sparkling form, rosé and vermouth the still wine form in clear glass,
 sake the sake form, soju the small green bottle. No
 brands, no lettering. Their square is drawn larger in the illustrated
 fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it.
-Frozen food doesn't rot: it is drawn fresh (fraction 0) and shows freezer
+Frozen food doesn't rot: it is drawn at the decay it had when frozen
+(it.decayFrom; fresh if it went in fresh) and shows freezer
 burn as its freezer time runs out (freezerBurnMarkup, burnFraction) -- a
 pale frost rim inside the outline that thickens, a fine broken line of
 crystals along it, and pale dry patches spreading across the surface,
@@ -320,7 +342,8 @@ The illustrated fridge opens the page: a literal drawing of a fridge
 (door, shelves, crisper, door bins, and the freezer compartment at the
 top). The freezer has its own door on the same right-hand hinge, closed
 on every load, opened and closed by its handle (or its inside face once
-open); the door front carries a small count ("3 inside", "empty").
+open); the door front carries a small count ("3 inside", "empty"),
+which opens it too when tapped.
 Inside, one wire shelf and frost on the walls, in the same line-and-wash,
 with its own one-point perspective (FZ, fzP); every frozen item stands
 on that shelf at one size (bottles taller), since nothing frozen is
