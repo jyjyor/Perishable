@@ -2154,6 +2154,190 @@ async function drinksScenario(browser) {
   await page.context().close();
 }
 
+// Condiments, from FoodKeeper under the rule. Each typed name matches its
+// own FoodKeeper entry; "Opened or unopened?" is asked only where
+// FoodKeeper gives an after-opening figure (hot sauce #559, relish #500
+// and butter #1 have none). Unopened counts the pantry figure (or, for
+// horseradish and pesto, the refrigerator one), opened the after-opening
+// figure, both from purchase. They live in the door bins on desktop.
+async function condimentsScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- CONDIMENTS: door bins, opened or unopened ---');
+  const names = ['ketchup', 'mayo', 'mustard', 'soy sauce', 'oyster sauce', 'hot sauce', 'sriracha', 'salad dressing',
+    'jam', 'jelly', 'butter', 'bbq sauce', 'hoisin', 'horseradish', 'pickles', 'relish', 'pesto', 'tahini', 'ranch', 'vinaigrette', 'teriyaki', 'jarred salsa'];
+  await typeEntry(page, names.join(', '));
+  const rows = await readReview(page, '#receiptLines');
+  const got = await page.evaluate(() => pendingItems.map(e => [e.key, foodOf(e.key).fk, opensKey(e.key)]));
+  console.log(JSON.stringify(got));
+  expectEqual('FoodKeeper ids', got.map(g => g[1]),
+    [348, 350, 351, 360, 434, 559, 559, 356, 347, 347, 1, 340, 435, 346, 353, 500, 354, 416, 623, 625, 360, 357]);
+  const noAsk = ['hot sauce', 'sriracha', 'butter', 'relish'];
+  names.forEach((n, i) => {
+    const asks = rows[i].match.includes('opened or unopened?');
+    if (asks === noAsk.includes(n)) throw new Error(n + (asks ? ' should not ask opened' : ' should ask opened') + ': ' + rows[i].match);
+    if (rows[i].flag) throw new Error(n + ' should need no date: ' + rows[i].flag);
+  });
+  // opened: ketchup, mayo, soy sauce, pesto
+  for (const i of [0, 1, 3, 16]) {
+    await page.check(`#receiptLines .entry-open[data-idx="${i}"][value="opened"]`);
+    await page.waitForTimeout(40);
+  }
+  await page.click('#addbtn');
+  await page.waitForTimeout(200);
+  const recs = await page.evaluate(() => fridge.map(i => [i.key, !!i.opened, left(i), fridgeShapeOf(i)]));
+  console.log(JSON.stringify(recs));
+  const days = Object.fromEntries(recs.map(r => [r[0] + (r[1] ? '+' : ''), r[2]]));
+  expectEqual('days', [days['ketchup+'], days['mayonnaise+'], days.mustard, days['soysauce+'], days.oystersauce, days.hotsauce,
+    days.saladdressing, days.jam, days.butter, days.bbqsauce, days.hoisin, days.horseradish, days.pickles, days.relish, days['pesto+'],
+    days.tahini, days.creamydressing, days.vinaigrette, days.teriyaki, days.jarredsalsa],
+    [180, 60, 730, 30, 720, 180, 360, 540, 60, 365, 720, 360, 365, 270, 3, 365, 180, 180, 1095, 365]);
+  expectEqual('opened ketchup drawn opened, unopened mustard not', [recs[0][3], recs[2][3]], ['ketchupOpen', 'mustard']);
+  const src = await page.evaluate(() => [shelfSourceOf(fridge.find(i => i.key === 'mustard')), shelfSourceOf(fridge.find(i => i.key === 'ketchup')),
+    shelfSourceOf(fridge.find(i => i.key === 'horseradish'))]);
+  expectEqual('sources', src, ['unopened: FoodKeeper #351, 730 days (its pantry figure; none given for the refrigerator unopened)',
+    'opened: FoodKeeper #348, 180 days after opening', 'FoodKeeper #346']);
+  // In the door bins on desktop (pesto, opened, 3 days, is at eye level: urgency wins), all of them drawn.
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.waitForTimeout(300);
+  const placed = await page.evaluate(() => ({
+    bins: [...document.querySelectorAll('[id^="rfDoorBin"] [data-rf-item]')].map(b => fridge.find(i => i.id === +b.dataset.rfItem).key),
+    eye: [...document.querySelectorAll('#rfShelfEye [data-rf-item]')].map(b => fridge.find(i => i.id === +b.dataset.rfItem).key),
+    upper: document.querySelectorAll('#rfShelfUpper [data-rf-item]').length, nan: document.getElementById('rfUnit').innerHTML.includes('NaN')}));
+  console.log(JSON.stringify(placed));
+  expectEqual('every other condiment in the door bins, none dropped', placed.bins.length, recs.length - 1);
+  expectEqual('opened pesto at eye level', placed.eye, ['pesto']);
+  expectEqual('nothing on the upper shelf, no NaN', [placed.upper, placed.nan], [0, false]);
+  await page.$eval('#rfUnit', u => u.classList.add('open'));
+  await page.waitForTimeout(300);
+  await page.locator('#panelFridge').screenshot({ path: path.join(OUT, 'condiments-door-bins.png') });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Frozen food bought frozen goes straight into the freezer on its
+// FoodKeeper freezer value, nothing asked: ice cream #317 (180 days),
+// frozen vegetables #331 (540), frozen berries #315 (540), ice pops #318
+// (270, typed "popsicles"), frozen pizza #571 (360), and frozen dumplings
+// under #330 Frozen entrees (prepared meals), 360 -- potstickers, gyoza,
+// wontons and bao too.
+async function frozenFoodsScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- FROZEN FOODS: straight into the freezer ---');
+  const aliases = await page.evaluate(() => ['dumplings', 'potstickers', 'pot stickers', 'gyoza', 'wontons', 'bao', 'bao buns'].map(n => entryFor(n, 0).key));
+  expectEqual('dumpling names', aliases, Array(7).fill('frozendumplings'));
+  await typeEntry(page, 'ice cream, frozen vegetables, frozen berries, popsicles, frozen pizza, frozen dumplings');
+  if (await previewOpen(page)) {
+    const rows = await readReview(page, '#receiptLines');
+    throw new Error('nothing should be asked: ' + JSON.stringify(rows.map(r => [r.name, r.as, r.flag])));
+  }
+  const recs = await page.evaluate(() => fridge.map(i => [i.key, foodOf(i.key).fk, !!i.frozen, shelfOf(i), fridgeShapeOf(i)]));
+  console.log(JSON.stringify(recs));
+  expectEqual('records', recs, [['icecream', 317, true, 180, 'icecream'], ['frozenveg', 331, true, 540, 'vegbag'],
+    ['frozenberries', 315, true, 540, 'berrybag'], ['icepops', 318, true, 270, 'popbox'], ['frozenpizza', 571, true, 360, 'pizzabox'],
+    ['frozendumplings', 330, true, 360, 'dumplingbag']]);
+  const st = await page.evaluate(() => ({inFz: document.querySelectorAll('#rfFzShelf [data-rf-item]').length, count: document.getElementById('rfFzCount').textContent,
+    counted: counted(fridge).length, nan: document.getElementById('rfFzShelf').innerHTML.includes('NaN')}));
+  expectEqual('all six in the freezer, out of every count', [st.inFz, st.count, st.counted, st.nan], [6, '6 inside', 0, false]);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.$eval('#rfUnit', u => u.classList.add('fz-open'));
+  await page.waitForTimeout(400);
+  await page.locator('#panelFridge').screenshot({ path: path.join(OUT, 'frozen-foods-freezer.png') });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Leftovers. After Cook this the board asks "Any leftovers?"; Yes puts a
+// container named for the dish in the fridge on FoodKeeper's leftovers
+// value (#173 with egg: 4 days), and it behaves like any item: it decays,
+// freezes (#173: 90 days), and Used and Tossed reach the ledger. Undo
+// takes it out and asks again; No drops the question. Typed, "leftovers"
+// and "takeout" ask which entry, keep their word as the name, and never
+// become a usual.
+async function leftoversScenario(browser) {
+  const { page, errors } = await freshPage(browser);
+  console.log('\n--- LEFTOVERS: Any leftovers? ---');
+  await page.evaluate(() => {
+    const t = today();
+    fridge = [{id: ++uid, key: 'tomato', bought: t - 5, custom: null}, {id: ++uid, key: 'egg', bought: t - 30, custom: null},
+      {id: ++uid, key: 'scallion', bought: t - 5, custom: null}];
+    render(); showRoom(1);
+  });
+  await page.waitForTimeout(300);
+  const dish = (await page.textContent('#tonight h2')).trim();
+  expectEqual('tonight', dish, 'Tomato egg stir-fry');
+  if (await page.$('#leftoversAsk')) throw new Error('no question before cooking');
+  await page.click('#tonight .js-cook');
+  await page.waitForTimeout(150);
+  expectEqual('asked', (await page.textContent('#leftoversAsk p')).trim(), 'Tomato egg stir-fry cooked. Any leftovers?');
+  await page.click('#tonight .js-leftovers-yes');
+  await page.waitForTimeout(150);
+  let st = await page.evaluate(() => fridge.map(i => [i.key, food(i).en, foodOf(i.key).fk, left(i), fridgeShapeOf(i), shelfSourceOf(i)]));
+  console.log(JSON.stringify(st));
+  expectEqual('one container, named for the dish, #173, 4 days', st, [['leftovers', 'Tomato egg stir-fry', 173, 4, 'leftovers', 'FoodKeeper #173']]);
+  expectEqual('question gone, not a usual', [!!(await page.$('#leftoversAsk')), await page.evaluate(() => Object.keys(standing).length)], [false, 0]);
+  const svg = await page.evaluate(() => document.querySelector(`[data-rf-item="${fridge[0].id}"]`).innerHTML);
+  if (!svg.includes('Tomato egg')) throw new Error('the tape should carry the dish name');
+  // Undo: out again, asked again
+  await page.click('#toast button');
+  await page.waitForTimeout(150);
+  expectEqual('undo', [await page.evaluate(() => fridge.length), !!(await page.$('#leftoversAsk'))], [0, true]);
+  await page.click('#tonight .js-leftovers-yes');
+  await page.waitForTimeout(150);
+  await page.evaluate(() => showRoom(0));
+  await page.waitForTimeout(300);
+  await page.locator('#panelFridge').screenshot({ path: path.join(OUT, 'leftovers-fridge.png') });
+  // decays like any item: on its last day, at the last-day level
+  const later = await page.evaluate(() => { const it = fridge[0]; return [leftAt(it, today() + 4), decayFraction(it, today() + 4), leftAt(it, today() + 5) < 0]; });
+  expectEqual('decay', later, [0, 0.75, true]);
+  // Freeze from the popover: #173's freezer value
+  const id = await page.evaluate(() => fridge[0].id);
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-freeze');
+  await page.waitForTimeout(150);
+  expectEqual('frozen on #173', await page.evaluate(() => [!!fridge[0].frozen, shelfOf(fridge[0])]), [true, 90]);
+  // Tossed: waste, like anything
+  const before = await page.evaluate(() => ledger.wasteG);
+  await openPopover(page, id);
+  await page.click('#rfPopover .rf-pop-tossed');
+  await page.waitForTimeout(150);
+  expectEqual('tossed is waste', await page.evaluate(b => [ledger.wasteG - b, fridge.length], before), [400, 0]);
+
+  // No: nothing added, the question goes
+  await page.evaluate(() => {
+    const t = today();
+    fridge = [{id: ++uid, key: 'tomato', bought: t - 5, custom: null}, {id: ++uid, key: 'egg', bought: t - 30, custom: null},
+      {id: ++uid, key: 'scallion', bought: t - 5, custom: null}];
+    render(); showRoom(1);
+  });
+  await page.waitForTimeout(200);
+  await page.click('#tonight .js-cook');
+  await page.waitForTimeout(100);
+  await page.click('#tonight .js-leftovers-no');
+  await page.waitForTimeout(100);
+  expectEqual('no', [await page.evaluate(() => fridge.length), !!(await page.$('#leftoversAsk'))], [0, false]);
+  // a dish without meat, fish, poultry or egg: #174
+  expectEqual('which entry', await page.evaluate(() => [leftoversOf(['tomato', 'egg']), leftoversOf(['spinach', 'tofu']), leftoversOf(['chicken'])]),
+    ['leftovers', 'leftoversveg', 'leftovers']);
+
+  // Typed
+  await page.evaluate(() => showRoom(0));
+  await typeEntry(page, 'leftovers, takeout');
+  let rows = await readReview(page, '#receiptLines');
+  expectEqual('typed asks which', rows.map(r => r.options), [['Leftovers with meat or egg (FOODS)', 'Leftovers without meat or egg (FOODS)'],
+    ['Leftovers with meat or egg (FOODS)', 'Leftovers without meat or egg (FOODS)']]);
+  await page.selectOption('#receiptLines .entry-pick[data-idx="0"]', 'leftovers');
+  await page.waitForTimeout(40);
+  await page.selectOption('#receiptLines .entry-pick[data-idx="1"]', 'leftoversveg');
+  await page.waitForTimeout(40);
+  await page.click('#addbtn');
+  await page.waitForTimeout(200);
+  st = await page.evaluate(() => fridge.map(i => [food(i).en, foodOf(i.key).fk, left(i), shelfOf({key: i.key, frozen: true})]));
+  expectEqual('typed records keep their word', st, [['Leftovers', 173, 4, 90], ['Takeout', 174, 4, 60]]);
+  expectEqual('never a usual', await page.evaluate(() => Object.keys(standing)), []);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
 // Sparkling wine, rosé, vermouth, sake, soju: no FoodKeeper entry. The
 // first three are estimated from Iowa State Extension's opened figures
 // (3, 7, 28 days) and ask "Opened or unopened?"; unopened, the printed
@@ -3607,7 +3791,7 @@ async function bagPhoneScenario(browser) {
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
   // ONLY=decayLineScenario node tools/scenarios.js runs just that one.
   if (process.env.ONLY){
-    await eval(process.env.ONLY)(browser);
+    try { await eval(process.env.ONLY)(browser); } catch (e) { console.log('\nFAILED:', e.message); process.exitCode = 1; }
     await browser.close(); server.close();
     return;
   }
@@ -3664,6 +3848,9 @@ async function bagPhoneScenario(browser) {
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),
     () => drinkLabelScenario(browser),
+    () => condimentsScenario(browser),
+    () => frozenFoodsScenario(browser),
+    () => leftoversScenario(browser),
     () => freezeScenario(browser),
     () => thawScenario(browser),
     () => cantFreezeScenario(browser),

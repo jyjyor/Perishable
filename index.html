@@ -182,7 +182,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   --rf-ceil:#D3DEE4;--rf-floor:#E3EBEF;
   --rf-glass:rgba(206,226,233,.55);--rf-glass-edge:#C8D9E0;--rf-glass-hi:#F5FAFB;
   --rf-liner:#E4ECF0;--rf-liner-2:#D6E1E7;
-  --rf-bin:rgba(214,230,236,.42);--rf-bin-back:#D2DEE5;
+  --rf-bin:rgba(214,230,236,.62);--rf-bin-back:#D2DEE5;--rf-bin-lip:#CFDEE5;
   --rf-dome:#C9D3D8;--rf-dome-lit:#FBFCF8;
   --rf-gasket:#9AA7AB;--rf-handle:#E9EDEE;--rf-handle-2:#C7CFD2;
   --rf-frost:#F4F8FA;--rf-fz-back:#D5E0E6;
@@ -206,7 +206,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rf-svg .glass{fill:var(--rf-glass)} .rf-svg .glassedge{fill:var(--rf-glass-edge)}
 .rf-svg .glasshi{stroke:var(--rf-glass-hi);stroke-width:1.2;fill:none;stroke-linecap:round}
 .rf-svg .liner{fill:var(--rf-liner)} .rf-svg .liner2{fill:var(--rf-liner-2)}
-.rf-svg .bin{fill:var(--rf-bin)} .rf-svg .binback{fill:var(--rf-bin-back)}
+.rf-svg .bin{fill:var(--rf-bin)} .rf-svg .binback{fill:var(--rf-bin-back)} .rf-svg .binlip{fill:var(--rf-bin-lip)}
 .rf-svg .gasket{stroke:var(--rf-gasket);stroke-width:.8;fill:none}
 .rf-svg .handle{fill:var(--rf-handle)} .rf-svg .handle2{fill:var(--rf-handle-2)}
 
@@ -564,6 +564,10 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .dish-sub .dish-name{font-weight:700;font-size:17px;color:var(--ink);margin-top:2px}
 .dish-usesup{margin-top:10px;color:var(--ink-2);max-width:48ch}
 .dish-saves{margin-top:8px;color:var(--ink-2)}
+/* After Cook this: "Any leftovers?", on the board above the next dish. */
+.leftovers-ask{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.leftovers-ask p{margin:0;flex:1 1 100%;color:var(--ink)}
+@media (max-width:720px){ .leftovers-ask button{min-height:44px} }
 .rescue{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .chip{
   font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11.5px;letter-spacing:.04em;
@@ -1255,7 +1259,8 @@ const FOODS = {
   hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
   shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
   softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
-  butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', base:'#d7d0a2'},
+  // In the door's butter compartment (RF_DOOR_KEYS), drawn as a wrapped block.
+  butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', shape:'butter', base:'#d7d0a2'},
   cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper entry, e.g. Chinese eggplant via the generic
@@ -1469,7 +1474,77 @@ const FOODS = {
   bourbon:       {en:'Bourbon',           aliases:['bourbon whiskey','bottle of bourbon'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'whiskey', base:'#dbe6e8'},
   scotch:        {en:'Scotch',            aliases:['scotch whisky','single malt','single malt scotch','bottle of scotch'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:39.99, estPrice:true, cat:'drinks', shape:'scotch', base:'#dbe6e8'},
   brandy:        {en:'Brandy',            aliases:['bottle of brandy'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'brandy', base:'#dbe6e8'},
-  cognac:        {en:'Cognac',            aliases:['bottle of cognac'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:44.99, estPrice:true, cat:'drinks', shape:'brandy', base:'#dbe6e8'}
+  cognac:        {en:'Cognac',            aliases:['bottle of cognac'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:44.99, estPrice:true, cat:'drinks', shape:'brandy', base:'#dbe6e8'},
+  // Condiments (cat 'condiments'): the door bins, unless urgency puts one
+  // at eye level (toDoorBin), or the upper shelf on a phone. FoodKeeper
+  // gives most of them no refrigerator figure for an unopened jar or
+  // bottle, only a pantry one (DOP_Pantry), and a refrigerator figure
+  // after opening (Refrigerate_After_Opening). As for wine: entry asks
+  // "Opened" or "Unopened" wherever there is an after-opening figure
+  // (opens), the last choice per food the default; unopened counts the
+  // pantry figure (pantryFig) -- or the refrigerator one where FoodKeeper
+  // gives that (horseradish, pesto) -- and opened counts the after-opening
+  // figure, both from purchase. Upper end, months x30, years x365. With
+  // no after-opening figure (hot sauce #559, relish #500, butter #1)
+  // nothing is asked. Drawn as packages from four shared forms (BOTTLES:
+  // squeeze bottle, glass jar, narrow sauce bottle; butter's block), told
+  // apart by what shows through: blank labels, no brands. Weights and
+  // prices are a usual bottle or jar's, estimated.
+  ketchup:       {en:'Ketchup',           aliases:['catsup','tomato ketchup'], shelf:365, opens:180, pantryFig:true, fk:348, g:567, usd:3.49, estPrice:true, cat:'condiments', shape:'ketchup', base:'#e3e9e6'},
+  mayonnaise:    {en:'Mayonnaise',        aliases:['mayo','mayonaise','japanese mayo','japanese mayonnaise'], shelf:180, opens:60, pantryFig:true, fk:350, g:887, usd:5.99, estPrice:true, cat:'condiments', shape:'mayonnaise', base:'#e3e9e6'},
+  mustard:       {en:'Mustard',           aliases:['yellow mustard','dijon','dijon mustard','whole grain mustard','spicy brown mustard','brown mustard'], shelf:730, opens:365, pantryFig:true, fk:351, g:397, usd:2.49, estPrice:true, cat:'condiments', shape:'mustard', base:'#e3e9e6'},
+  // #360 "Soy sauce or teriyaki sauce": one entry, named for both.
+  soysauce:      {en:'Soy sauce',         aliases:['light soy sauce','dark soy sauce','tamari','shoyu'], shelf:1095, opens:30, pantryFig:true, fk:360, g:600, usd:3.99, estPrice:true, cat:'condiments', shape:'soysauce', base:'#e3e9e6'},
+  teriyaki:      {en:'Teriyaki sauce',    aliases:['teriyaki'], shelf:1095, opens:30, pantryFig:true, fk:360, g:591, usd:4.49, estPrice:true, cat:'condiments', shape:'teriyaki', base:'#e3e9e6'},
+  oystersauce:   {en:'Oyster sauce',      shelf:720, opens:180, pantryFig:true, fk:434, g:510, usd:4.99, estPrice:true, cat:'condiments', shape:'oystersauce', base:'#e3e9e6'},
+  hoisin:        {en:'Hoisin sauce',      aliases:['hoisin'], shelf:720, opens:180, pantryFig:true, fk:435, g:397, usd:3.99, estPrice:true, cat:'condiments', shape:'hoisin', base:'#e3e9e6'},
+  // #559 Hot sauce: pantry 6 months and nothing else ("will stay fresher
+  // longer if refrigerated"), so 180 days and nothing asked. Sriracha is a
+  // hot sauce, under that generic entry (rule 6).
+  hotsauce:      {en:'Hot sauce',         aliases:['sriracha','hot pepper sauce','chili hot sauce'], shelf:180, pantryFig:true, fk:559, g:150, usd:3.49, estPrice:true, cat:'condiments', shape:'hotsauce', base:'#e3e9e6'},
+  // #356 is commercial bottled dressing in general; creamy (#623) and
+  // vinaigrette (#625) have their own entries.
+  saladdressing: {en:'Salad dressing',    aliases:['dressing','bottled dressing','bottled salad dressing'], shelf:360, opens:90, pantryFig:true, fk:356, g:473, usd:3.99, estPrice:true, cat:'condiments', shape:'dressing', base:'#e3e9e6'},
+  creamydressing:{en:'Creamy dressing',   aliases:['creamy salad dressing','ranch','ranch dressing','blue cheese dressing','caesar dressing','thousand island dressing'], shelf:180, opens:28, pantryFig:true, fk:623, g:473, usd:3.99, estPrice:true, cat:'condiments', shape:'creamydressing', base:'#e3e9e6'},
+  vinaigrette:   {en:'Vinaigrette',       aliases:['vinaigrettes','italian dressing','balsamic vinaigrette','vinaigrette dressing'], shelf:180, opens:28, pantryFig:true, fk:625, g:473, usd:3.99, estPrice:true, cat:'condiments', shape:'vinaigrette', base:'#e3e9e6'},
+  jam:           {en:'Jam',               aliases:['jams','jelly','jellies','preserves','fruit preserves','strawberry jam','raspberry jam','grape jelly','marmalade'], shelf:540, opens:360, pantryFig:true, fk:347, g:510, usd:3.99, estPrice:true, cat:'condiments', shape:'jam', base:'#e3e9e6'},
+  bbqsauce:      {en:'Barbecue sauce',    aliases:['bbq sauce','barbeque sauce','bbq'], shelf:365, opens:120, pantryFig:true, fk:340, g:510, usd:2.99, estPrice:true, cat:'condiments', shape:'bbqsauce', base:'#e3e9e6'},
+  pickles:       {en:'Pickles',           aliases:['pickle','dill pickles','dill pickle','pickle spears','jar of pickles'], shelf:365, opens:90, pantryFig:true, fk:353, g:680, usd:3.99, estPrice:true, cat:'condiments', shape:'pickles', plural:true, base:'#e3e9e6'},
+  jarredsalsa:   {en:'Jarred salsa',      aliases:['salsa jar','jar of salsa','picante sauce','taco sauce'], shelf:365, opens:30, pantryFig:true, fk:357, g:680, usd:3.99, estPrice:true, cat:'condiments', shape:'jarredsalsa', base:'#e3e9e6'},
+  tahini:        {en:'Tahini',            shelf:365, opens:21, pantryFig:true, fk:416, g:454, usd:7.99, estPrice:true, cat:'condiments', shape:'tahini', base:'#e3e9e6'},
+  // Refrigerated unopened: DOP_Refrigerate, the rule's own column.
+  horseradish:   {en:'Horseradish',       aliases:['prepared horseradish','jar of horseradish'], shelf:360, opens:120, fk:346, g:227, usd:3.49, estPrice:true, cat:'condiments', shape:'horseradish', base:'#e3e9e6'},
+  pesto:         {en:'Pesto',             aliases:['basil pesto','jarred pesto'], shelf:180, opens:3, fk:354, g:190, usd:4.99, estPrice:true, cat:'condiments', shape:'pesto', base:'#e3e9e6'},
+  relish:        {en:'Relish',            aliases:['pickle relish','sweet relish'], shelf:270, fk:500, g:296, usd:2.49, estPrice:true, cat:'condiments', shape:'relish', base:'#e3e9e6'},
+  // Frozen food bought frozen, straight into the freezer (keptFrozen), on
+  // FoodKeeper's freezer value (DOP_Freeze, else Freeze; upper end):
+  // #317 Ice cream 6 months, #318 Ice pops 9, #315 Fruits (such as
+  // berries) 18, #331 Vegetables 18, #571 Pizza (frozen) 12. FoodKeeper's
+  // refrigerator figures for #331 and #571 are "for storage after
+  // cooking", not for the frozen product, so there is no shelf: thawed,
+  // each asks for a date, as anything without an after-thawing figure
+  // does. Drawn as packages: an ice cream tub, a freezer bag, a flat box.
+  icecream:      {en:'Ice cream',         aliases:['tub of ice cream','pint of ice cream','carton of ice cream'], shelf:null, keptFrozen:true, fk:317, g:900, usd:5.99, estPrice:true, cat:'frozen', shape:'icecream', base:'#e8e3d6'},
+  icepops:       {en:'Ice pops',          aliases:['ice pop','popsicle','popsicles','freezer pops','ice lolly','ice lollies'], shelf:null, keptFrozen:true, fk:318, g:700, usd:4.99, estPrice:true, cat:'frozen', shape:'popbox', plural:true, base:'#cfdcde'},
+  frozenberries: {en:'Frozen berries',    aliases:['frozen mixed berries','frozen berry','frozen fruit','frozen fruits'], shelf:null, keptFrozen:true, fk:315, g:1360, usd:12.99, estPrice:true, cat:'frozen', shape:'berrybag', plural:true, base:'#e4ebea'},
+  frozenveg:     {en:'Frozen vegetables', aliases:['frozen vegetable','frozen veggies','frozen veg','frozen mixed vegetables'], shelf:null, keptFrozen:true, fk:331, g:1360, usd:6.99, estPrice:true, cat:'frozen', shape:'vegbag', plural:true, base:'#e4ebea'},
+  // #330 "Frozen entrees (prepared meals)": bagged dumplings, potstickers,
+  // gyoza, wontons and bao are frozen prepared foods cooked from frozen,
+  // and FoodKeeper's freezer value (12 months) is quality only. Its
+  // refrigerator guidance is "Not Recommended", so there is no shelf:
+  // thawed, it asks for a date.
+  frozendumplings:{en:'Frozen dumplings', aliases:['frozen dumpling','dumplings','dumpling','potstickers','potsticker','pot stickers','pot sticker','frozen potstickers','gyoza','frozen gyoza','wontons','wonton','frozen wontons','bao','bao buns','bao bun','frozen bao','frozen bao buns'], shelf:null, keptFrozen:true, fk:330, g:680, usd:8.99, estPrice:true, cat:'frozen', shape:'dumplingbag', plural:true, base:'#e4ebea'},
+  frozenpizza:   {en:'Frozen pizza',      aliases:['frozen pizzas'], shelf:null, keptFrozen:true, fk:571, g:450, usd:6.99, estPrice:true, cat:'frozen', shape:'pizzabox', base:'#dcd8cf'},
+  // Leftovers: #173 "Leftovers (with meat, fish, poultry, or egg)" and
+  // #174 "(without ...)", 3-4 days refrigerated either way, freezer 3
+  // and 2 months. After Cook this, "Any leftovers?" puts one in the fridge
+  // named for the dish (it.name), #173 when the dish used meat, fish,
+  // poultry or egg, else #174 (leftoversOf). Typed, "leftovers" or
+  // "takeout" asks which, and keeps the typed word as its name (named).
+  // A lidded container, labelled; never a usual (noUsual). One portion's
+  // weight and price, estimated.
+  leftovers:     {en:'Leftovers with meat or egg', aliases:['leftovers','leftover','takeout','take-out','take out','takeaway','leftovers with meat','leftover with meat'], shelf:4, fk:173, named:true, noUsual:true, g:400, usd:4.00, estPrice:true, cat:'leftovers', shape:'leftovers', plural:true, base:'#e3e9e6'},
+  leftoversveg:  {en:'Leftovers without meat or egg', aliases:['leftovers','leftover','takeout','take-out','take out','takeaway','vegetable leftovers','leftovers without meat'], shelf:4, fk:174, named:true, noUsual:true, g:400, usd:4.00, estPrice:true, cat:'leftovers', shape:'leftovers', plural:true, base:'#e3e9e6'}
 };
 
 const DISHES = [
@@ -3050,6 +3125,11 @@ const FRIDGE_CAT = {
   cooked:  {shape:'cooked',  darken:1.0, sag:0.7, mold:1.2, shrink:0.8, wrinkle:0.2},
   // bottles: glass holds its shape and colour (see BOTTLES)
   drinks:  {shape:'generic', darken:0,   sag:0,   mold:0,   shrink:0,   wrinkle:0},
+  // jars, bottles, tubs, bags, boxes and containers: packages, which hold
+  // their shape; decay shows only as signs on them (VESSELS, BOTTLES)
+  condiments:{shape:'generic', darken:0, sag:0,   mold:0,   shrink:0,   wrinkle:0},
+  frozen:  {shape:'generic', darken:0,   sag:0,   mold:0,   shrink:0,   wrinkle:0},
+  leftovers:{shape:'generic', darken:0,  sag:0,   mold:0,   shrink:0,   wrinkle:0},
   generic: {shape:'generic', darken:1.0, sag:1.0, mold:1.0, shrink:1.0, wrinkle:0.2}
 };
 function fridgeCatOf(it){ return FRIDGE_CAT[food(it).cat || 'generic']; }
@@ -4968,7 +5048,14 @@ const BOTTLE_PROFILES = {
   // a small green bottle: short, screw cap
   small:     {rows: [[0.36, 0.032], [0.46, 0.036], [0.58, 0.095], [0.93, 0.095]], label: [0.64, 0.84], cap: 'screw'},
   // a sake bottle: a long, gently sloping shoulder up to a narrow neck
-  sake:      {rows: [[0.08, 0.034], [0.17, 0.035], [0.52, 0.125], [0.93, 0.125]], label: [0.58, 0.84], cap: 'screw'}
+  sake:      {rows: [[0.08, 0.034], [0.17, 0.035], [0.52, 0.125], [0.93, 0.125]], label: [0.58, 0.84], cap: 'screw'},
+  // Condiments, three shared forms. A squeeze bottle: soft plastic, a
+  // round shoulder under a flip-top cap.
+  squeeze:   {rows: [[0.27, 0.098], [0.34, 0.142], [0.93, 0.146]], label: [0.58, 0.76], cap: 'flip'},
+  // a narrow sauce bottle: long neck, small screw cap
+  sauce:     {rows: [[0.12, 0.032], [0.16, 0.034], [0.36, 0.038], [0.52, 0.102], [0.93, 0.102]], label: [0.67, 0.83], cap: 'screw'},
+  // a glass jar: a short neck under a wide metal lid
+  jar:       {rows: [[0.42, 0.165], [0.465, 0.188], [0.93, 0.188]], label: [0.63, 0.80], cap: 'lid'}
 };
 // Each drawn drink: its form (p), and what shows through the glass --
 // liquid colour and level (an opened wine has been poured from), or a
@@ -5006,6 +5093,26 @@ const BOTTLES = {
   sake:          {p: 'sake', glass: '#5d4128'},
   smallgreen:    {p: 'small', clear: true, glass: '#7fbf8e', level: 0.6}
 };
+// Condiments: the form and what shows through the clear plastic or glass
+// (the glass is the food's base). Every one has an opened version (Open),
+// used down a little, its contents darkening toward brown (natureColor)
+// as the opened jar's time runs out -- the same sign as an opened wine.
+// Natural colours, leaning away from the urgency palette: the reds toward
+// orange, mustard toward lemon, the greens toward leaf.
+const CONDIMENT_LOOKS = {
+  ketchup: ['squeeze', '#b8361f'], mayonnaise: ['squeeze', '#efe7c6'], mustard: ['squeeze', '#dcc33c'],
+  bbqsauce: ['squeeze', '#6e2c18'],
+  soysauce: ['sauce', '#3b2317'], teriyaki: ['sauce', '#4a2a17'], oystersauce: ['sauce', '#4c2e1e'],
+  hotsauce: ['sauce', '#c8431f'], dressing: ['sauce', '#e3d6a8'], creamydressing: ['sauce', '#eee9d6'],
+  vinaigrette: ['sauce', '#d9bf55'],
+  jam: ['jar', '#ad3127'], hoisin: ['jar', '#4b2219'], pickles: ['jar', '#86a640'], jarredsalsa: ['jar', '#c4512b'],
+  tahini: ['jar', '#cfb07e'], horseradish: ['jar', '#ece6d4'], pesto: ['jar', '#4f8c3c'], relish: ['jar', '#6f9c3a']
+};
+const CONDIMENT_LEVEL = {squeeze: 0.31, sauce: 0.40, jar: 0.48};
+Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid]]) => {
+  BOTTLES[k] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p], solid: true};
+  BOTTLES[k + 'Open'] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p] + 0.12, solid: true, open: true};
+});
 Object.keys(BOTTLES).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 const BOTTLE_LABEL_HEX = '#ECE8DC', BOTTLE_FADED_HEX = '#C4C2B8', CAP_HEX = '#B4B9B6', CORK_HEX = '#C9A46A',
   FOIL_HEX = '#BBA765', WOOD_HEX = '#6A4A31';
@@ -5045,7 +5152,7 @@ function bottleMarkupLine(shape, color, fraction, size, seed){
   let drink = '';
   if (b.liquid){
     const c = b.open ? natureColor(b.liquid, fraction) : b.liquid;
-    drink = `<rect x="0" y="${X(b.level)}" width="${s}" height="${X(1 - b.level)}" fill="${c}" fill-opacity="${b.clear ? '.75' : '.62'}" clip-path="url(#${uid}-clip)"/>` + hline(b.level, 0.16, 0.35);
+    drink = `<rect x="0" y="${X(b.level)}" width="${s}" height="${X(1 - b.level)}" fill="${c}" fill-opacity="${b.solid ? '.92' : b.clear ? '.75' : '.62'}" clip-path="url(#${uid}-clip)"/>` + hline(b.level, b.solid ? 0.3 : 0.16, 0.35);
   } else if (b.clear){
     drink = hline(b.level, 0.06, 0.3);
   }
@@ -5089,6 +5196,19 @@ function bottleMarkupLine(shape, color, fraction, size, seed){
     cap = `<path d="M ${X(0.5 - w0)} ${X(top)} L ${X(0.5 + w0)} ${X(top)} L ${X(0.5 + w1)} ${X(fy)} L ${X(0.5 - w1)} ${X(fy)} Z" fill="${FOIL_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`
       + [ly + 0.02, ly + 0.045].map(y => `<line x1="${X(0.5 - w0 - 0.004)}" y1="${X(y)}" x2="${X(0.5 + w0 + 0.004)}" y2="${X(y)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-opacity=".7"/>`).join('')
       + [-0.6, 0, 0.6].map(k => `<line x1="${X(0.5 + k * w0)}" y1="${X(top)}" x2="${X(0.5 + k * w0 * 1.1)}" y2="${X(ly + 0.045)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-opacity=".6"/>`).join('');
+  } else if (prof.cap === 'flip'){
+    // a flip-top: the cap, its hinge line, and the small closed spout
+    const w = lh * 1.02, y0 = ly - 0.075;
+    cap = `<path d="M ${X(0.5 - w)} ${X(ly + 0.012)} L ${X(0.5 - w)} ${X(y0 + 0.015)} Q ${X(0.5 - w)} ${X(y0)} ${X(0.5 - w + 0.02)} ${X(y0)} L ${X(0.5 + w - 0.02)} ${X(y0)} Q ${X(0.5 + w)} ${X(y0)} ${X(0.5 + w)} ${X(y0 + 0.015)} L ${X(0.5 + w)} ${X(ly + 0.012)} Z" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`
+      + `<line x1="${X(0.5 - w)}" y1="${X(y0 + 0.03)}" x2="${X(0.5 + w)}" y2="${X(y0 + 0.03)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`
+      + rect(0.5 - w * 0.3, y0 - 0.03, 0.5 + w * 0.3, y0, CAP_HEX);
+    // opened: a dried smear at the spout
+    if (b.open) cap += `<path d="M ${X(0.5 - w * 0.3)} ${X(y0 - 0.005)} q ${X(w * 0.15)} ${X(0.03)} ${X(w * 0.3)} ${X(0.012)}" fill="none" stroke="${natureColor(b.liquid, fraction)}" stroke-width="${f1(s * 0.012)}" stroke-linecap="round"/>`;
+  } else if (prof.cap === 'lid'){
+    // a wide metal lid, knurled down its edge
+    const w = lh * 1.06, y0 = ly - 0.06;
+    cap = rect(0.5 - w, y0, 0.5 + w, ly + 0.012, CAP_HEX)
+      + Array.from({length: 9}, (_, k) => 0.5 - w + 2 * w * (k + 1) / 10).map(x => `<line x1="${X(x)}" y1="${X(y0 + 0.012)}" x2="${X(x)}" y2="${X(ly)}" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"/>`).join('');
   } else if (prof.cap === 'tab'){
     // the lid seen a little from above, and its pull tab
     const w = prof.rows[0][1];
@@ -5102,8 +5222,176 @@ function bottleMarkupLine(shape, color, fraction, size, seed){
   </svg>`;
 }
 
-function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed){
+// ---- Vessels: the butter block, the frozen packages and the leftovers
+// container. Packages, like the tub and the carton: each keeps its own
+// colour and rigid outline (always the drawing's first <path>, which the
+// freezer's frost and the shelf's resting read), carries a blank label,
+// and shows decay only in small signs -- the label fading, a little mold
+// at a seam, a lid that domes. The container is clear, so the food in it
+// browns as it goes (natureColor), and its strip of tape carries the
+// dish's name, as a real one would. Frozen ones are drawn at the decay
+// they had when frozen; freezer burn is drawn over them.
+const TAPE_HEX = '#E6E1CE', BUTTER_HEX = '#ecd98a';
+// The freezer bag's contents, scattered pieces in their own colours.
+const BAG_BITS = {
+  berrybag: ['#4b5f9e', '#c8403f', '#3e3558', '#4b5f9e', '#d0443a'],
+  vegbag:   ['#5bae61', '#d9894a', '#e2d36a', '#4d9a45', '#5bae61'],
+  dumplingbag: ['#ece4cc', '#e2d6b8', '#efe9d6']
+};
+function vesselSigns(fraction, size, seed, labelPts, seam){
+  const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
+  const thin = Math.max(0.6, size * 0.005).toFixed(2);
+  const label = labelPts ? `<path d="${polyD(labelPts)}" fill="${hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}" stroke-width="${thin}"/>` : '';
+  let mold = '';
+  if (seam && fraction > MOLD_START){
+    const rand = seededRand(seed + 997), growT = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
+    const count = Math.round(3 + growT * 7), at = 0.15 + rand() * 0.2;
+    for (let i = 0; i < count; i++){
+      const p = rfLerp(seam[0], seam[1], at + (rand() - 0.3) * 0.18 * (0.5 + growT));
+      mold += `<circle cx="${f1(p[0] + (rand() - 0.5) * size * 0.02)}" cy="${f1(p[1] + rand() * size * 0.02)}" r="${f1(size * (0.008 + rand() * 0.008))}" fill="${MOLD_HEX}" stroke="${LABEL_HEX}" stroke-width="${Math.max(0.4, size * 0.003).toFixed(2)}"/>`;
+    }
+  }
+  return label + mold;
+}
+const VESSELS = {
+  // A block of butter in its paper wrap, seen from a little above: front,
+  // top and end faces, the wrap's folded end. As it goes, a grease stain
+  // spreads through the paper and the exposed edge yellows.
+  butter: (color, fraction, size, seed) => {
+    const P = pts => scalePts(size, pts), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+    const hull = P([[0.14, 0.50], [0.30, 0.39], [0.88, 0.39], [0.88, 0.69], [0.72, 0.80], [0.14, 0.80]]);
+    const top = P([[0.14, 0.50], [0.30, 0.39], [0.88, 0.39], [0.72, 0.50]]);
+    const end = P([[0.72, 0.50], [0.88, 0.39], [0.88, 0.69], [0.72, 0.80]]);
+    const fold = P([[0.72, 0.50], [0.80, 0.60], [0.88, 0.39]]), fold2 = P([[0.80, 0.60], [0.80, 0.745]]);
+    const R = seededRand(seed + 61), g = Math.max(0, (fraction - 0.25) / 0.75);
+    const stain = g ? `<ellipse cx="${f1(size * (0.30 + R() * 0.25))}" cy="${f1(size * 0.67)}" rx="${f1(size * (0.05 + 0.13 * g))}" ry="${f1(size * (0.03 + 0.06 * g))}" fill="${natureColor(BUTTER_HEX, 0.3 + 0.5 * fraction)}" fill-opacity="${(0.25 + 0.3 * g).toFixed(2)}"/>` : '';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="${polyD(hull)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+      <path d="${polyD(top)}" fill="${hexLerp(color, '#ffffff', 0.35)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${lineD(fold)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".55" stroke-width="${thin}"/>
+      <path d="${lineD(fold2)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${thin}"/>
+      <path d="M ${f1(size * 0.14)} ${f1(size * 0.80)} L ${f1(size * 0.72)} ${f1(size * 0.80)}" stroke="${natureColor(BUTTER_HEX, fraction)}" stroke-width="${f1(size * 0.014)}"/>
+      ${stain}
+      ${vesselSigns(fraction, size, seed, P([[0.24, 0.57], [0.62, 0.57], [0.62, 0.72], [0.24, 0.72]]), P([[0.14, 0.50], [0.72, 0.50]]))}
+    </svg>`;
+  },
+  // A round ice cream tub, a little from above: the lid's top and rim,
+  // the body tapering to its base.
+  icecream: (color, fraction, size, seed) => {
+    const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+    const top = 0.40, rim = 0.47, base = 0.86, rx = 0.32, rb = 0.27, ry = 0.06;
+    const hull = `M ${X(0.5 - rx)} ${X(top)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 + rx)} ${X(top)} L ${X(0.5 + rx)} ${X(rim)} L ${X(0.5 + rb)} ${X(base)} A ${X(rb)} ${X(ry * 0.8)} 0 0 1 ${X(0.5 - rb)} ${X(base)} L ${X(0.5 - rx)} ${X(rim)} Z`;
+    const lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top)}" rx="${X(rx)}" ry="${X(ry)}" fill="${hexLerp(color, '#ffffff', 0.3)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+    const rimLine = `<path d="M ${X(0.5 - rx)} ${X(rim)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(rim)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+    const lbl = [[0.5 - rx + 0.05, 0.58], [0.5 + rx - 0.06, 0.58], [0.5 + rb - 0.03, 0.77], [0.5 - rb + 0.03, 0.77]];
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="${hull}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+      ${lidTop}${rimLine}
+      ${vesselSigns(fraction, size, seed, scalePts(size, lbl), [[size * (0.5 - rx), size * rim], [size * (0.5 + rx), size * rim]])}
+    </svg>`;
+  },
+  // A flat freezer bag, zip along the top, the pieces in it showing
+  // through the clear plastic.
+  bag: (color, fraction, size, seed, name, shape) => {
+    const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+    const out = scalePts(size, [[0.20, 0.30], [0.80, 0.30], [0.82, 0.46], [0.83, 0.70], [0.80, 0.86], [0.50, 0.88], [0.20, 0.86], [0.17, 0.70], [0.18, 0.46]]);
+    const d = smoothClosedPath(out), uid = 'bag' + (fridgeShapeCounter++);
+    const R = seededRand(seed + 71), bits = BAG_BITS[shape] || BAG_BITS.vegbag;
+    let pieces = '';
+    if (shape === 'dumplingbag'){
+      // half-moons, each with its pleats
+      for (let i = 0; i < 9; i++){
+        const x = 0.30 + (i % 3) * 0.2 + (R() - 0.5) * 0.04, y = 0.54 + Math.floor(i / 3) * 0.11 + (R() - 0.5) * 0.03, w = 0.085, h = 0.055;
+        pieces += `<path d="M ${X(x - w)} ${X(y + h * 0.4)} Q ${X(x)} ${X(y - h * 1.6)} ${X(x + w)} ${X(y + h * 0.4)} Z" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".55" stroke-width="${thin}" stroke-linejoin="round"/>`
+          + [-0.4, 0, 0.4].map(k => `<line x1="${X(x + k * w * 0.8)}" y1="${X(y - h * 0.55)}" x2="${X(x + k * w * 0.6)}" y2="${X(y - h * 0.1)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`).join('');
+      }
+    } else for (let i = 0; i < 26; i++){
+      const x = 0.24 + R() * 0.52, y = 0.47 + R() * 0.37, r = 0.035 + R() * 0.025;
+      pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`;
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="${d}" fill="${color}" fill-opacity=".7" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+      <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
+      <g clip-path="url(#${uid}-clip)">${pieces}
+        <rect x="0" y="0" width="${size}" height="${X(0.38)}" fill="${color}"/>
+        <line x1="0" y1="${X(0.36)}" x2="${size}" y2="${X(0.36)}" stroke="${INK_HEX}" stroke-width="${thin}"/>
+        <line x1="0" y1="${X(0.385)}" x2="${size}" y2="${X(0.385)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>
+      </g>
+      <line x1="${X(0.27)}" y1="${X(0.42)}" x2="${X(0.27)}" y2="${X(0.8)}" stroke="#ffffff" stroke-opacity=".7" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>
+      ${vesselSigns(fraction, size, seed, scalePts(size, [[0.50, 0.42], [0.74, 0.42], [0.74, 0.56], [0.50, 0.56]]), null)}
+    </svg>`;
+  },
+  // A flat box, lying down, a little from above: its top and front.
+  box: (color, fraction, size, seed, name, shape) => {
+    const deep = shape === 'popbox';
+    const y0 = deep ? 0.46 : 0.56, y1 = deep ? 0.62 : 0.68, y2 = 0.84;
+    const P = pts => scalePts(size, pts), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+    const hull = P([[0.08, y1], [0.26, y0], [0.92, y0], [0.92, y0 + (y2 - y1)], [0.74, y2], [0.08, y2]]);
+    const top = P([[0.08, y1], [0.26, y0], [0.92, y0], [0.74, y1]]);
+    const end = P([[0.74, y1], [0.92, y0], [0.92, y0 + (y2 - y1)], [0.74, y2]]);
+    const lbl = P([[0.30, y0 + 0.02], [0.66, y0 + 0.02], [0.58, y1 - 0.02], [0.22, y1 - 0.02]]);
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="${polyD(hull)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+      <path d="${polyD(top)}" fill="${hexLerp(color, '#ffffff', 0.25)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <line x1="${f1(size * 0.10)}" y1="${f1(size * (y1 + y2) / 2)}" x2="${f1(size * 0.72)}" y2="${f1(size * (y1 + y2) / 2)}" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"/>
+      ${vesselSigns(fraction, size, seed, lbl, null)}
+    </svg>`;
+  },
+  // A clear food container with a snap lid, the food in it, and a strip
+  // of tape on the front with the dish's name. The food browns as it
+  // goes; mold starts on its surface; past half-gone the lid domes.
+  leftovers: (color, fraction, size, seed, name) => {
+    const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+    const bulge = packageBulge(fraction, size) / size;
+    const body = [[0.15, 0.47], [0.85, 0.47], [0.81, 0.85], [0.19, 0.85]];
+    const d = polyD(scalePts(size, body)), uid = 'lo' + (fridgeShapeCounter++);
+    const R = seededRand(seed + 83), food = natureColor('#b48a58', fraction);
+    const surf = [];
+    for (let k = 0; k <= 10; k++) surf.push([0.12 + k * 0.076, 0.58 + (R() - 0.5) * 0.05]);
+    const foodD = 'M ' + surf.map(([x, y]) => X(x) + ' ' + X(y)).join(' L ') + ` L ${X(0.9)} ${X(0.9)} L ${X(0.1)} ${X(0.9)} Z`;
+    let bits = '';
+    for (let i = 0; i < 7; i++) bits += `<circle cx="${X(0.24 + R() * 0.52)}" cy="${X(0.64 + R() * 0.16)}" r="${X(0.02 + R() * 0.02)}" fill="${natureColor(['#5f9a48', '#c9652f', '#e3d7b0'][i % 3], fraction)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
+    let mold = '';
+    if (fraction > MOLD_START){
+      const g = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
+      for (let i = 0; i < Math.round(3 + g * 8); i++){
+        const s0 = surf[1 + Math.floor(R() * 8)];
+        mold += `<circle cx="${X(s0[0] + (R() - 0.5) * 0.05)}" cy="${X(s0[1] + 0.012 + R() * 0.03)}" r="${X(0.012 + R() * 0.014 * (0.5 + g))}" fill="${MOLD_HEX}" stroke="${LABEL_HEX}" stroke-width="${Math.max(0.4, size * 0.003).toFixed(2)}"/>`;
+      }
+    }
+    const lid = `M ${X(0.11)} ${X(0.47)} L ${X(0.11)} ${X(0.415)} Q ${X(0.5)} ${X(0.40 - bulge * 2)} ${X(0.89)} ${X(0.415)} L ${X(0.89)} ${X(0.47)} Z`;
+    // the tape and the name on it, cut to what fits
+    const fs = 0.062, tx0 = 0.24, tx1 = 0.76, maxCh = Math.floor((tx1 - tx0 - 0.03) / (fs * 0.62));
+    let text = String(name || '');
+    if (text.length > maxCh){
+      const words = text.split(' '); text = '';
+      for (const w of words){ if ((text ? text + ' ' + w : w).length > maxCh) break; text = text ? text + ' ' + w : w; }
+      if (!text) text = String(name).slice(0, maxCh);
+    }
+    const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
+    const tape = `<path d="M ${X(tx0)} ${X(0.515)} L ${X(tx1)} ${X(0.51)} L ${X(tx1 - 0.008)} ${X(0.585)} L ${X(tx0 + 0.006)} ${X(0.59)} Z" fill="${hexLerp(TAPE_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`
+      + (text ? `<text x="${X(tx0 + 0.02)}" y="${X(0.567)}" font-family="tonos-mono-vf, ui-monospace, monospace" style="text-transform:none;letter-spacing:0" font-size="${X(fs)}" fill="${INK_HEX}" fill-opacity="${(0.85 - 0.45 * fade).toFixed(2)}">${esc(text)}</text>` : '');
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="${d}" fill="${color}" fill-opacity=".6" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
+      <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
+      <g clip-path="url(#${uid}-clip)"><path d="${foodD}" fill="${food}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>${bits}${mold}</g>
+      <line x1="${X(0.21)}" y1="${X(0.52)}" x2="${X(0.235)}" y2="${X(0.8)}" stroke="#ffffff" stroke-opacity=".75" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>
+      <path d="${lid}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <rect x="${X(0.09)}" y="${X(0.43)}" width="${X(0.03)}" height="${X(0.05)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/>
+      <rect x="${X(0.88)}" y="${X(0.43)}" width="${X(0.03)}" height="${X(0.05)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/>
+      ${tape}
+    </svg>`;
+  }
+};
+// Which vessel each shape is drawn as.
+const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'box', popbox: 'box', leftovers: 'leftovers'};
+Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
+
+function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name){
   if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed);
+  if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape);
   if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed);
   const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
@@ -5264,7 +5552,7 @@ function buildShelfItem(p, day){
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = shortLeft(it, d);
   const itemStyle = `left:${x}px;z-index:${p.z}`;
-  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id, f.en);
   if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   return `<div class="fridge-item" style="${itemStyle}">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
@@ -5296,7 +5584,7 @@ function buildDrawerItem(it, day){
   const color = foodBodyColor(it, frac);
   const labelColor = COLOR[state(d)]; // always 'gone' here, same lookup as everywhere else
   const shapeStyle = `width:${size}px;height:${size}px`;
-  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id, f.en);
   return `<div class="fridge-item">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
     <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span>${fridgeActs(it, f)}</div>
@@ -5397,10 +5685,11 @@ const RF = {
   upperY: 280, eyeY: 418, edge: 12, crispTop: 476, crispBaseY: 498,
   bins: [60, 190, 320]
 };
-// Carton, tub, box and bottle items live in the door bins -- unless urgency has
-// already put them on the eye-level shelf, which always wins.
-const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt']);
-const toDoorBin = it => RF_DOOR_KEYS.has(it.key) || food(it).cat === 'drinks';
+// Carton, tub, box, bottle and jar items live in the door bins -- unless
+// urgency has already put them on the eye-level shelf, which always wins.
+// Condiments too, and butter in its compartment.
+const RF_DOOR_KEYS = new Set(['milk', 'egg', 'yogurt', 'butter']);
+const toDoorBin = it => RF_DOOR_KEYS.has(it.key) || food(it).cat === 'drinks' || food(it).cat === 'condiments';
 // Must match the phone breakpoint in the .rf CSS, where the door only
 // opens to square and its bins can't be seen.
 const RF_PHONE = window.matchMedia('(max-width:720px)');
@@ -5551,8 +5840,11 @@ function rfDrawCabinet(){
   let binFront = '';
   RF.bins.forEach(bt => {
     din += `<rect class="binback i" x="24" y="${bt + 18}" width="${DW - 48}" height="48" rx="3"/>`;
+    // the front, over the lower part of what stands in the bin, and its
+    // lip, a solid band along the top, so the bottles stand inside it
     binFront += `<rect class="bin o" x="22" y="${bt + 30}" width="${DW - 44}" height="38" rx="4"/>
-      <line class="glasshi" x1="32" y1="${bt + 34}" x2="110" y2="${bt + 34}"/>`;
+      <rect class="binlip o" x="22" y="${bt + 30}" width="${DW - 44}" height="7" rx="3"/>
+      <line class="glasshi" x1="32" y1="${bt + 40}" x2="110" y2="${bt + 40}"/>`;
   });
   document.getElementById('rfDoorInsideSvg').innerHTML = `<g filter="url(#rfWobble)">${din}</g>`;
   document.getElementById('rfDoorBinFrontSvg').innerHTML = `<g filter="url(#rfWobble)">${binFront}</g>`;
@@ -5668,7 +5960,7 @@ function rfDrawFreezer(){
     <rect class="o nf" x="0" y="0" width="10" height="100" vector-effect="non-scaling-stroke"/>`;
 }
 
-// Size follows urgency and nothing else: days left through the same
+// Size follows urgency and nothing else (except in the door bins, binItemU): days left through the same
 // sqrt scale the decay line and the line-art fridge use (pos), so a
 // today item is the largest thing in the drawing and a 28-day carrot one
 // of the smallest -- whatever their category. Gone items share one size.
@@ -5677,6 +5969,29 @@ function rfDrawFreezer(){
 // square is drawn larger (BOTTLE_BOX) to carry the same visual weight as
 // a round fruit or a carton at the same urgency.
 const BOTTLE_BOX = 1.6;
+// In the door bins size doesn't tell urgency (only what isn't urgent is
+// there): each item stands about one and a half times the bin front's
+// height (BIN_H), a little more for a wine bottle, less for a jar, a can
+// or a block of butter, so the bins read as a real door's. Its square is
+// sized from how much of it the drawing fills: a bottle's from its
+// profile, lip to base, cap included (BIN_CAP); anything else from its
+// outline (BIN_OTHER). Widths follow from the forms themselves: a squeeze
+// bottle is wide, a soy sauce bottle narrow.
+const BIN_H = 38;
+const BIN_CAP = {crown: 0.03, cork: 0.035, screw: 0.06, bar: 0.065, foil: 0.02, tab: 0.022, flip: 0.105, lid: 0.06};
+const BIN_FORM_K = {squeeze: 1.5, sauce: 1.6, jar: 1.25, longneck: 1.6, can: 1.25, wine: 1.8, sparkling: 1.8,
+  spirit: 1.8, square: 1.4, small: 1.4, sake: 1.7};
+// [share of the square the outline fills, top to bottom; height in bin fronts]
+const BIN_OTHER = {carton: [0.86, 1.6], eggs: [0.6, 1.0], dairy: [0.6, 1.1], butter: [0.41, 0.85]};
+function binItemU(it){
+  const b = BOTTLES[fridgeShapeOf(it)];
+  if (b){
+    const prof = BOTTLE_PROFILES[b.p];
+    return BIN_H * (BIN_FORM_K[b.p] || 1.5) / (0.93 - (prof.rows[0][0] - (BIN_CAP[prof.cap] || 0.04)));
+  }
+  const [frac, k] = BIN_OTHER[fridgeShapeOf(it)] || [0.7, 1.2];
+  return BIN_H * k / frac;
+}
 function rfUrgencyPx(it, day){
   const d = leftAt(it, day);
   const k = BOTTLES[fridgeShapeOf(it)] ? BOTTLE_BOX : 1;
@@ -5731,7 +6046,7 @@ function rfBuildFoodItem(it, day, u, z){
   const frac = gone ? 1 : decayFraction(it, day);
   const px = Math.round(u * RF.PX);
   const color = foodBodyColor(it, frac);
-  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id, f.en);
   if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
   // No tags under items: the fridge tells urgency by position, size and
@@ -5840,12 +6155,14 @@ function renderRealFridge(){
   rfFillRow(crisperItems, goneFit, day, {dropU: 3, stringU: 3});
 
   const DW = RF.door.x1 - RF.door.x0, DH = RF.door.y1 - RF.door.y0;
+  // three to a bin; past nine, shared evenly so none is left undrawn
+  // (the row overlaps, then scales, to fit)
+  const perBin = Math.max(3, Math.ceil(doorItems.length / bins.length));
   bins.forEach((el, i) => {
     const bt = RF.bins[i];
     rfPlaceRow(el, 30, DW - 30, bt + 52, DW, DH);
-    const mine = doorItems.slice(i * 3, i * 3 + 3);
-    const tallest = Math.max(0, ...mine.map(it => rfUrgencyPx(it, day) / RF.PX));
-    rfFillRow(el, rfFitRow(mine, day, DW - 60, tallest ? Math.min(1, 80 / tallest) : 1), day, {dropU: 68 - 52 + 4, stringU: 4});
+    const mine = doorItems.slice(i * perBin, i * perBin + perBin);
+    rfFillRow(el, rfFitRow(mine, day, DW - 60, 1, binItemU), day, {dropU: 68 - 52 + 4, stringU: 4});
   });
 
   // foodShapeMarkupLine centres a body in its square; rfWireItems pulls
@@ -6678,6 +6995,25 @@ function wireDishCard(r, boxId, skipSet){
 }
 
 function renderTodayCard(entry){
+  renderTodayCardBody(entry);
+  renderLeftoversAsk();
+}
+// After Cook this, the board asks "Any leftovers?" above whatever comes
+// next. Yes puts a lidded container named for the dish in the fridge
+// (addLeftovers); No drops the question. Asked once per dish cooked.
+let leftoversAsk = null; // {dish, key} while the question stands
+function renderLeftoversAsk(){
+  if (!leftoversAsk) return;
+  const box = document.getElementById('tonight');
+  box.insertAdjacentHTML('afterbegin', `<div class="leftovers-ask" id="leftoversAsk">
+    <p>${esc(leftoversAsk.dish)} cooked. Any leftovers?</p>
+    <button class="solid js-leftovers-yes">Yes, into the fridge</button>
+    <button class="js-leftovers-no">No</button>
+  </div>`);
+  box.querySelector('.js-leftovers-yes').onclick = () => addLeftovers();
+  box.querySelector('.js-leftovers-no').onclick = () => { leftoversAsk = null; render(); };
+}
+function renderTodayCardBody(entry){
   const box = document.getElementById('tonight');
   const day = entry.day;
 
@@ -6832,6 +7168,7 @@ function renderTonight(){
       <div class="eyebrow mono">Tonight</div>
       <p class="mono" style="color:var(--ink-3)">—</p>
     </div>`;
+    renderLeftoversAsk();
     return;
   }
   if (!fridge.some(it => left(it) >= 0)){
@@ -6841,6 +7178,7 @@ function renderTonight(){
       <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
         Everything in the fridge is already past date. Clear it out, then restock to start again.</p>
     </div>`;
+    renderLeftoversAsk();
     return;
   }
 
@@ -7035,7 +7373,32 @@ function cook(r){
     }
   });
   ledger.savedG += g;
+  leftoversAsk = {dish: r.dish.name, key: leftoversOf(r.matched)};
   toast(Math.round(g) + ' g rescued');
+  render();
+}
+// FoodKeeper #173 for leftovers of a dish that used meat, fish, poultry or
+// egg, #174 for one that didn't (both 4 days; freezer 3 and 2 months).
+function leftoversOf(keys){
+  const animal = k => k === 'egg' || k === 'rotisserie' || (FOODS[k] && FOODS[k].cat === 'protein' && k !== 'tofu');
+  return keys.some(animal) ? 'leftovers' : 'leftoversveg';
+}
+// Yes to "Any leftovers?": a container named for the dish, bought today,
+// counted like any other item (decay, Used, Tossed, Freeze). Undo takes
+// it back out and asks again. Never a usual.
+function addLeftovers(){
+  if (!leftoversAsk) return;
+  const ask = leftoversAsk;
+  const it = {id: ++uid, key: ask.key, bought: today(), custom: null, name: ask.dish};
+  fridge.push(it);
+  leftoversAsk = null;
+  toast(ask.dish + ' leftovers in the fridge', () => {
+    const i = fridge.findIndex(x => x.id === it.id);
+    if (i < 0) return;
+    fridge.splice(i, 1);
+    leftoversAsk = ask;
+    render();
+  });
   render();
 }
 
@@ -7181,8 +7544,10 @@ const MEDIAN_MIN = 3;
 const CAT_MEDIANS = (() => {
   const median = xs => { const v = xs.slice().sort((a, b) => a - b), m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   const of = list => ({g: median(list.map(f => f.g)), usd: +median(list.map(f => f.usd)).toFixed(2), n: list.length});
-  // drinks are bottles by liquid weight, not food: out of the medians
-  const all = Object.values(FOODS).filter(f => f.cat !== 'drinks');
+  // drinks are bottles by liquid weight, not food: out of the medians; so
+  // are jars and bottles of condiments, frozen packages and leftovers,
+  // none of which a FoodKeeper fallback item resembles
+  const all = Object.values(FOODS).filter(f => !['drinks', 'condiments', 'frozen', 'leftovers'].includes(f.cat));
   const out = {all: of(all)};
   for (const cat of Object.keys(FALLBACK_BASE)){
     const list = all.filter(f => f.cat === cat);
@@ -7263,6 +7628,10 @@ function shelfSourceOf(it){
   if (it.opened && it.shelf == null && f.opens != null) return f.fk != null
     ? 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening'
     : 'opened: estimated, ' + dayCount(f.opens) + ' after opening — ' + f.note;
+  // a condiment counted by its pantry figure says so: FoodKeeper gives
+  // none for the refrigerator (unopened, where it asks)
+  if (f.pantryFig && it.shelf == null && !it.opened && !it.frozen && !it.thawed)
+    return (f.opens != null ? 'unopened: ' : '') + 'FoodKeeper #' + f.fk + ', ' + dayCount(f.shelf) + ' (its pantry figure; none given for the refrigerator' + (f.opens != null ? ' unopened)' : ')');
   if (it.ripening) return 'ripening: ' + (f.fk != null ? 'FoodKeeper #' + f.fk : 'estimated') + ' counts ' + dayCount(f.shelf) + ' from when it is ripe';
   if (it.shelf != null && it.shelfFrom === 'date')
     return (f.pkgDate ? 'package date' : 'date given at entry')
@@ -7332,7 +7701,10 @@ function entryNeeds(e){
 function entryRecord(e, bought){
   const shelf = entryDated(e) ? parseReceiptDate(e.date) - bought : null;
   const frozen = entryFrozen(e);
-  if (e.key) return {key: e.key, custom: null, shelf, name: FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
+  // a named food (leftovers) keeps the word it was typed as: "Takeout"
+  const named = FOODS[e.key] && FOODS[e.key].named;
+  if (e.key) return {key: e.key, custom: null, shelf,
+    name: named ? cleanName(e.typed || e.raw) : FOODS[e.key] ? null : (e.label.trim() || cleanName(e.raw)),
     ripe: ripensKey(e.key) && !frozen ? (e.ripe || lastRipeChoice(e.key)) : null,
     open: opensKey(e.key) ? (e.open || lastOpenChoice(e.key)) : null, frozen};
   const name = e.label.trim() || e.raw || 'Item';
@@ -7518,11 +7890,13 @@ function commitItems(entries){
       if (rec.open === 'opened') it.opened = true;
       if (rec.frozen) it.frozen = true; // bought frozen: the freezer value counts from purchase
       fridge.push(it);
+      ids.push(it.id);
+      // leftovers are never a usual
+      if (FOODS[rec.key] && FOODS[rec.key].noUsual) continue;
       touchStanding(rec.key, rec.custom, rec.name);
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       if (rec.open) standing[rec.key].open = rec.open;
       if (rec.frozen) standing[rec.key].frozen = true; else delete standing[rec.key].frozen;
-      ids.push(it.id);
     }
   });
   return {ids, notes};

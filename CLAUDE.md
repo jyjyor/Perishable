@@ -26,8 +26,19 @@ consumer food app.
      bottle counts Refrigerate_After_Opening from purchase (FOODS[key].
      opens, it.opened). Unopened wine has no refrigerator figure, only a
      pantry one, and counts by that (red #462 5 years, white #463 2).
-     Sparkling wine, rosé and vermouth ask it too (see rule 5); nothing
-     else has an "opened" state.
+     Sparkling wine, rosé and vermouth ask it too (see rule 5), and so
+     does every condiment FoodKeeper gives an after-opening figure
+     (Refrigerate_After_Opening): ketchup #348, mayonnaise #350, mustard
+     #351, soy and teriyaki sauce #360, oyster sauce #434, hoisin #435,
+     salad dressing #356, creamy dressing #623, vinaigrette #625, jam and
+     jelly #347, barbecue sauce #340, pickles #353, jarred salsa #357,
+     tahini #416, horseradish #346, pesto #354. Unopened, a condiment
+     counts its pantry figure (DOP_Pantry; pantryFig -- FoodKeeper gives
+     none for the refrigerator unopened, as for wine), except horseradish
+     and pesto, which have a refrigerator one (DOP_Refrigerate). Hot sauce
+     #559 (sriracha under it; pantry 6 months), relish #500 and butter #1
+     have no after-opening figure and ask nothing. Nothing else has an
+     "opened" state.
   2. Foods usually kept out of the fridge use the pantry value instead
      (DOP_Pantry, else Pantry): bananas, potatoes, sweet potatoes, whole
      onions, garlic, tomatoes, winter squash, whole spaghetti squash,
@@ -99,7 +110,23 @@ consumer food app.
      kept frozen (no refrigerator or pantry figure, a freezer value, and
      "Food Purchased Frozen" or an after-thawing figure: ice cream,
      frozen edamame, chicken nuggets) is in FK_TABLE as store 'F' with no
-     days, and goes in frozen at entry.
+     days, and goes in frozen at entry. FOODS has five bought-frozen
+     entries (keptFrozen, no shelf): ice cream #317, ice pops #318
+     ("popsicles"), frozen berries #315, frozen vegetables #331, frozen
+     pizza #571 -- #331's and #571's refrigerator figures are "for storage
+     after cooking", not for the frozen product, so they have none.
+     Frozen dumplings (potstickers, gyoza, wontons, bao) are #330
+     "Frozen entrees (prepared meals)", 12 months: frozen prepared foods
+     cooked from frozen, the freezer value quality only.
+  8. Leftovers: #173 (with meat, fish, poultry or egg) and #174
+     (without), 4 days refrigerated, freezer 90 and 60. After Cook this,
+     the board asks "Any leftovers?" (leftoversAsk); Yes puts a container
+     named for the dish (it.name) in the fridge, #173 if the dish used
+     meat, fish, poultry or egg, else #174 (leftoversOf), with Undo; No
+     drops the question. Typed, "leftovers" or "takeout" asks which, and
+     keeps the typed word as the name (named). Leftovers are never a
+     usual (noUsual) and behave like any item: decay, Used, Tossed,
+     Freeze.
      - Freeze (popover) only for a food with a freezer value, not past
        date: into the freezer (it.frozen), the clock restarted today
        (it.clockFrom) on the freezer value; a date set before no longer
@@ -271,6 +298,25 @@ over any drawing, food, package or bottle. A spirit keeps: only the thin
 rim. tools/freezer-burn-study.js shows it at 0/50/100%. Refrigerated
 drinks live in the door bins (toDoorBin) unless urgency puts them at eye
 level; room-temperature ones stand on the kitchen counter (see Kitchen).
+Condiments live in the door bins too, and butter (the door's butter
+compartment); past nine, the bins share them evenly so none goes
+undrawn. In the bins size doesn't tell urgency: each item stands about
+one and a half times the bin front's height (binItemU; a wine bottle a
+little more, a jar, a can or butter less), its width from its own form,
+and the bin's front and solid lip are drawn over its lower part, so it
+stands inside the bin. On a phone the door opens only to square and its
+bins can't be seen: these stand on the upper shelf, sized by urgency. They are packages drawn from three more shared bottle forms
+(squeeze bottle, glass jar, narrow sauce bottle; CONDIMENT_LOOKS) and
+the butter block: the contents show through clear plastic or glass in
+their natural colour, the blank label fades, and an opened one is used
+down a little, its contents darkening toward brown as its time runs
+out. Frozen packages and leftovers are vessels (VESSELS): an ice cream
+tub, a freezer bag with its pieces showing (berries, vegetables,
+dumplings), a flat
+box (pizza, ice pops), and a clear lidded container whose food browns
+and molds, with a strip of tape carrying the dish's name -- the one
+place a drawing has lettering, because a real one would.
+tools/fridge-contents-study.js shows them all.
 
 Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
