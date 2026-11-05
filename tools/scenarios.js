@@ -230,7 +230,7 @@ async function recommendationScenario(browser) {
 
   const eyebrow = await page.textContent('.tonight .eyebrow');
   console.log('eyebrow:', eyebrow);
-  if (eyebrow.trim() !== 'Tonight · rescues 3 items') throw new Error(`eyebrow was "${eyebrow.trim()}", expected "Tonight · rescues 3 items" (onion isn't at risk)`);
+  if (eyebrow.trim() !== 'Rescues 3 items') throw new Error(`eyebrow was "${eyebrow.trim()}", expected "Rescues 3 items" (onion isn't at risk)`);
 
   await page.click('#tabKitchen');
   await page.waitForTimeout(900); // the panel switch settles before Cook this is clicked
@@ -492,7 +492,9 @@ async function pluralAgreementScenario(browser) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForSelector('#headline');
-  await page.fill('#entry', 'chicken, spinach, milk, onion, egg 34d');
+  // No spinach: no dish today can cook the eggs (Eggs on toast is one
+  // short), Dinner cooks the rest, so Tomorrow's fact is about the eggs.
+  await page.fill('#entry', 'chicken, milk, onion, egg 34d');
   await page.click('#addbtn');
   await answerPreview(page);
   await page.waitForTimeout(150);
@@ -526,12 +528,15 @@ async function dishRepeatScenario(browser) {
   await page.waitForTimeout(150);
 
   console.log('\n--- DISH REPEAT COLLAPSING ---');
+  // Yogurt bowl with mango is a breakfast (and snack) dish: today's
+  // breakfast has it, so that's the meal to look at.
+  await page.click('#tonight .meal-tab[data-meal="breakfast"]');
   const tonightH2 = await page.textContent('#tonight h2');
   const tomorrowDishName = await page.textContent('#tomorrow .dish-name');
   console.log('Tonight:', tonightH2.trim());
   console.log('Tomorrow dish-sub:', tomorrowDishName.trim());
   if (tonightH2.trim() !== 'Yogurt bowl with mango') throw new Error(`expected tonight's near-miss to be "Yogurt bowl with mango", got "${tonightH2.trim()}"`);
-  const expected = 'Same dish as tonight: Yogurt bowl with mango.';
+  const expected = "Same dish as today's breakfast: Yogurt bowl with mango.";
   if (tomorrowDishName.trim() !== expected) throw new Error(`expected Tomorrow to collapse to "${expected}", got "${tomorrowDishName.trim()}"`);
   // Collapsed cards still carry no full rescue chip row or stats -- confirm
   // it didn't just render the full card again with different wording.
@@ -3481,16 +3486,17 @@ async function panelsScenario(browser) {
     expectEqual(`${tag}: toggles with storage failing`, (await usuals()).chips, u.total);
     await page.click('#usualsMore');
 
-    // The Tonight line, and the outline on what the dish uses.
+    // The line under the bag (the suite's clock says Dinner), and the
+    // outline on what the dish uses.
     const t = await page.evaluate(() => ({
       line: document.getElementById('tonightLine').textContent.replace(/\s+/g, ' ').trim(),
       dish: document.querySelector('#tonight h2').textContent.trim(),
       outlined: [...document.querySelectorAll('#rfUnit .rf-tonight')].map(b => +b.dataset.rfItem).sort(),
-      uses: boardItems.filter(it => document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`)).map(it => it.id).sort(),
+      uses: nextMealItems.filter(it => document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`)).map(it => it.id).sort(),
       shown: [...document.querySelectorAll('#rfUnit .rf-tn')].filter(g => getComputedStyle(g).display !== 'none').length,
     }));
     console.log(`${tag}: tonight`, JSON.stringify(t));
-    expectEqual(`${tag}: Tonight line`, t.line, `Tonight${t.dish} →`);
+    expectEqual(`${tag}: the line names Dinner`, t.line, `Dinner:${t.dish} →`);
     if (!t.uses.length) throw new Error(`${tag}: the fixture's dish should use something in the fridge`);
     expectEqual(`${tag}: the fridge items the dish uses are marked`, t.outlined, t.uses);
     expectEqual(`${tag}: no outline shown by default`, t.shown, 0);
@@ -3518,7 +3524,7 @@ async function panelsScenario(browser) {
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
   await seedMixed18(page, [['beets', 0], ['carrot', 0]]);
   await page.waitForSelector('#headline');
-  const none = await page.evaluate(() => [tonightDish, document.getElementById('tonightLine').hidden, document.querySelectorAll('.rf-tonight').length]);
+  const none = await page.evaluate(() => [nextMealDish, document.getElementById('tonightLine').hidden, document.querySelectorAll('.rf-tonight').length]);
   expectEqual('no dish, no Tonight line, nothing outlined', none, [null, true, 0]);
   await page.context().close();
 }
@@ -3685,7 +3691,7 @@ async function tonightOutlineScenario(browser) {
     await page.waitForTimeout(500);
     const shown = () => page.evaluate(() => [...document.querySelectorAll('#rfUnit .rf-tn')]
       .filter(g => getComputedStyle(g).display !== 'none').map(g => fridge.find(i => i.id === +g.closest('[data-rf-item]').dataset.rfItem).key).sort());
-    const st = await page.evaluate(() => ({dish: tonightDish, uses: boardItems.map(i => i.key).sort(),
+    const st = await page.evaluate(() => ({dish: nextMealDish && nextMealDish.name, uses: nextMealItems.map(i => i.key).sort(),
       eggWhere: (e => e.closest('[id^="rfDoorBin"], #rfShelfEye, #rfShelfUpper').id)(document.querySelector(`[data-rf-item="${fridge.find(i => i.key === 'egg').id}"]`)),
       dashed: (g => g && g.querySelector('path[stroke-dasharray]') && g.querySelectorAll('path[stroke-dasharray]').length)(document.querySelector(`[data-rf-item="${fridge.find(i => i.key === 'egg').id}"] .rf-tn`))}));
     console.log(JSON.stringify(st));
@@ -4361,9 +4367,238 @@ async function dupRenderScenario(browser) {
   }
 }
 
+// ---- Meals. The Kitchen's "Tonight" is Breakfast / Lunch / Dinner /
+// Snack. Every context in this suite runs on a mocked clock (the
+// browser.newContext wrapper at the bottom pins it at 18:00 today, so the
+// older scenarios, written for "tonight", see Dinner); these set their own.
+async function mealContext(browser, hh, mm = 0, vp = { width: 1280, height: 1000 }) {
+  const ctx = await browser.newContext({ viewport: vp });
+  const d = new Date(); d.setHours(hh, mm, 0, 0);
+  await ctx.clock.setFixedTime(d);
+  return ctx;
+}
+// Bananas, eggs, milk, spinach and chicken, with an onion, strawberries,
+// yogurt, a tomato and scallions so every meal has something to choose.
+const MEALS_FIXTURE = [['banana', 1], ['egg', 10], ['milk', 2, 6], ['spinach', 4], ['chicken', 1],
+  ['onion', 5], ['strawberry', 0], ['yogurt', 3], ['tomato', 3], ['scallion', 3], ['apple', 20], ['grapes', 2]];
+const mealState = page => page.evaluate(() => ({
+  pressed: [...document.querySelectorAll('#tonight .meal-tab')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.meal),
+  h2: (document.querySelector('#tonight h2') || {textContent: ''}).textContent.trim(),
+  line: document.getElementById('tonightLine').hidden ? null : document.getElementById('tonightLine').textContent.replace(/\s+/g, ' ').trim(),
+  plates: [...document.querySelectorAll('#tonight .meal-plate')].map(b => b.dataset.meal),
+  board: [...document.querySelectorAll('#kcBoardItems [data-board-item]')].map(e => +e.dataset.boardItem).sort((a, b) => a - b),
+  dish: !!document.querySelector('#kcDish svg') && !document.getElementById('kcDish').hidden
+}));
+
+// The default meal by the clock: before 10:30 Breakfast, until 15:00
+// Lunch, until 21:00 Dinner, then Snack -- on both sides of each line. The
+// line under the bag names the default meal.
+async function mealDefaultScenario(browser) {
+  console.log('\n--- MEALS: the default meal by the (mocked) clock ---');
+  const cases = [[0, 5, 'breakfast'], [7, 0, 'breakfast'], [10, 29, 'breakfast'], [10, 30, 'lunch'], [14, 59, 'lunch'],
+    [15, 0, 'dinner'], [20, 59, 'dinner'], [21, 0, 'snack'], [23, 30, 'snack']];
+  for (const [hh, mm, want] of cases) {
+    const ctx = await mealContext(browser, hh, mm);
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, MEALS_FIXTURE);
+    await page.waitForSelector('#tonight .meal-tab');
+    const st = await mealState(page);
+    const fn = await page.evaluate(() => [defaultMeal(), selectedMeal(), nextMealDish && nextMealDish.name]);
+    const tag = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    console.log(tag, JSON.stringify({pressed: st.pressed, line: st.line}));
+    expectEqual(`${tag}: default meal`, [fn[0], fn[1], st.pressed], [want, want, [want]]);
+    const label = {breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack'}[want];
+    if (fn[2]) expectEqual(`${tag}: the line names the default meal`, st.line, `${label}:${fn[2]} →`);
+    else expectEqual(`${tag}: no dish for the default meal, no line`, st.line, null);
+    expectEqual(`${tag}: the other three meals beside it`, st.plates, ['breakfast', 'lunch', 'dinner', 'snack'].filter(m => m !== want));
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
+// Switching meals: the switcher and the small plates select a meal; the
+// board, its dish drawing and the card follow it; the line under the bag
+// stays on the default meal, and so does the fridge's outline; nothing is
+// saved, so a reload opens on the default meal again. The line opens the
+// Kitchen on the meal it names.
+async function mealSwitchScenario(browser) {
+  console.log('\n--- MEALS: switching, not remembered ---');
+  const ctx = await mealContext(browser, 8, 0);
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await seedMixed18(page, MEALS_FIXTURE);
+  await page.waitForSelector('#tonight .meal-tab');
+  const plan = () => page.evaluate(() => {
+    const p = planDay(fridge, today());
+    return Object.fromEntries(MEALS.map(m => [m, p.meals[m].result ? {name: p.meals[m].result.dish.name, ids: p.meals[m].result.matched.map(k => p.meals[m].result.have[k].id).sort((a, b) => a - b)} : null]));
+  });
+  const P = await plan();
+  console.log('plan at 08:00', JSON.stringify(P));
+  const before = await mealState(page);
+  expectEqual('opens on Breakfast', [before.pressed, before.h2], [['breakfast'], P.breakfast.name]);
+  const outlined = () => page.evaluate(() => [...document.querySelectorAll('#rfUnit .rf-tonight')].map(b => +b.dataset.rfItem).sort((a, b) => a - b));
+  // what the breakfast dish uses that stands in the fridge (not the bowl)
+  const inFridge = await page.evaluate(ids => ids.filter(id => document.querySelector(`#rfUnit .rf-cavity [data-rf-item="${id}"], #rfUnit .rf-door [data-rf-item="${id}"]`)), P.breakfast.ids);
+  expectEqual('the fridge outlines the breakfast dish', await outlined(), inFridge);
+
+  for (const m of ['lunch', 'dinner', 'snack', 'breakfast']) {
+    await page.click(`#tonight .meal-tab[data-meal="${m}"]`);
+    const st = await mealState(page);
+    const want = P[m];
+    expectEqual(`switched to ${m}`, st.pressed, [m]);
+    if (want) {
+      expectEqual(`${m}: its dish on the card`, st.h2, want.name);
+      expectEqual(`${m}: its ingredients on the board`, st.board, want.ids);
+      expectEqual(`${m}: its dish drawn on the board`, st.dish, true);
+    } else expectEqual(`${m}: no dish, nothing drawn`, st.dish, false);
+    expectEqual(`${m}: the line still names Breakfast`, st.line.startsWith('Breakfast:'), true);
+  }
+  // a small plate selects its meal too
+  await page.click('#tonight .meal-plate[data-meal="lunch"]');
+  expectEqual('a small plate selects its meal', (await mealState(page)).pressed, ['lunch']);
+  expectEqual('the outline stays on Breakfast', await outlined(), inFridge);
+  // the line opens the Kitchen on the meal it names
+  await page.click('#tonightLine');
+  await page.waitForTimeout(400);
+  expectEqual('the line opens Kitchen on Breakfast', [(await mealState(page)).pressed,
+    await page.$eval('#tabKitchen', t => t.getAttribute('aria-selected'))], [['breakfast'], 'true']);
+  // not remembered
+  await page.click('#tonight .meal-tab[data-meal="dinner"]');
+  const saved = await page.evaluate(() => Object.keys(localStorage).join(' ') + ' ' + localStorage.getItem('perishable.v1'));
+  expectEqual('the switch is not saved', /dinner/i.test(saved), false);
+  await page.reload();
+  await page.waitForSelector('#tonight .meal-tab');
+  expectEqual('a reload opens on the default meal again', (await mealState(page)).pressed, ['breakfast']);
+  console.log('switched through every meal and back; the line and outline stayed on Breakfast; not saved');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// No ingredient reused within a day: at every time of day, the fridge
+// records the four meals use are all different -- through the drawn
+// boards, each meal selected in turn, not just the plan's own numbers.
+async function mealNoReuseScenario(browser) {
+  console.log('\n--- MEALS: no ingredient used twice in a day ---');
+  for (const hh of [8, 12, 18, 22]) {
+    const ctx = await mealContext(browser, hh);
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, [...MEALS_FIXTURE, ['egg', 12], ['tomato', 2], ['mango', 1], ['bread', 2], ['broccoli', 3], ['garlic', 6]]);
+    await page.waitForSelector('#tonight .meal-tab');
+    const used = {};
+    for (const m of ['breakfast', 'lunch', 'dinner', 'snack']) {
+      await page.click(`#tonight .meal-tab[data-meal="${m}"]`);
+      const st = await mealState(page);
+      used[m] = st.h2 && st.board.length ? {dish: st.h2, ids: st.board} : null;
+    }
+    console.log(`${hh}:00`, JSON.stringify(used));
+    const all = Object.values(used).filter(Boolean).flatMap(u => u.ids);
+    expectEqual(`${hh}:00: at least three meals have a dish`, Object.values(used).filter(Boolean).length >= 3, true);
+    expectEqual(`${hh}:00: no record on two boards`, all.length, new Set(all).size);
+    const names = Object.values(used).filter(Boolean).map(u => u.dish);
+    expectEqual(`${hh}:00: no dish twice`, names.length, new Set(names).size);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
+// The most urgent ingredient goes to the earliest meal still ahead: at
+// 08:00 strawberries on their last day go to Breakfast (not the snack, the
+// other meal that has a strawberry dish); at 12:00 chicken on its last day
+// goes to Lunch, though Dinner has a chicken dish too; at 18:00 it goes to
+// Dinner. With another fridge, a dish that scores higher without it loses.
+async function mealUrgentFirstScenario(browser) {
+  console.log('\n--- MEALS: the most urgent ingredient in the earliest meal ahead ---');
+  const FIX = [['strawberry', 3], ['banana', 0], ['yogurt', 10], ['kiwi', 0], ['chicken', 2], ['spinach', 2], ['milk', 2, 6],
+    ['onion', 4], ['broccoli', 2], ['garlic', 6], ['ginger', 3], ['egg', 10], ['tomato', 1], ['scallion', 2]];
+  for (const [hh, meal, key] of [[8, 'breakfast', 'strawberry'], [12, 'lunch', 'chicken'], [18, 'dinner', 'chicken']]) {
+    const ctx = await mealContext(browser, hh);
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, FIX);
+    await page.waitForSelector('#tonight .meal-tab');
+    const st = await page.evaluate(([meal, key]) => {
+      const it = fridge.find(i => i.key === key);
+      // nothing this meal could cook is sooner to turn
+      const usable = fridge.filter(i => leftAt(i, today()) >= 0 && DISHES.some(d => d.meals.includes(meal) && d.needs.includes(i.key)));
+      return {soonest: Math.min(...usable.map(i => left(i))), left: left(it), id: it.id,
+        board: boardItems.map(i => i.key), selected: selectedMeal(), dish: (document.querySelector('#tonight h2') || {}).textContent};
+    }, [meal, key]);
+    console.log(`${hh}:00`, JSON.stringify(st));
+    expectEqual(`${hh}:00: opens on ${meal}`, st.selected, meal);
+    expectEqual(`${hh}:00: ${key} is the soonest ${meal} can use`, st.left, st.soonest);
+    expectEqual(`${hh}:00: ${meal} uses the ${key}`, st.board.includes(key), true);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+  // The rule, on its own: a dish with a higher score (three things a day
+  // or two from turning) loses to one that uses the single soonest item.
+  const ctx = await mealContext(browser, 12);
+  const page = await ctx.newPage();
+  await seedMixed18(page, [['chicken', 2], ['spinach', 0], ['milk', 0, 10], ['onion', 0], ['tomato', 6], ['egg', 34], ['scallion', 6], ['garlic', 0]]);
+  await page.waitForSelector('#tonight .meal-tab');
+  const r = await page.evaluate(() => {
+    const t = today(), plain = recommendAt(fridge, t, new Set()), lunch = planDay(fridge, t, 'lunch').meals.lunch.result;
+    return {plain: plain.dish.name, lunch: lunch.dish.name, lunchUses: lunch.matched, chickenLeft: left(fridge.find(i => i.key === 'chicken'))};
+  });
+  console.log('urgent vs score:', JSON.stringify(r));
+  expectEqual('by score alone, the three things a day from turning', r.plain, 'Tomato egg stir-fry');
+  expectEqual('lunch takes the chicken on its last day', [r.chickenLeft, r.lunch, r.lunchUses.includes('chicken')], [0, 'Creamy chicken spinach rice', true]);
+  await ctx.close();
+}
+
+// Each meal selected, desktop and phone, with bananas, eggs, milk,
+// spinach and chicken: the Kitchen (switcher, the dish large on the board
+// with what it uses beside it, the other meals small beside the card) and
+// the Fridge panel's line under the bag with its small dish.
+async function mealRenderScenario(browser) {
+  console.log('\n--- MEALS: each meal selected, desktop and phone ---');
+  for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await mealContext(browser, 8, 0, vp);
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await seedMixed18(page, MEALS_FIXTURE);
+    await page.waitForSelector('#tonight .meal-tab');
+    await page.waitForTimeout(1300); // the door's load animation
+    await page.$eval('#tonightLine', el => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - (innerHeight - 200)));
+    await page.screenshot({ path: path.join(OUT, `meals-${tag}-fridge-line.png`) });
+    await page.click('#tabKitchen');
+    await page.waitForTimeout(600);
+    for (const m of ['breakfast', 'lunch', 'dinner', 'snack']) {
+      await page.click(`#tonight .meal-tab[data-meal="${m}"]`);
+      await page.waitForTimeout(150);
+      const st = await mealState(page);
+      console.log(`${tag} ${m}:`, JSON.stringify({h2: st.h2, board: st.board.length, dish: st.dish}));
+      await page.$eval('#roomTabs', el => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 8));
+      await page.screenshot({ path: path.join(OUT, `meals-${tag}-${m}.png`) });
+      const art = await page.evaluate(() => document.querySelector('#tonight').innerHTML.includes('NaN') || (document.getElementById('kcDish').innerHTML.includes('NaN')));
+      expectEqual(`${tag} ${m}: no NaN in the drawings`, art, false);
+    }
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
+  // Every context runs on a mocked clock, 18:00 today unless a scenario
+  // sets its own (mealContext): the Kitchen opens on the meal the clock
+  // says, so without this a scenario would see a different meal depending
+  // on when the suite runs.
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (opts) => {
+    const ctx = await newContext(opts);
+    const d = new Date(); d.setHours(18, 0, 0, 0);
+    await ctx.clock.setFixedTime(d);
+    return ctx;
+  };
   // ONLY=decayLineScenario node tools/scenarios.js runs just that one.
   if (process.env.ONLY){
     try { await eval(process.env.ONLY)(browser); } catch (e) { console.log('\nFAILED:', e.message); process.exitCode = 1; }
@@ -4456,6 +4691,11 @@ async function dupRenderScenario(browser) {
     () => dupRestockCutScenario(browser),
     () => cutFruitScenario(browser),
     () => dupRenderScenario(browser),
+    () => mealDefaultScenario(browser),
+    () => mealSwitchScenario(browser),
+    () => mealNoReuseScenario(browser),
+    () => mealUrgentFirstScenario(browser),
+    () => mealRenderScenario(browser),
   ];
   let passed = 0;
   const failed = [];
