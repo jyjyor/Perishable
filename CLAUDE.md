@@ -446,11 +446,23 @@ it when there are many). Top to bottom:
   the receipt's next lines; "2d" after an item still dates it two days
   back). Enter prints the field as lines; nothing reaches the fridge
   until Put away.
+  One fridge record per thing bought. A repeat on the receipt -- the
+  same food under the same name, bought the same day, typed or tapped
+  ("milk, milk", a usual tapped twice) or on two lines of one scan --
+  is one line with a count after the name, "Milk ×2", with small − and +
+  beside it (44px on a phone; − stops at one). A count typed before or
+  after the name is the same ("2 milk", "2x milk", "milk x2", "milk ×2";
+  "2% milk" is not a count). Its questions are answered once for all of
+  them. Put away makes each its own record, with its own purchase date
+  and clock. A new one never replaces, refreshes or merges with one
+  already in the fridge, freezer or bowl: the older keeps its date and
+  its cut or opened state, and stands further forward (with equal days
+  left, the one bought first comes first: olderFirst).
 - Usuals: the six most-bought peek out of the bag's mouth, drawn with the
   same food drawings (fresh, decay 0), the bottom of each behind the
   bag's front, a small name label on the front under each. Tapping one
-  prints it on the receipt (a restock line: Put away refreshes a fresh
-  one already in the fridge, as restock always has). "+N more" (the real
+  prints it on the receipt (a restock line: Put away adds a new one,
+  never touching the one already in the fridge). "+N more" (the real
   count) is a small text control on the bag's front; it opens the rest as
   the same small drawings, heaped over the mouth in wrapping rows, never
   sideways, and "Show fewer" closes them; Edit (tap a drawing to remove
@@ -596,8 +608,9 @@ the same way, never past the date it had; otherwise the date doesn't
 move. Already opened, or frozen, the clock doesn't move either. Whole food
 is drawn cut and wrapped, packages opened (see the visual system). A cut
 counter food (a half onion, a wedge of melon) goes in the fridge; an
-opened package stays where it was. A restock of it is whole again. Undo
-puts the record back as it was and takes the weight off the ledger.
+opened package stays where it was. Buying it again adds a whole new one
+beside it; the cut one stays cut. Undo puts the record back as it was
+and takes the weight off the ledger.
 
 ## Voice
 

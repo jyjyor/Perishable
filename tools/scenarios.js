@@ -1337,7 +1337,7 @@ async function noMatchScenario(browser) {
 
 // A receipt of new staples: FOODS additions, a FoodKeeper-only line, two
 // package/ripeness dates, and a choice; then restocking a package-date
-// item asks again.
+// item asks again, and puts a second one beside the first.
 async function receiptNewItemsScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- RECEIPT: new foods, dates and a choice ---');
@@ -1405,8 +1405,8 @@ async function receiptNewItemsScenario(browser) {
   await page.click('#addbtn');
   await page.waitForTimeout(100);
   const after = await readInventory(page);
-  expectEqual('sour cream rows after restock', after.filter(r => r.name === 'Sour cream').length, 1);
-  expectRow(after, 'Sour cream', '25 days');
+  // a second tub beside the first, each with its own printed date
+  expectEqual('sour cream rows after restock', after.filter(r => r.name === 'Sour cream').map(r => r.left), ['21 days', '25 days']);
   await page.screenshot({ path: path.join(OUT, 'scn-receipt-new-foods.png'), fullPage: true });
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -3909,7 +3909,9 @@ async function putAwayScenario(browser) {
   // and they can go again
   await page.click('#addbtn');
   await page.waitForTimeout(100);
-  expectEqual('put away again', await page.evaluate(n => fridge.length - n, n0), 4);
+  // five records: the usual is a new one beside the one already there,
+  // never a refresh of it
+  expectEqual('put away again', await page.evaluate(n => fridge.length - n, n0), 5);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await ctx.close();
 }
@@ -3979,8 +3981,14 @@ async function bagPhoneScenario(browser) {
   await ctx.close();
 }
 
-// ---------- Cut produce ----------
-// A clean page; dupSeed(page, list) puts records in as if bought `age` days ago
+// ---------- Duplicates: a second of anything is its own record ----------
+// One fridge record per thing bought. A repeat on the receipt is one line
+// with a count ("Milk ×2", with − and +); Put away makes each its own
+// record with its own purchase date and clock. A new one never replaces,
+// refreshes or merges with one already there: the older keeps its date and
+// its cut or opened state, and stands further forward.
+
+// A clean page; seed(list) puts records in as if bought `age` days ago
 // and makes each key a usual. Returns {page, errors, ctx}.
 async function dupPage(browser, vp = { width: 1280, height: 800 }, opts = {}) {
   const ctx = await browser.newContext({ viewport: vp, ...opts });
@@ -4005,6 +4013,232 @@ const dupSeed = (page, list) => page.evaluate(list => {
   render();
   return ids;
 }, list);
+const dupRecs = (page, key) => page.evaluate(key => fridge.filter(i => i.key === key).map(i => ({
+  id: i.id, bought: today() - i.bought, part: i.part == null ? 1 : i.part, opened: !!i.opened, cut: !!i.cut, frozen: !!i.frozen,
+  left: leftAt(i, today()), exp: expiryOf(i) == null ? null : expiryOf(i) - today()})), key);
+const dupLines = page => page.$$eval('#receiptLines .receipt-row', els => els.map(el => ({
+  name: el.querySelector('.receipt-name').value,
+  n: (el.querySelector('.rl-n') || {textContent: ''}).textContent.trim(),
+  less: !!el.querySelector('.rl-less'), more: !!el.querySelector('.rl-more'),
+  q: pendingItems[+el.dataset.idx].quantity || 1
+})));
+async function dupPutAway(page) {
+  await page.click('#addbtn');
+  await page.waitForTimeout(150);
+}
+// The line-art row's order (urgency): the ids, left to right, shelf by shelf.
+const dupRowOrder = async page => {
+  await page.$eval('#allItems', d => { d.open = true; });
+  await page.waitForTimeout(150);
+  return page.$$eval('#fridgeShelf [data-fridge-item]', els => els.map(e => +e.dataset.fridgeItem));
+};
+
+// The same usual tapped twice: one line, "Milk ×2"; two new cartons,
+// each its own record, the one already in the fridge left as it was.
+async function dupUsualTwiceScenario(browser) {
+  console.log('\n--- DUPLICATES: the same usual tapped twice ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  const [old] = await dupSeed(page, [['yogurt', 4]]);
+  const before = await dupRecs(page, 'yogurt');
+  await page.click('[data-restock="yogurt"]');
+  await page.click('[data-restock="yogurt"]');
+  await page.waitForTimeout(80);
+  const lines = await dupLines(page);
+  console.log('receipt:', JSON.stringify(lines));
+  expectEqual('one line, ×2, with − and +', lines.map(l => [l.name, l.n, l.less, l.more]), [['Yogurt', '×2', true, true]]);
+  await dupPutAway(page);
+  const recs = await dupRecs(page, 'yogurt');
+  console.log('yogurt:', JSON.stringify(recs));
+  expectEqual('three yogurts: the old one and two new', recs.length, 3);
+  expectEqual('the old one as it was', recs.find(r => r.id === old), before[0]);
+  expectEqual('two new ones bought today, 14 days each', recs.filter(r => r.id !== old).map(r => [r.bought, r.left]), [[0, 14], [0, 14]]);
+  expectEqual('the usual counted twice more', await page.evaluate(() => standing.yogurt.count), 3);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// "milk, milk" typed: one line, "Milk ×2"; its printed date is asked once
+// and goes on both.
+async function dupTypedRepeatScenario(browser) {
+  console.log('\n--- DUPLICATES: "milk, milk" typed ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  await page.fill('#entry', 'milk, milk');
+  await page.press('#entry', 'Enter');
+  await page.waitForTimeout(80);
+  let lines = await dupLines(page);
+  expectEqual('one line, ×2', lines.map(l => [l.name, l.n]), [['Milk', '×2']]);
+  // "champagne, prosecco": the same food under two names stays two lines
+  await page.fill('#entry', 'champagne, prosecco');
+  await page.press('#entry', 'Enter');
+  await page.waitForTimeout(80);
+  lines = await dupLines(page);
+  expectEqual('two names, two lines', lines.map(l => l.name), ['Milk', 'Champagne', 'Prosecco']);
+  await page.click('#receiptLines .rl-void[data-idx="2"]');
+  await page.click('#receiptLines .rl-void[data-idx="1"]');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 8));
+  await dupPutAway(page);
+  const recs = await dupRecs(page, 'milk');
+  console.log('milk:', JSON.stringify(recs));
+  expectEqual('two cartons, the printed date on each', recs.map(r => [r.bought, r.left]), [[0, 8], [0, 8]]);
+  expectEqual('two records, two ids', new Set(recs.map(r => r.id)).size, 2);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// "2 milk" and "2x milk": a count before the name. "2% milk" is not one.
+async function dupCountBeforeScenario(browser) {
+  console.log('\n--- DUPLICATES: "2 milk", a count before the name ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  for (const [text, name, n, q] of [['2 milk', 'Milk', '×2', 2], ['3x yogurt', 'Yogurt', '×3', 3], ['2% milk', 'Milk', '', 1]]) {
+    await page.fill('#entry', text);
+    await page.press('#entry', 'Enter');
+    await page.waitForTimeout(60);
+    const l = (await dupLines(page)).pop();
+    expectEqual(`"${text}"`, [l.name, l.n, l.q], [name, n, q]);
+    await takeOffReceipt(page);
+  }
+  await page.fill('#entry', '3 milk');
+  await page.press('#entry', 'Enter');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 7));
+  await dupPutAway(page);
+  expectEqual('"3 milk" put away: three cartons', (await dupRecs(page, 'milk')).length, 3);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// "milk x2" and "milk ×2": a count after the name; "2d" still dates it.
+async function dupCountAfterScenario(browser) {
+  console.log('\n--- DUPLICATES: "milk x2", a count after the name ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  for (const [text, name] of [['spinach x2', 'Spinach'], ['spinach ×2', 'Spinach'], ['spinach x 2', 'Spinach']]) {
+    await page.fill('#entry', text);
+    await page.press('#entry', 'Enter');
+    await page.waitForTimeout(60);
+    const l = (await dupLines(page)).pop();
+    expectEqual(`"${text}"`, [l.name, l.n], [name, '×' + text.match(/(\d+)$/)[1]]);
+    await takeOffReceipt(page);
+  }
+  await page.fill('#entry', 'spinach x2 2d');
+  await dupPutAway(page);
+  const recs = await dupRecs(page, 'spinach');
+  console.log('spinach:', JSON.stringify(recs));
+  expectEqual('"spinach x2 2d": two bags, bought two days ago', recs.map(r => [r.bought, r.left]), [[2, 5], [2, 5]]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// Milk typed while milk is already in the fridge (used some: opened, half
+// left) and in the freezer: a new carton beside them; the old one keeps
+// its date, its half and its opened state, and stands further forward;
+// the frozen one is untouched.
+async function dupAlreadyThereScenario(browser) {
+  console.log('\n--- DUPLICATES: adding milk while milk is in the fridge and the freezer ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  const [oldId, frozenId] = await dupSeed(page, [['milk', 3, {shelf: 9, shelfFrom: 'date'}], ['milk', 20, {frozen: true, clockFrom: 0}]]);
+  await page.evaluate(() => { const t = today(); fridge[1].clockFrom = t - 10; render(); });
+  await page.$eval(`[data-rf-item="${oldId}"]`, el => el.click());
+  await page.click('#rfPopover .rf-pop-some');
+  await page.waitForTimeout(150);
+  const before = await dupRecs(page, 'milk');
+  await page.fill('#entry', 'milk');
+  await page.press('#entry', 'Enter');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 10));
+  await dupPutAway(page);
+  const recs = await dupRecs(page, 'milk');
+  console.log('milk:', JSON.stringify(recs));
+  expectEqual('three cartons', recs.length, 3);
+  expectEqual('the old one: its date, half left, as it was', recs.find(r => r.id === oldId), before.find(r => r.id === oldId));
+  expectEqual('the old one is still half', recs.find(r => r.id === oldId).part, 0.5);
+  expectEqual('the frozen one untouched', recs.find(r => r.id === frozenId), before.find(r => r.id === frozenId));
+  const fresh = recs.find(r => r.id !== oldId && r.id !== frozenId);
+  expectEqual('the new one: today, whole, its own date', [fresh.bought, fresh.part, fresh.left], [0, 1, 10]);
+  const order = await dupRowOrder(page);
+  if (!(order.indexOf(oldId) >= 0 && order.indexOf(oldId) < order.indexOf(fresh.id))) throw new Error('the old carton should stand ahead of the new: ' + JSON.stringify(order));
+  // the same date on both: the older still first
+  await page.evaluate(([a, b]) => { const A = fridge.find(i => i.id === a), B = fridge.find(i => i.id === b); B.shelf = A.shelf - (B.bought - A.bought); render(); }, [oldId, fresh.id]);
+  const order2 = await dupRowOrder(page);
+  expectEqual('same days left: the older first', order2.indexOf(oldId) < order2.indexOf(fresh.id), true);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// A scanned receipt with the same item on two lines: one line, "Milk ×2",
+// whose − and + change the count (44px on a phone); Put away makes that
+// many records.
+async function dupScanTwoLinesScenario(browser) {
+  console.log('\n--- DUPLICATES: a scanned receipt with the same item on two lines ---');
+  for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    const phone = vp.width < 720;
+    const { ctx, page, errors } = await dupPage(browser, vp, phone ? { hasTouch: true, isMobile: true } : {});
+    await page.evaluate(() => {
+      window.__receiptApiOverride = async () => ({ date: null, items: [
+        {raw: 'BNLS CHKN BRST', expanded: 'Chicken breast', quantity: 1, is_food: true},
+        {raw: 'SPINACH', expanded: 'Spinach', quantity: 1, is_food: true},
+        {raw: 'BNLS CHKN BRST', expanded: 'Chicken breast', quantity: 1, is_food: true},
+        {raw: 'BAGS', expanded: 'Bags', quantity: 1, is_food: false},
+        {raw: 'BAGS', expanded: 'Bags', quantity: 1, is_food: false}
+      ]});
+    });
+    const fixturePath = path.join(os.tmpdir(), 'perishable-receipt-dup.jpg');
+    fs.writeFileSync(fixturePath, FIXTURE_JPEG);
+    await page.setInputFiles('#receiptFile', fixturePath);
+    await page.waitForSelector('#receiptLines .receipt-row');
+    fs.unlinkSync(fixturePath);
+    let lines = await dupLines(page);
+    console.log(phone ? 'phone' : 'desktop', 'receipt:', JSON.stringify(lines.map(l => l.name + ' ' + l.n)));
+    expectEqual('chicken on one line ×2; void lines left alone', lines.map(l => [l.name, l.n]),
+      [['Chicken breast', '×2'], ['Spinach', ''], ['Bags', ''], ['Bags', '']]);
+    if (phone) {
+      const sz = await page.$$eval('#receiptLines .rl-less, #receiptLines .rl-more', bs => bs.map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }));
+      if (sz.some(s => s < 44)) throw new Error('− and + should be 44px on a phone: ' + sz);
+    }
+    await page.click('#receiptLines .rl-more[data-idx="0"]');
+    expectEqual('+ makes it ×3', (await dupLines(page))[0].n, '×3');
+    await page.click('#receiptLines .rl-less[data-idx="0"]');
+    await page.click('#receiptLines .rl-less[data-idx="0"]');
+    lines = await dupLines(page);
+    expectEqual('− down to one: no count, − off, + still there', [lines[0].n, lines[0].q, await page.$eval('#receiptLines .rl-less[data-idx="0"]', b => b.disabled), lines[0].more], ['', 1, true, true]);
+    await page.click('#receiptLines .rl-more[data-idx="0"]');
+    await dupPutAway(page);
+    const recs = await dupRecs(page, 'chicken');
+    expectEqual('two chicken breasts, each its own record', recs.map(r => [r.bought, r.left]), [[0, 2], [0, 2]]);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
+}
+
+// Restocking something cut by Used some: the cut one stays cut, with its
+// date (an onion's doesn't move; an apple's is FoodKeeper's cut-fruit
+// clock), and a whole new one goes in beside it. Undo takes only the new
+// one out.
+async function dupRestockCutScenario(browser) {
+  console.log('\n--- DUPLICATES: restocking a cut ("used some") item ---');
+  const { ctx, page, errors } = await dupPage(browser);
+  const [onionId, appleId] = await dupSeed(page, [['onion', 6], ['apple', 10]]);
+  for (const id of [onionId, appleId]) {
+    await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
+    await page.click('#rfPopover .rf-pop-some');
+    await page.waitForTimeout(150);
+  }
+  const before = {onion: await dupRecs(page, 'onion'), apple: await dupRecs(page, 'apple')};
+  console.log('cut:', JSON.stringify(before));
+  expectEqual('cut apple on FoodKeeper #179, 4 days', [before.apple[0].cut, before.apple[0].exp], [true, 4]);
+  await page.click('[data-restock="onion"]');
+  await page.click('[data-restock="apple"]');
+  await dupPutAway(page);
+  for (const [key, id, whole] of [['onion', onionId, 30], ['apple', appleId, 42]]) {
+    const recs = await dupRecs(page, key);
+    console.log(key + ':', JSON.stringify(recs));
+    expectEqual(`${key}: the cut one as it was`, recs.find(r => r.id === id), before[key][0]);
+    expectEqual(`${key}: a whole new one beside it`, recs.filter(r => r.id !== id).map(r => [r.bought, r.part, r.cut, r.left]), [[0, 1, false, whole]]);
+  }
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo: only the new ones out', [await dupRecs(page, 'onion'), await dupRecs(page, 'apple')], [before.onion, before.apple]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
 // Used some on fruit and vegetables with no after-opening figure of their
 // own: FoodKeeper's entry for them cut (FK_CUT), counted from the day it's
 // cut -- fruit #179 "Fruit, cut", 4 days; whole spaghetti squash #597, 5.
@@ -4059,6 +4293,53 @@ async function cutFruitScenario(browser) {
   expectEqual('reload keeps the cut clock', await page.evaluate(id => { const it = fridge.find(x => x.id === id); return [it.cut, expiryOf(it) - today()]; }, ids[0]), [true, 4]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await ctx.close();
+}
+
+// The pictures: a receipt with "Milk ×2" on it, and the fridge holding an
+// old and a new milk and a half onion, the whole new onion in the bowl
+// (onions are kept out of the fridge; the All items row shows them side
+// by side). Desktop and phone.
+async function dupRenderScenario(browser) {
+  console.log('\n--- DUPLICATES: the receipt and the fridge, desktop and phone ---');
+  for (const vp of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    const phone = vp.width < 720;
+    const { ctx, page, errors } = await dupPage(browser, vp, phone ? { hasTouch: true, isMobile: true } : {});
+    const [, , oldOnion] = await dupSeed(page, [['milk', 5, {shelf: 8, shelfFrom: 'date'}], ['spinach', 1], ['onion', 9], ['carrot', 3]]);
+    // the whole onion may be on Tonight's board: Used some straight from the record
+    await page.evaluate(id => useSome(id), oldOnion);
+    await page.waitForTimeout(150);
+    await page.fill('#entry', 'milk, onion');
+    await page.press('#entry', 'Enter');
+    await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 9));
+    await dupPutAway(page);
+    await page.waitForTimeout(6400); // every flight landed, the toast gone
+    // and a receipt with the next shop on it
+    await page.fill('#entry', 'milk, milk, spinach');
+    await page.press('#entry', 'Enter');
+    await page.waitForTimeout(100);
+    const lines = await dupLines(page);
+    expectEqual('the receipt', lines.map(l => l.name + (l.n ? ' ' + l.n : '')), ['Milk ×2', 'Spinach']);
+    const st = await page.evaluate(() => fridge.map(it => [it.key, it.part || 1, !!document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`), !!document.querySelector(`#kcUnit [data-rf-item="${it.id}"]`)]));
+    console.log(phone ? 'phone' : 'desktop', JSON.stringify(st));
+    expectEqual('two milks in the fridge', st.filter(s => s[0] === 'milk' && s[2]).length, 2);
+    expectEqual('the half onion in the fridge, the whole one in the bowl',
+      st.filter(s => s[0] === 'onion').map(s => [s[1], s[2], s[3]]), [[0.5, true, false], [1, false, true]]);
+    if (!phone) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: path.join(OUT, 'dup-desktop.png') });
+    } else {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: path.join(OUT, 'dup-phone-fridge.png') });
+      await page.$eval('#addFood', el => el.scrollIntoView({ block: 'center' }));
+      await page.screenshot({ path: path.join(OUT, 'dup-phone-receipt.png') });
+    }
+    await page.$eval('#allItems', d => { d.open = true; });
+    await page.waitForTimeout(200);
+    await page.$eval('#allItems', el => el.scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: path.join(OUT, `dup-${phone ? 'phone' : 'desktop'}-allitems.png`) });
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
 }
 
 (async () => {
@@ -4147,7 +4428,15 @@ async function cutFruitScenario(browser) {
     () => putAwayScenario(browser),
     () => putAwayReducedMotionScenario(browser),
     () => bagPhoneScenario(browser),
+    () => dupUsualTwiceScenario(browser),
+    () => dupTypedRepeatScenario(browser),
+    () => dupCountBeforeScenario(browser),
+    () => dupCountAfterScenario(browser),
+    () => dupAlreadyThereScenario(browser),
+    () => dupScanTwoLinesScenario(browser),
+    () => dupRestockCutScenario(browser),
     () => cutFruitScenario(browser),
+    () => dupRenderScenario(browser),
   ];
   let passed = 0;
   const failed = [];

@@ -851,6 +851,12 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rl-freeze.on{color:var(--ink);text-decoration:underline solid}
 .rl-void{flex:none;border:none;background:none;padding:0 2px;width:20px;color:var(--ink-3);font-size:13px;line-height:1}
 .rl-void:hover{background:none;color:var(--ink)}
+/* A repeat is one line with its count, "Milk ×2", and − and + beside it. */
+.rl-count{flex:none;display:flex;align-items:baseline;gap:0;white-space:nowrap;margin-left:-3px}
+.rl-n{flex:none;font-size:12.5px;color:var(--ink);margin-left:-2px}
+.rl-less,.rl-more{flex:none;border:none;background:none;padding:0 1px;min-width:12px;color:var(--ink-3);font-size:13px;line-height:1}
+.rl-less:hover,.rl-more:hover{background:none;color:var(--ink)}
+.rl-less:disabled{opacity:.35;cursor:default}
 .receipt .receipt-row.void input.receipt-name{text-decoration:line-through;color:var(--ink-3)}
 .receipt .receipt-row .match{padding:3px 0 0 0;gap:4px 8px;font-size:10.5px;letter-spacing:.02em}
 .receipt .receipt-row .match label{display:inline-flex;align-items:center;gap:3px}
@@ -962,6 +968,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   .receipt .receipt-row input.receipt-name{min-height:36px;font-size:14px}
   .rl-void{width:44px;height:44px;margin:-6px -12px -6px 0}
   .rl-freeze{min-height:44px;min-width:44px;margin:-6px 0}
+  .rl-less,.rl-more{min-height:44px;min-width:44px;margin:-6px -6px;font-size:16px}
   .receipt .receipt-scan{min-height:44px}
   .receipt .suggest-row{padding:12px 0}
   .receipt .receipt-row .match label{min-height:44px}
@@ -2696,6 +2703,9 @@ function cutOf(it){
   const c = f.fk != null && FK_CUT[f.fk];
   return c ? {fk: c[0], days: c[1]} : null;
 }
+// Two of the same thing with the same days left: the one bought first
+// (then the one put away first) comes first.
+const olderFirst = (a, b) => a.bought - b.bought || a.id - b.id;
 // A food FoodKeeper gives no spoilage limit (vodka: FOODS[key].keeps)
 // keeps: no countdown and no decay, and it is left out of the headline,
 // the decay line and every at-risk count (counted()). A Use by the person
@@ -6590,8 +6600,9 @@ function renderRealFridge(){
   emptyCavity.hidden = true;
   unit.classList.add('has-items');
 
-  const active = here.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
-  const gone = here.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  // equal days left: the one bought first stands further forward
+  const active = here.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day) || olderFirst(a, b));
+  const gone = here.filter(it => leftAt(it, day) < 0).sort((a, b) => leftAt(a, day) - leftAt(b, day) || olderFirst(a, b));
 
   // Most urgent means the 72-hour bucket, state() === 'crit', and only
   // that: those go on the middle, eye-level shelf, front and center,
@@ -7268,7 +7279,7 @@ function renderFridgeView(){
     return;
   }
 
-  const savable = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+  const savable = fridge.filter(it => leftAt(it, day) >= 0).sort((a, b) => leftAt(a, day) - leftAt(b, day) || olderFirst(a, b));
   const gone = fridge.filter(it => leftAt(it, day) < 0);
 
   if (savable.length){
@@ -8370,47 +8381,40 @@ function restock(key, shelf){
   if (!entry) return null;
   if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null, !!entry.frozen)) return null;
   const label = labelOf(key);
-  // Only a toss counts as waste. A past-date one of these stays in the
-  // drawer for the person to check, toss or remove; the new one is a
-  // separate record.
-  const existing = entry.frozen ? null : fridge.find(it => it.key === key && !it.frozen && left(it) >= 0);
-  let note = '', id;
-  if (existing){
-    id = existing.id;
-    existing.bought = today();
-    existing.crossed = false;
-    delete existing.ripeOn;
-    delete existing.clockFrom; delete existing.thawed; delete existing.decayFrom; // a fresh one, not the thawed one
-    delete existing.part; // and whole, not what was left after Used some
-    if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
-    if (opensKey(key) && lastOpenChoice(key) === 'opened') existing.opened = true; else delete existing.opened;
-    delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
-    delete existing.shelfFrom;
-    if (shelf != null){ existing.shelf = shelf; existing.shelfFrom = 'date'; }
-  } else {
-    const it = {id:++uid, key, bought:today(), custom: entry.custom || null};
-    if (entry.name) it.name = entry.name;
-    if (ripensKey(key) && lastRipeChoice(key) === 'unripe') it.ripening = true;
-    if (opensKey(key) && lastOpenChoice(key) === 'opened') it.opened = true;
-    if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
-    if (entry.frozen){ it.frozen = true; delete it.ripening; }
-    fridge.push(it);
-    id = it.id;
-    if (fridge.some(x => x.key === key && left(x) < 0)) note = 'the old ' + label + ' stays in the drawer until you toss it';
-  }
+  // One record per thing bought: a new one never replaces, refreshes or
+  // merges with one already there, which keeps its own date and its cut
+  // or opened state. Only a toss counts as waste: a past-date one stays in
+  // the drawer for the person to check, toss or remove.
+  const it = {id:++uid, key, bought:today(), custom: entry.custom || null};
+  if (entry.name) it.name = entry.name;
+  if (ripensKey(key) && lastRipeChoice(key) === 'unripe') it.ripening = true;
+  if (opensKey(key) && lastOpenChoice(key) === 'opened') it.opened = true;
+  if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
+  if (entry.frozen){ it.frozen = true; delete it.ripening; }
+  const old = fridge.some(x => x.key === key && left(x) < 0);
+  fridge.push(it);
   touchStanding(key, entry.custom, entry.name);
-  return {id, note};
+  return {id: it.id, note: old ? 'the old ' + label + ' stays in the drawer until you toss it' : ''};
 }
 
 // Pure: text in, entries out. No fridge/standing mutation, no render.
+// A count before or after the name ("2 milk", "2x milk", "milk x2",
+// "milk ×2") is that many of it: one line, quantity 2. "2% milk" is not a
+// count. A repeat ("milk, milk") joins the line already printed
+// (printLines).
+const COUNT_BEFORE = /^(\d{1,2})\s*[x×]?\s+(?=\D)/i, COUNT_AFTER = /\s*[x×]\s*(\d{1,2})$/i;
 function parseText(text){
   const parts = text.split(/[,\n;]+/).map(s => s.trim()).filter(Boolean);
   return parts.map(part => {
-    let age = 0;
+    let age = 0, quantity = 1;
     const m = part.match(/(\d+)\s*d\b/i);
-    if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').trim(); }
-    if (!part.length) return null;
-    return entryFor(part, age);
+    if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').replace(/\s+/g, ' ').trim(); }
+    const c = part.match(COUNT_BEFORE) || part.match(COUNT_AFTER);
+    if (c){ quantity = parseInt(c[1], 10); part = part.replace(c[0], ' ').trim(); }
+    if (!part.length || !(quantity >= 1)) return null;
+    const e = entryFor(part, age);
+    if (quantity > 1) e.quantity = quantity;
+    return e;
   }).filter(Boolean);
 }
 
@@ -8433,8 +8437,10 @@ function commitItems(entries){
       if (rec.frozen) st.frozen = true; else delete st.frozen;
       if (rec.ripe) st.ripe = rec.ripe;
       if (rec.open) st.open = rec.open;
-      const r = restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined);
-      if (r){ ids.push(r.id); if (r.note) notes.push(r.note); }
+      for (let n = 0; n < (e.quantity || 1); n++){
+        const r = restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined);
+        if (r){ ids.push(r.id); if (r.note && !notes.includes(r.note)) notes.push(r.note); }
+      }
       return;
     }
     for (let n = 0; n < (e.quantity || 1); n++){
@@ -8470,17 +8476,45 @@ function printEntry(text){
   suggestItems = []; suggestIndex = -1;
   renderSuggestions();
   if (!entries.length) return [];
-  pendingItems.push(...entries);
+  const lines = printLines(entries);
   renderReceipt();
-  return entries;
+  return lines;
+}
+// A repeat of a line already on the receipt -- the same food under the
+// same name ("champagne, prosecco" stay two lines), bought the same day,
+// from the same place (typed or a usual, or the same scan), in
+// or out of the freezer alike -- is that line, one more: "Milk ×2". Put
+// away makes each one its own record. Returns the lines printed or
+// added to.
+function lineSig(e){
+  if (!e.included) return null;
+  const what = e.key || (e.options.length > 1 ? 'which:' + e.options.join('|') : 'none');
+  return [what, normName(lineTyped(e)), e.age, e.scanned ? 'scan' : 'typed', entryFrozen(e) ? 'frozen' : ''].join('/');
+}
+function printLines(entries, onto = pendingItems){
+  const out = [];
+  entries.forEach(e => {
+    const sig = lineSig(e), same = sig && onto.find(x => lineSig(x) === sig);
+    if (same){
+      same.quantity = (same.quantity || 1) + (e.quantity || 1);
+      same.counted = true;
+      if (!same.restockKey && e.restockKey) same.restockKey = e.restockKey;
+      if (!out.includes(same)) out.push(same);
+    } else {
+      if ((e.quantity || 1) > 1) e.counted = true;
+      onto.push(e);
+      out.push(e);
+    }
+  });
+  return out;
 }
 // A usual tapped in the bag: printed as a line that restocks it.
 function addUsualLine(key){
   const entry = standing[key];
   if (!entry) return;
   const label = labelOf(key);
-  pendingItems.push({raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
-    suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key, frozen: !!entry.frozen});
+  printLines([{raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
+    suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key, frozen: !!entry.frozen}]);
   renderReceipt();
 }
 
@@ -8525,14 +8559,19 @@ function renderReceipt(){
   const box = document.getElementById('receiptLines');
   box.innerHTML = pendingItems.map((e, i) => {
     const d = lineDays(e), as = lineMatchedAs(e), shown = as ? lineTyped(e) : e.label;
-    const qty = [(e.quantity || 1) > 1 ? '×' + e.quantity : '', !e.scanned && e.age ? e.age + 'd' : ''].filter(Boolean).join(' ');
+    const qty = !e.scanned && e.age ? e.age + 'd' : '', n = e.quantity || 1;
     return '<div class="receipt-row' + (e.included ? entryRowClass(e) : ' void') + '" data-idx="' + i + '">' +
       '<div class="rl-main">' +
         '<span class="qty">' + qty + '</span>' +
         '<span class="rl-name">' +
           '<input type="text" class="receipt-name" data-idx="' + i + '" value="' + esc(shown) + '" aria-label="Line ' + (i + 1) + ' on the receipt"' +
-            (as ? ' size="' + Math.max(3, shown.length) + '"' : '') + '>' +
+            (as ? ' size="' + Math.max(3, shown.length) + '"' : n > 1 || e.counted ? ' size="' + Math.max(3, shown.length) + '" style="width:calc(' + Math.max(3, shown.length) + 'ch + 2px)"' : '') + '>' +
           (as ? '<span class="rl-match">→ ' + esc(as) + '</span>' : '') +
+          (n > 1 ? '<span class="rl-n">×' + n + '</span>' : '') +
+          (n > 1 || e.counted ? '<span class="rl-count">' +
+            (e.included ? '<button type="button" class="rl-less" data-idx="' + i + '" aria-label="One less ' + esc(e.label) + '"' + (n > 1 ? '' : ' disabled') + '>−</button>' +
+              '<button type="button" class="rl-more" data-idx="' + i + '" aria-label="One more ' + esc(e.label) + '">+</button>' : '') +
+          '</span>' : '') +
         '</span>' +
         '<span class="rl-days' + (d.ask ? ' ask' : '') + '">' + d.text + '</span>' +
         freezeToggle(e, i) +
@@ -8548,6 +8587,13 @@ function renderReceipt(){
       if (inp.value.trim() === (lineMatchedAs(e) ? lineTyped(e) : e.label)) return;
       rematchEntry(e, inp.value);
       delete e.restockKey; // renamed: a new food, not that usual
+      renderReceipt();
+    };
+  });
+  box.querySelectorAll('.rl-less, .rl-more').forEach(b => {
+    b.onclick = () => {
+      const e = pendingItems[+b.dataset.idx];
+      e.quantity = Math.max(1, (e.quantity || 1) + (b.classList.contains('rl-more') ? 1 : -1));
       renderReceipt();
     };
   });
@@ -8843,7 +8889,8 @@ function buildReceiptPending(parsed){
       frozen: isFood && (!!e.frozen || FROZEN_WORD.test(String(it.raw || '')))});
   });
   // a new scan replaces the last one's lines, never the typed ones
-  pendingItems = pendingItems.filter(e => !e.scanned).concat(items);
+  pendingItems = pendingItems.filter(e => !e.scanned);
+  printLines(items);
   receiptPending = {age, dateKnown: dateDay != null};
   renderReceipt();
 }
