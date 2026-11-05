@@ -97,7 +97,8 @@ async function receiptScenario(browser) {
     checked: !el.classList.contains('void'),
     name: el.querySelector('.receipt-name').value,
     flag: el.classList.contains('unresolved') ? 'no match' : el.classList.contains('needs-date') ? 'needs date' : '',
-    match: (el.querySelector('.match') || {textContent: ''}).textContent.trim(),
+    match: ((e => e && e.key ? sourceOf(e.key) : '')(pendingItems[+el.dataset.idx]) + ' ' + (el.querySelector('.match') || {textContent: ''}).textContent).trim(),
+    details: (el.querySelector('.match') || {textContent: ''}).textContent.trim(),
     qty: el.querySelector('.qty').textContent.trim()
   })));
   const rows = await readRows();
@@ -596,6 +597,18 @@ async function migrationScenario(browser) {
     }
     if (await livePage.$eval(ADD, b => b.disabled)) throw new Error('origin/main review still blocks Add after every date was filled');
     await livePage.click(ADD);
+    await livePage.waitForTimeout(150);
+  }
+  // Since the grocery bag (f8a556f) the batch waits on the receipt
+  // instead: the same dates, then Put away (#addbtn) again.
+  if (await livePage.$('#receiptLines .receipt-row')) {
+    const inFive = await livePage.evaluate(() => new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10));
+    const n = (await livePage.$$('#receiptLines .entry-date')).length;
+    for (let i = 0; i < n; i++) {
+      await livePage.locator('#receiptLines .entry-date').nth(i).fill(inFive);
+      await livePage.waitForTimeout(100);
+    }
+    await livePage.click('#addbtn');
     await livePage.waitForTimeout(150);
   }
   // A driver that no longer matches origin/main's entry UI saves nothing,
@@ -1116,14 +1129,25 @@ async function takeOffReceipt(page) {
     await page.waitForTimeout(20);
   }
 }
+// A receipt line: the name as shown (what was typed, store words cleaned
+// off), the food it matched when that's a different name (as, shown
+// inline after an arrow), its flag, the questions under it (details), and
+// -- from the line's data, since the receipt no longer says it -- where
+// its numbers come from (source). match is source and details together.
 function readReview(page, box) {
-  return page.$$eval(`${box} .receipt-row`, els => els.map(el => ({
-    name: (el.querySelector('.entry-name') || el.querySelector('input[type=text]')).textContent.trim() ||
-          (el.querySelector('input[type=text]') || {}).value,
-    flag: el.classList.contains('unresolved') ? 'no match / choice' : el.classList.contains('needs-date') ? 'needs date' : '',
-    match: (el.querySelector('.match') || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim(),
-    options: [...el.querySelectorAll('.entry-pick option')].slice(1).map(o => o.textContent)
-  })));
+  return page.$$eval(`${box} .receipt-row`, els => els.map(el => {
+    const e = pendingItems[+el.dataset.idx];
+    const source = e && e.key ? sourceOf(e.key) : '';
+    const details = (el.querySelector('.match') || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim();
+    const arrow = el.querySelector('.rl-match');
+    return {
+      name: el.querySelector('.receipt-name').value,
+      as: arrow ? arrow.textContent.replace(/^→\s*/, '') : null,
+      flag: el.classList.contains('unresolved') ? 'no match / choice' : el.classList.contains('needs-date') ? 'needs date' : '',
+      source, details, match: (source + ' ' + details).trim(),
+      options: [...el.querySelectorAll('.entry-pick option')].slice(1).map(o => o.textContent)
+    };
+  }));
 }
 // Every item as the line-art row shows it -- the row does the list's job
 // now -- with days left written out the way the old list wrote them
@@ -1338,7 +1362,7 @@ async function receiptNewItemsScenario(browser) {
   const rows = await readReview(page, '#receiptLines');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
   expectEqual('flags', rows.map(r => r.flag), ['', '', '', 'needs date', 'no match / choice', '', '']);
-  expectEqual('scanned names, cleaned', rows.map(r => r.name),
+  expectEqual('scanned names, cleaned (the match, where it differs)', rows.map(r => r.as || r.name),
     ['Strawberries', 'Rotisserie chicken', 'Avocados', 'Sour cream', 'Tortillas', 'Plums', 'Salmon']);
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
   if (!rows[2].match.includes('Not ripe yet')) throw new Error('avocados should offer the ripeness choice');
@@ -1376,7 +1400,7 @@ async function receiptNewItemsScenario(browser) {
   await page.waitForTimeout(100);
   const heading = await page.textContent('#receiptLines .receipt-row:last-child');
   console.log('restock sour cream:', heading.replace(/\s+/g, ' ').trim());
-  if (!/date\?/.test(heading) || !/needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the date on its receipt line');
+  if (!/date\?/.test(heading) || !/printed date/.test(heading) || /needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the printed date on its receipt line');
   await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 25));
   await page.click('#addbtn');
   await page.waitForTimeout(100);
@@ -2044,7 +2068,7 @@ async function drinksScenario(browser) {
   expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
   expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
   if (!(await lineSource(page, 2)).includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539');
-  if (rows[2].match.includes('matched')) throw new Error('vodka typed as its own name: no "matched" line: ' + rows[2].match);
+  if (rows[2].as || /matched/.test(rows[2].details)) throw new Error('vodka typed as its own name: nothing after it: ' + JSON.stringify(rows[2]));
   if (!(await lineSource(page, 3)).includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
   await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 120));
   await page.dispatchEvent('#receiptLines .entry-date[data-idx="0"]', 'change');
@@ -2118,7 +2142,7 @@ async function drinksScenario(browser) {
   await typeEntry(page, 'whisky, bourbon, scotch, rum, gin, tequila, mezcal, brandy, cognac, baijiu, liquor, spirits, cream liqueur, canned beer, hard cider, hard seltzer');
   rows = await readReview(page, '#receiptLines');
   const sources = await page.evaluate(() => pendingItems.map(e => e.key ? sourceOf(e.key) : ''));
-  const got = rows.map((r, i) => [r.name, r.flag, (sources[i].match(/FoodKeeper #\d+/) || ['none'])[0]]);
+  const got = rows.map((r, i) => [r.as || r.name, r.flag, (sources[i].match(/FoodKeeper #\d+/) || ['none'])[0]]);
   console.log(JSON.stringify(got));
   const keepsNames = ['Whiskey', 'Bourbon', 'Scotch', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Baijiu', 'Liquor', 'Liquor'];
   expectEqual('spirits: #539, nothing asked', got.slice(0, 12), keepsNames.map(n => [n, '', 'FoodKeeper #539']));
@@ -2140,11 +2164,14 @@ async function moreDrinksScenario(browser) {
   await typeEntry(page, 'champagne, prosecco, cava, rosé, rose wine, sweet vermouth, sake, soju');
   let rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
-  expectEqual('names', rows.map(r => r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
+  expectEqual('names', rows.map(r => r.as || r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
   rows.forEach(r => { if (r.flag !== 'needs date') throw new Error(r.name + ' unopened should need the printed date: ' + JSON.stringify(r)); });
   for (let i = 0; i < 6; i++) if (!(await lineSource(page, i)).includes('estimated')) throw new Error(rows[i].name + ' should be estimated');
   // "matched" only where the match isn't the name as typed: champagne -> Sparkling wine, yes; rosé -> Rosé, no
-  expectEqual('matched line only when the name differs', rows.map(r => r.match.includes('matched')), [true, true, true, false, true, true, false, false]);
+  // the match shows inline only where it isn't the name as typed
+  expectEqual('typed → matched, only when they differ', rows.map(r => r.as ? r.name + ' → ' + r.as : r.name),
+    ['Champagne → Sparkling wine', 'Prosecco → Sparkling wine', 'Cava → Sparkling wine', 'Rosé', 'Rose wine → Rosé', 'Sweet vermouth → Vermouth', 'Sake', 'Soju']);
+  rows.forEach(r => { if (/matched|estimated|needs the date/.test(r.details)) throw new Error('no source, estimate or sentence on a receipt line: ' + r.details); });
   rows.slice(0, 6).forEach(r => {
     if (!r.match.includes('opened or unopened?')) throw new Error(r.name + ' should ask opened: ' + r.match);
   });

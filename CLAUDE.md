@@ -349,11 +349,15 @@ it when there are many). Top to bottom:
   anything that can go in the freezer (none for what FoodKeeper says not
   to freeze, none while a choice between matches is open), and × to take
   it off (a scanned line is voided instead, struck through, + restores
-  it). Under each name, only what tells something: "matched <name> ·
-  source" only when the match isn't the name as typed or scanned
-  (normName, so plurals and capitals don't count) or it came from the
-  FoodKeeper fallback table; then the questions -- pick a match, Ripe /
-  Not ripe yet, Opened / Unopened, the date. A
+  it). The line never says where its numbers come from or that weight
+  and price are estimated: the item's popover says that once it's put
+  away. When the food matched is a different name from what was typed
+  or scanned (store words cleaned off; normName, so plurals and capitals
+  don't count), it shows inline after the name, "juice → Apple juice",
+  so a wrong match is easy to catch. Under the name, only the questions
+  -- pick a match, Ripe / Not ripe yet, Opened / Unopened, and the date:
+  "printed date" for a package-date food (no sentence asking for it),
+  "use by" for one that matched nothing. A
   first-time ripe or opened choice is left unanswered ("ripe?",
   "opened?"); unanswered, Put away counts the default (Ripe, Unopened),
   and a remembered choice is the default and shows its days. The
