@@ -368,7 +368,9 @@ them (a little more for a hot dish), meat seared into pieces, an egg
 fried in a pan or on toast and halved elsewhere, and a wisp of steam
 over a hot dish. A pantry staple lays the base (oats, rice, noodles,
 broth; flour is the pancakes); dairy goes into the dish rather than
-sitting on it; a glass is the blend of its fruit. The warmth is the food
+sitting on it; a glass is the blend of its fruit. A drink (glass, mug)
+has nothing on or in it: its ingredients show only beside it on the
+board. The warmth is the food
 bodies' own exception, scoped to the dish drawing: the vessel, the page
 and every control stay cold. tools/dish-study.js shows every dish large
 and small.
@@ -553,7 +555,9 @@ plates -- each its dish drawn small and its name -- and tapping one
 selects it. Tomorrow and The day after follow as text under the counter,
 one dish each, from the fridge as today's meals would leave it ("assumes
 today's meals happen"; a recommendation is assumed cooked, a near-miss
-isn't). The bowl holds what's kept out of the fridge (onCounter:
+isn't). A day the days before would leave with nothing in the fridge is
+one small line, "Nothing left to plan for tomorrow" -- no headline, no
+dish line. The bowl holds what's kept out of the fridge (onCounter:
 store:'pantry' foods -- potatoes, onions, garlic, bread, whole melons,
 coconut -- plus bananas) and anything marked "Not ripe yet"; those leave
 the fridge shelves. A ripe avocado goes in the fridge; only an unripe one

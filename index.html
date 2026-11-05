@@ -597,6 +597,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   margin-top:6px;
   max-width:22ch;
 }
+.projected-empty{color:var(--ink-2);margin-top:2px}
 .dish-sub{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
 .dish-sub .dish-name{font-weight:700;font-size:17px;color:var(--ink);margin-top:2px}
 .dish-usesup{margin-top:10px;color:var(--ink-2);max-width:48ch}
@@ -7420,7 +7421,9 @@ function dishMarkup(dish, px){
     fill = {staple: null, color: cols.slice(1).reduce((c, x, i) => oklchLerp(c, x, 1 / (i + 2)), cols[0])};
   }
   let keys = dishPieceKeys(dish);
-  if (v === 'glass' || v === 'mug') keys = keys.slice(0, 1); // one piece on the rim, or floating
+  // a drink shows its ingredients only beside it on the board, never on
+  // or in the glass or mug
+  if (v === 'glass' || v === 'mug') keys = [];
   const n = keys.length;
   const w = n ? Math.min(V.max, (V.x1 - V.x0) / n * 1.6) : 0;
   const step = n > 1 ? (V.x1 - V.x0 - w) / (n - 1) : 0;
@@ -7968,11 +7971,17 @@ function renderProjectedCard(entry, boxId, skipSet){
   box.style.display = '';
   const day = entry.day;
   const label = DAY_LABELS[entry.dayIndex];
-  // factAt can legitimately return null now that it reads the projected
-  // fridge: if an earlier day's recommendation used up everything, there's
-  // nothing left to report on. That's a real, if unusual, outcome -- say
-  // so plainly rather than let the template print the literal word null.
-  const fact = factAt(day, entry.fridgeAtStart) || 'Nothing would be left in the fridge by then.';
+  // factAt returns null when it reads an empty projected fridge: the days
+  // before used up everything. No headline and no dish line then, only
+  // one small line saying so.
+  const fact = factAt(day, entry.fridgeAtStart);
+  if (!fact){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">${label}</div>
+      <p class="projected-empty">Nothing left to plan for ${label.toLowerCase()}</p>
+    </div>`;
+    return;
+  }
 
   let subHTML;
   if (entry.tier === 'terminal'){

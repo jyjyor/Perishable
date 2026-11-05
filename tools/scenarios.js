@@ -457,9 +457,10 @@ async function fridgeFactBugScenario(browser) {
   await page.context().close();
 
   // Edge case the fix itself exposed: when the projected fridge is fully
-  // emptied (every item in it was part of tonight's dish), factAt()
-  // legitimately returns null -- confirm the fallback copy renders
-  // instead of the template printing the literal word "null".
+  // emptied (every item in it was part of today's meals), factAt()
+  // legitimately returns null. Tomorrow is then one small line -- no
+  // headline, no "Not even one ingredient away from a dish", never the
+  // literal word "null".
   const page2 = await (await browser.newContext()).newPage();
   const errors2 = [];
   page2.on('pageerror', e => errors2.push(e.message));
@@ -471,10 +472,15 @@ async function fridgeFactBugScenario(browser) {
   await page2.click('#addbtn');
   await answerPreview(page2);
   await page2.waitForTimeout(150);
-  const emptyFact = await page2.textContent('#tomorrow .daily-fact');
-  console.log('Tomorrow fact when the projection is fully emptied:', emptyFact.trim());
-  if (emptyFact.trim() === 'null') throw new Error('factAt() returning null leaked the literal word "null" into the page');
-  if (!emptyFact.trim()) throw new Error('expected fallback copy for an emptied projection, got nothing');
+  const empty = await page2.evaluate(() => {
+    const box = document.getElementById('tomorrow');
+    return {line: (box.querySelector('.projected-empty') || {textContent: ''}).textContent.trim(),
+      headline: !!box.querySelector('.daily-fact, h2'), text: box.textContent.replace(/\s+/g, ' ').trim()};
+  });
+  console.log('Tomorrow when the projection is fully emptied:', JSON.stringify(empty));
+  expectEqual('one small line', empty.line, 'Nothing left to plan for tomorrow');
+  expectEqual('no headline', empty.headline, false);
+  if (/null|Not even one ingredient/.test(empty.text)) throw new Error(`emptied Tomorrow says more than the one line: "${empty.text}"`);
   if (errors2.length) console.log('console errors:', errors2);
   await page2.context().close();
 }
@@ -4460,7 +4466,10 @@ async function mealSwitchScenario(browser) {
   await page.click('#tonight .meal-plate[data-meal="lunch"]');
   expectEqual('a small plate selects its meal', (await mealState(page)).pressed, ['lunch']);
   expectEqual('the outline stays on Breakfast', await outlined(), inFridge);
-  // the line opens the Kitchen on the meal it names
+  // the line opens the Kitchen on the meal it names -- from the Fridge
+  // panel, where the line is
+  await page.click('#tabFridge');
+  await page.waitForTimeout(600);
   await page.click('#tonightLine');
   await page.waitForTimeout(400);
   expectEqual('the line opens Kitchen on Breakfast', [(await mealState(page)).pressed,
@@ -4579,6 +4588,11 @@ async function mealRenderScenario(browser) {
       await page.screenshot({ path: path.join(OUT, `meals-${tag}-${m}.png`) });
       const art = await page.evaluate(() => document.querySelector('#tonight').innerHTML.includes('NaN') || (document.getElementById('kcDish').innerHTML.includes('NaN')));
       expectEqual(`${tag} ${m}: no NaN in the drawings`, art, false);
+      // a drink (glass, mug) draws nothing on or in it: its ingredients
+      // are beside it on the board
+      const drink = await page.evaluate(() => boardDish && ['glass', 'mug'].includes(boardDish.vessel)
+        ? [document.querySelectorAll('#kcDish svg svg, #kcDish svg ellipse[fill="#F7F3E8"]').length, boardItems.length > 0] : null);
+      if (drink) expectEqual(`${tag} ${m}: the drink's ingredients beside it, none on it`, drink, [0, true]);
     }
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await ctx.close();
