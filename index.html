@@ -462,11 +462,46 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rf-svg .kb{fill:var(--kc-board)} .rf-svg .kb2{fill:var(--kc-board-2)}
 .rf-svg .kw{fill:var(--kc-bowl)} .rf-svg .kw2{fill:var(--kc-bowl-2)} .rf-svg .kwi{fill:var(--kc-bowl-in)}
 .kc-unit .kc-front{z-index:2;pointer-events:none}
+.kc-dish{position:absolute;z-index:1;aspect-ratio:1;pointer-events:none}
+.kc-dish[hidden]{display:none}
+.kc-dish svg{width:100%;height:100%;display:block}
 .kc-row{z-index:1}
 .kc-captions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.55fr);gap:28px;max-width:720px;margin:0 auto;align-items:start}
 .kc-bowl-note{color:var(--ink-3);text-align:center;padding-top:4px}
 .tonight.kc-board{margin-top:0;border-top:none;padding-top:4px;grid-template-columns:1fr;gap:14px}
 .tonight.kc-board .actions{flex-direction:row}
+/* The meal switcher, in place of "Tonight": four plain text buttons, the
+   selected one underlined, as the Fridge / Kitchen tabs are. The selected
+   meal is the large card; the others stand beside it as small plates. */
+.meal-switch{display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:12px}
+.meal-tab{
+  border:none;background:none;padding:4px 0;color:var(--ink-2);
+  border-bottom:1px solid transparent;
+}
+.meal-tab:hover{background:none;color:var(--ink)}
+.meal-tab[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.meal-day{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:22px;align-items:start}
+.meal-main .actions{margin-top:16px;flex-direction:row}
+.meal-note{margin-top:12px;color:var(--ink-2);max-width:44ch}
+.meal-plates{display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--line);padding-left:14px}
+.meal-plate{
+  display:flex;align-items:center;gap:8px;border:none;background:none;padding:2px 0;
+  text-align:left;text-transform:none;letter-spacing:0;color:var(--ink);
+}
+.meal-plate:hover{background:none}
+.meal-plate:hover .meal-plate-name{text-decoration:underline}
+.meal-plate-art{flex:0 0 40px;width:40px;height:40px;display:block}
+.meal-plate-art svg{width:100%;height:100%;display:block}
+.meal-plate-text{display:flex;flex-direction:column;min-width:0}
+.meal-plate-text .mono{font-size:10.5px;color:var(--ink-2)}
+.meal-plate-name{font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;font-size:14px;line-height:1.2}
+.meal-plate-name.none{color:var(--ink-3)}
+@media (max-width:720px){
+  .meal-tab{min-height:44px}
+  .meal-day{grid-template-columns:1fr;gap:14px}
+  .meal-plates{flex-direction:row;flex-wrap:wrap;border-left:none;padding-left:0;border-top:1px solid var(--line);padding-top:10px;gap:4px 14px}
+  .meal-plate{min-height:44px;flex:1 1 140px}
+}
 #panelKitchen .tonight.projected{max-width:720px;margin-left:auto;margin-right:auto}
 @media (max-width:720px){
   .kc-captions{grid-template-columns:1fr;gap:6px}
@@ -562,6 +597,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   margin-top:6px;
   max-width:22ch;
 }
+.projected-empty{color:var(--ink-2);margin-top:2px}
 .dish-sub{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
 .dish-sub .dish-name{font-weight:700;font-size:17px;color:var(--ink);margin-top:2px}
 .dish-usesup{margin-top:10px;color:var(--ink-2);max-width:48ch}
@@ -937,7 +973,11 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 .tonight-line:hover{background:none;border-bottom-color:var(--ink)}
 .tonight-line[hidden]{display:none}
+.tonight-line{display:flex;align-items:center}
+.tonight-line[hidden]{display:none}
 .tonight-line .mono{color:var(--ink-2);margin-right:6px}
+.tonight-line-art{flex:0 0 34px;width:34px;height:34px;margin-right:8px;display:block}
+.tonight-line-art svg{width:100%;height:100%;display:block}
 /* The fridge items tonight's dish uses (.rf-tonight): nothing by
    default. Only while the Tonight line is hovered or focused (the unit's
    .tonight-show), a thin dashed ink line around each one's own outline,
@@ -1128,6 +1168,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
         <div class="kc-unit" id="kcUnit">
           <svg class="rf-svg" id="kcBackSvg" viewBox="0 0 360 150" aria-hidden="true"></svg>
           <div class="rf-row kc-row" id="kcCounterBack"></div>
+          <div class="kc-dish" id="kcDish" aria-hidden="true"></div>
           <div class="rf-row kc-row" id="kcBoardItems"></div>
           <div class="rf-row kc-row" id="kcBowlBack"></div>
           <div class="rf-row kc-row" id="kcBowlItems"></div>
@@ -1562,61 +1603,88 @@ const FOODS = {
   leftoversveg:  {en:'Leftovers without meat or egg', aliases:['leftovers','leftover','takeout','take-out','take out','takeaway','vegetable leftovers','leftovers without meat'], shelf:4, fk:174, named:true, noUsual:true, g:400, usd:4.00, estPrice:true, cat:'leftovers', shape:'leftovers', plural:true, base:'#e3e9e6'}
 };
 
+// Every dish carries the meals it suits (meals: breakfast, lunch, dinner,
+// snack), the vessel its drawing is composed in (vessel: bowl, plate,
+// glass, mug, toast, pan; dishMarkup) and hot:true when it's served hot
+// (a wisp of steam). Nothing else: no prep times, no data we don't have.
 const DISHES = [
-  {name:'Creamy chicken spinach rice', needs:['chicken','spinach','milk','onion'], pantry:['rice']},
-  {name:'Spinach and egg soup',        needs:['spinach','egg','scallion'],         pantry:['stock']},
-  {name:'Tomato egg stir-fry',         needs:['tomato','egg','scallion'],          pantry:['oil','sugar']},
-  {name:'Yogurt bowl with mango',      needs:['yogurt','mango'],                   pantry:['honey']},
-  {name:'Garlic mushroom toast',       needs:['mushroom','butter','garlic'],       pantry:['bread']},
-  {name:'Fried rice, everything in',   needs:['cookedrice','egg','carrot','scallion'], pantry:['soy sauce']},
-  {name:'Chicken and broccoli',        needs:['chicken','broccoli','garlic','ginger'], pantry:['soy sauce']},
-  {name:'Tofu with minced beef',       needs:['tofu','beef','garlic','scallion'],  pantry:['chili bean paste']},
-  {name:'Milk pancakes',               needs:['milk','egg','butter'],              pantry:['flour']},
-  {name:'Roast carrot and lemon salad',needs:['carrot','lemon','cilantro'],        pantry:['olive oil']},
-  {name:'Bacon and pepper pasta',      needs:['bacon','pepper','onion','hardcheese'],  pantry:['pasta']},
-  {name:'Green salad with soft egg',   needs:['leaflettuce','egg','tomato','lemon'],   pantry:['olive oil']},
-  {name:'Ginger scallion noodles',     needs:['scallion','ginger','garlic'],       pantry:['noodles','oil']},
-  {name:'Cheese omelette',             needs:['egg','shreddedcheese','butter'],            pantry:['salt']},
-  {name:'Potato and onion hash',       needs:['potato','onion','pepper'],          pantry:['oil','paprika']},
-  {name:'Mushroom cream pasta',        needs:['mushroom','milk','hardcheese','garlic'],pantry:['pasta']},
-  {name:'Tomato beef noodle',          needs:['tomato','beef','ginger','scallion'],pantry:['noodles']},
-  {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame']},
+  {name:'Creamy chicken spinach rice', needs:['chicken','spinach','milk','onion'], pantry:['rice'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Spinach and egg soup',        needs:['spinach','egg','scallion'],         pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Tomato egg stir-fry',         needs:['tomato','egg','scallion'],          pantry:['oil','sugar'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Yogurt bowl with mango',      needs:['yogurt','mango'],                   pantry:['honey'], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Garlic mushroom toast',       needs:['mushroom','butter','garlic'],       pantry:['bread'], meals:['breakfast','lunch','snack'], vessel:'toast', hot:true},
+  {name:'Fried rice, everything in',   needs:['cookedrice','egg','carrot','scallion'], pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Chicken and broccoli',        needs:['chicken','broccoli','garlic','ginger'], pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Tofu with minced beef',       needs:['tofu','beef','garlic','scallion'],  pantry:['chili bean paste'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Milk pancakes',               needs:['milk','egg','butter'],              pantry:['flour'], meals:['breakfast'], vessel:'plate', hot:true},
+  {name:'Roast carrot and lemon salad',needs:['carrot','lemon','cilantro'],        pantry:['olive oil'], meals:['lunch','dinner'], vessel:'plate'},
+  {name:'Bacon and pepper pasta',      needs:['bacon','pepper','onion','hardcheese'],  pantry:['pasta'], meals:['lunch','dinner'], vessel:'plate', hot:true},
+  {name:'Green salad with soft egg',   needs:['leaflettuce','egg','tomato','lemon'],   pantry:['olive oil'], meals:['lunch','dinner'], vessel:'plate'},
+  {name:'Ginger scallion noodles',     needs:['scallion','ginger','garlic'],       pantry:['noodles','oil'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Cheese omelette',             needs:['egg','shreddedcheese','butter'],            pantry:['salt'], meals:['breakfast','lunch'], vessel:'pan', hot:true},
+  {name:'Potato and onion hash',       needs:['potato','onion','pepper'],          pantry:['oil','paprika'], meals:['breakfast','lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Mushroom cream pasta',        needs:['mushroom','milk','hardcheese','garlic'],pantry:['pasta'], meals:['lunch','dinner'], vessel:'plate', hot:true},
+  {name:'Tomato beef noodle',          needs:['tomato','beef','ginger','scallion'],pantry:['noodles'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Broccoli tofu bowl',          needs:['broccoli','tofu','cookedrice','garlic'], pantry:['sesame'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
 
   // Every ingredient added alongside this batch appears in at least 2 of
   // these dishes, paired with existing anchors (garlic, ginger, scallion,
   // egg, tofu, beef, chicken, mushroom, carrot, potato) so a dish has real
   // partial-match odds before standing history has built up.
-  {name:'Garlic bok choy and Chinese broccoli',    needs:['bokchoy','gailan','garlic'],           pantry:['oil']},
-  {name:'Choy sum and water spinach with fermented bean curd', needs:['choysum','waterspinach','garlic'], pantry:['fermented bean curd']},
-  {name:'Napa cabbage and bok choy hot pot',       needs:['napacabbage','bokchoy','tofu'],        pantry:['stock']},
-  {name:'Chinese broccoli and shiitake stir-fry',  needs:['gailan','shiitake'],                   pantry:['oyster sauce','oil']},
-  {name:'Choy sum and egg stir-fry',               needs:['choysum','egg'],                       pantry:['oil']},
-  {name:'Water spinach and egg stir-fry',          needs:['waterspinach','egg'],                  pantry:['oil']},
-  {name:'Napa cabbage and mushroom soup',          needs:['napacabbage','mushroom','ginger'],     pantry:['stock']},
-  {name:'Lotus root and beef soup',                needs:['lotusroot','beef','ginger'],           pantry:['stock']},
-  {name:'Lotus root, snow peas, and carrot stir-fry', needs:['lotusroot','snowpeas','carrot'],    pantry:['oil']},
-  {name:'Braised daikon and beef',                 needs:['daikon','beef','scallion'],            pantry:['soy sauce']},
-  {name:'Daikon and winter melon soup',            needs:['daikon','wintermelon','ginger'],       pantry:['stock']},
-  {name:'Snow peas and shiitake stir-fry',         needs:['snowpeas','shiitake'],                 pantry:['oil']},
-  {name:'Winter melon and mushroom soup',          needs:['wintermelon','mushroom','scallion'],   pantry:['stock']},
-  {name:'Chinese eggplant with garlic sauce',      needs:['chineseeggplant','garlic','scallion'], pantry:['soy sauce','sugar']},
-  {name:'Braised eggplant and potato',             needs:['chineseeggplant','potato'],            pantry:['soy sauce']},
-  {name:'Bean sprouts and garlic chives stir-fry', needs:['beansprouts','garlicchives'],          pantry:['oil']},
-  {name:'Cold bean sprout and cucumber salad',     needs:['beansprouts','cucumber','cilantro'],   pantry:['vinegar','sesame oil']},
-  {name:'Enoki and garlic chives egg drop soup',   needs:['enoki','garlicchives','egg'],          pantry:['stock']},
-  {name:'Enoki and tofu soup',                     needs:['enoki','tofu','scallion'],             pantry:['stock']},
-  {name:'Taro and chicken clay pot',               needs:['taro','chicken','ginger'],             pantry:['soy sauce']},
-  {name:'Braised taro and bamboo shoots',          needs:['taro','bambooshoots','mushroom'],      pantry:['soy sauce']},
-  {name:'Bamboo shoots and beef stir-fry',         needs:['bambooshoots','beef','scallion'],      pantry:['soy sauce']},
-  {name:'Edamame, corn, and carrot salad',         needs:['edamame','corn','carrot'],             pantry:['olive oil']},
-  {name:'Edamame with garlic and chili',           needs:['edamame','garlic'],                    pantry:['chili','salt']},
-  {name:'Corn and egg stir-fry',                   needs:['corn','egg'],                          pantry:['oil']},
-  {name:'Braised leek and tofu',                   needs:['leek','tofu'],                         pantry:['soy sauce']},
-  {name:'Leek and egg stir-fry',                   needs:['leek','egg'],                          pantry:['oil']},
-  {name:'Smashed cucumber with garlic',            needs:['cucumber','garlic'],                   pantry:['vinegar','sesame oil']},
-  {name:'Garlic zucchini and cauliflower',         needs:['zucchini','cauliflower','garlic'],     pantry:['oil']},
-  {name:'Cumin cauliflower',                       needs:['cauliflower','garlic'],                pantry:['cumin','oil']},
-  {name:'Zucchini and egg stir-fry',               needs:['zucchini','egg'],                      pantry:['oil']}
+  {name:'Garlic bok choy and Chinese broccoli',    needs:['bokchoy','gailan','garlic'],           pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Choy sum and water spinach with fermented bean curd', needs:['choysum','waterspinach','garlic'], pantry:['fermented bean curd'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Napa cabbage and bok choy hot pot',       needs:['napacabbage','bokchoy','tofu'],        pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Chinese broccoli and shiitake stir-fry',  needs:['gailan','shiitake'],                   pantry:['oyster sauce','oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Choy sum and egg stir-fry',               needs:['choysum','egg'],                       pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Water spinach and egg stir-fry',          needs:['waterspinach','egg'],                  pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Napa cabbage and mushroom soup',          needs:['napacabbage','mushroom','ginger'],     pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Lotus root and beef soup',                needs:['lotusroot','beef','ginger'],           pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Lotus root, snow peas, and carrot stir-fry', needs:['lotusroot','snowpeas','carrot'],    pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Braised daikon and beef',                 needs:['daikon','beef','scallion'],            pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Daikon and winter melon soup',            needs:['daikon','wintermelon','ginger'],       pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Snow peas and shiitake stir-fry',         needs:['snowpeas','shiitake'],                 pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Winter melon and mushroom soup',          needs:['wintermelon','mushroom','scallion'],   pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Chinese eggplant with garlic sauce',      needs:['chineseeggplant','garlic','scallion'], pantry:['soy sauce','sugar'], meals:['lunch','dinner'], vessel:'plate', hot:true},
+  {name:'Braised eggplant and potato',             needs:['chineseeggplant','potato'],            pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Bean sprouts and garlic chives stir-fry', needs:['beansprouts','garlicchives'],          pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Cold bean sprout and cucumber salad',     needs:['beansprouts','cucumber','cilantro'],   pantry:['vinegar','sesame oil'], meals:['lunch','dinner','snack'], vessel:'plate'},
+  {name:'Enoki and garlic chives egg drop soup',   needs:['enoki','garlicchives','egg'],          pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Enoki and tofu soup',                     needs:['enoki','tofu','scallion'],             pantry:['stock'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Taro and chicken clay pot',               needs:['taro','chicken','ginger'],             pantry:['soy sauce'], meals:['dinner'], vessel:'bowl', hot:true},
+  {name:'Braised taro and bamboo shoots',          needs:['taro','bambooshoots','mushroom'],      pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Bamboo shoots and beef stir-fry',         needs:['bambooshoots','beef','scallion'],      pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Edamame, corn, and carrot salad',         needs:['edamame','corn','carrot'],             pantry:['olive oil'], meals:['lunch','dinner'], vessel:'bowl'},
+  {name:'Edamame with garlic and chili',           needs:['edamame','garlic'],                    pantry:['chili','salt'], meals:['lunch','dinner','snack'], vessel:'bowl', hot:true},
+  {name:'Corn and egg stir-fry',                   needs:['corn','egg'],                          pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Braised leek and tofu',                   needs:['leek','tofu'],                         pantry:['soy sauce'], meals:['lunch','dinner'], vessel:'bowl', hot:true},
+  {name:'Leek and egg stir-fry',                   needs:['leek','egg'],                          pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Smashed cucumber with garlic',            needs:['cucumber','garlic'],                   pantry:['vinegar','sesame oil'], meals:['lunch','dinner','snack'], vessel:'plate'},
+  {name:'Garlic zucchini and cauliflower',         needs:['zucchini','cauliflower','garlic'],     pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Cumin cauliflower',                       needs:['cauliflower','garlic'],                pantry:['cumin','oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  {name:'Zucchini and egg stir-fry',               needs:['zucchini','egg'],                      pantry:['oil'], meals:['lunch','dinner'], vessel:'pan', hot:true},
+  // Breakfast and snack dishes for the foods that had none, fruit above
+  // all. Matched by the same rule as every dish (recommendAt: two owned,
+  // at most one missing).
+  {name:'Banana oatmeal',                          needs:['banana','milk'],                       pantry:['oats'], meals:['breakfast'], vessel:'bowl', hot:true},
+  {name:'Apple oatmeal',                           needs:['apple','milk'],                        pantry:['oats','cinnamon'], meals:['breakfast'], vessel:'bowl', hot:true},
+  {name:'Banana pancakes',                         needs:['banana','egg'],                        pantry:['flour'], meals:['breakfast'], vessel:'plate', hot:true},
+  {name:'Eggs on toast',                           needs:['egg','bread'],                         pantry:['salt'], meals:['breakfast','lunch'], vessel:'toast', hot:true},
+  {name:'Avocado toast with lime',                 needs:['avocado','bread','lime'],              pantry:['salt'], meals:['breakfast','lunch','snack'], vessel:'toast'},
+  {name:'Figs and cream cheese on toast',          needs:['fig','creamcheese','bread'],           pantry:['honey'], meals:['breakfast','snack'], vessel:'toast'},
+  {name:'Banana strawberry smoothie',              needs:['banana','strawberry','yogurt'],        pantry:[], meals:['breakfast','snack'], vessel:'glass'},
+  {name:'Cherry and blackberry smoothie',          needs:['cherries','blackberry','milk'],        pantry:[], meals:['breakfast','snack'], vessel:'glass'},
+  {name:'Guava and coconut smoothie',              needs:['guava','coconut','banana'],            pantry:[], meals:['breakfast','snack'], vessel:'glass'},
+  {name:'Yogurt bowl with berries',                needs:['yogurt','blueberry','raspberry'],      pantry:['honey'], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Yogurt with peach and plum',              needs:['yogurt','peach','plum'],               pantry:[], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Cottage cheese with pineapple',           needs:['cottagecheese','pineapple'],           pantry:[], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Fruit salad',                             needs:['apple','pear','grapes'],               pantry:['lemon juice'], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Melon fruit salad',                       needs:['cantaloupe','honeydew','watermelon'],  pantry:[], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Citrus fruit salad',                      needs:['orange','grapefruit','mandarin'],      pantry:[], meals:['breakfast','snack'], vessel:'bowl'},
+  {name:'Pineapple and papaya with lime',          needs:['pineapple','papaya','lime'],           pantry:[], meals:['breakfast','snack'], vessel:'plate'},
+  {name:'Kiwi, dragon fruit, and lychee',          needs:['kiwi','dragonfruit','lychee'],         pantry:[], meals:['snack'], vessel:'bowl'},
+  {name:'Persimmon, Asian pear, and pomegranate',  needs:['persimmon','asianpear','pomegranate'], pantry:[], meals:['lunch','snack'], vessel:'plate'},
+  {name:'Strawberries and kiwi',                   needs:['strawberry','kiwi'],                   pantry:[], meals:['snack'], vessel:'bowl'},
+  {name:'Hot ginger and lemon',                    needs:['ginger','lemon'],                      pantry:['honey'], meals:['breakfast','snack'], vessel:'mug', hot:true}
 ];
 
 // missing-ingredient substitutions: key -> candidates
@@ -2956,11 +3024,12 @@ const ownedNow = () => haveAt(fridge, today());
 // false only to ask the weaker question "would anything match at all,
 // urgency aside" (buildDayProjections uses this to tell a fridge with
 // nothing urgent apart from a fridge with nothing cookable).
-function recommendAt(sourceFridge, day, skipSet, requireAtRisk = true){
+function recommendAt(sourceFridge, day, skipSet, requireAtRisk = true, meal = null){
   const have = haveAt(sourceFridge, day);
-  let best = null;
+  const found = [];
   DISHES.forEach(dish => {
     if (skipSet.has(dish.name)) return;
+    if (meal && !dish.meals.includes(meal)) return;
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 2) return;
@@ -2968,11 +3037,27 @@ function recommendAt(sourceFridge, day, skipSet, requireAtRisk = true){
     let score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
     score -= missing.length * 0.45;
     if (missing.length > 1) return;
-    if (!best || score > best.score) best = {dish, matched, missing, score, have};
+    found.push({dish, matched, missing, score, have});
   });
-  return best;
+  return bestFor(found, day, meal);
 }
 const recommend = () => recommendAt(fridge, today(), skipped);
+
+// The best of a meal's candidates. For a meal (planDay), the most urgent
+// ingredient any of them uses goes to this meal: only dishes that use it
+// compete, then the usual score decides. Without a meal (Tomorrow, The
+// day after) the score alone, as it always was.
+function bestFor(found, day, meal){
+  let pool = found;
+  if (meal && found.length){
+    const soonest = r => Math.min(...r.matched.map(k => leftAt(r.have[k], day)));
+    const min = Math.min(...found.map(soonest));
+    pool = found.filter(r => soonest(r) === min);
+  }
+  let best = null;
+  pool.forEach(r => { if (!best || r.score > best.score) best = r; });
+  return best;
+}
 
 // Only reachable ground beyond recommendAt(): a dish with matched >= 2 and
 // missing === 1 would already satisfy recommendAt()'s own gate, so if one
@@ -2980,19 +3065,20 @@ const recommend = () => recommendAt(fridge, today(), skipped);
 // recommendAt() has failed are two-ingredient dishes where exactly one is
 // owned -- there is no broader "missing two things" fallback tier, because
 // then "one more thing" would stop being true.
-function nearMissAt(sourceFridge, day, skipSet, requireAtRisk = true){
+function nearMissAt(sourceFridge, day, skipSet, requireAtRisk = true, meal = null){
   const have = haveAt(sourceFridge, day);
-  let best = null;
+  const found = [];
   DISHES.forEach(dish => {
     if (skipSet.has(dish.name)) return;
+    if (meal && !dish.meals.includes(meal)) return;
     const matched = dish.needs.filter(k => have[k]);
     const missing = dish.needs.filter(k => !have[k]);
     if (matched.length < 1 || missing.length !== 1) return;
     if (requireAtRisk && !matched.some(k => state(leftAt(have[k], day)) !== 'fresh')) return;
     const score = matched.reduce((s,k) => s + urgency(leftAt(have[k], day)), 0);
-    if (!best || score > best.score) best = {dish, matched, missing, score, have};
+    found.push({dish, matched, missing, score, have});
   });
-  return best;
+  return bestFor(found, day, meal);
 }
 const nearMiss = () => nearMissAt(fridge, today(), skipped);
 
@@ -3033,7 +3119,65 @@ function factAt(day, sourceFridge){
   return `${name} ${have} ${d} ${d === 1 ? 'day' : 'days'} left.`;
 }
 
-const DAY_LABELS = ['Tonight', 'Tomorrow', 'The day after'];
+const DAY_LABELS = ['Today', 'Tomorrow', 'The day after'];
+
+// ---- Meals. Today is planned as Breakfast, Lunch and Dinner, each with
+// its own dish, and a Snack from what's left. The Kitchen opens on the
+// next meal by the clock (defaultMeal: before 10:30 Breakfast, until
+// 15:00 Lunch, until 21:00 Dinner, then Snack); the person can switch
+// (mealPick), and the switch isn't remembered -- not saved, gone on reload.
+const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MEAL_LABEL = {breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack'};
+function defaultMeal(now = new Date()){
+  const m = now.getHours() * 60 + now.getMinutes();
+  return m < 10 * 60 + 30 ? 'breakfast' : m < 15 * 60 ? 'lunch' : m < 21 * 60 ? 'dinner' : 'snack';
+}
+let mealPick = null;
+const selectedMeal = () => mealPick || defaultMeal();
+// "Show another", per meal.
+const skippedMeals = {breakfast: new Set(), lunch: new Set(), dinner: new Set(), snack: new Set()};
+
+// The order meals choose in: the main meals from the earliest one still
+// ahead (after the last of them, round to Breakfast), then the Snack. Each
+// takes its dish from what the meals before it left, so no ingredient is
+// used twice in a day, and the most urgent go to the earliest meal ahead
+// (bestFor).
+function mealOrder(next){
+  const main = ['breakfast', 'lunch', 'dinner'];
+  const i = Math.max(0, main.indexOf(next));
+  return [...main.slice(i), ...main.slice(0, i), 'snack'];
+}
+// One day's plan: {breakfast, lunch, dinner, snack} entries, plus what a
+// real plan (tier 'recommend') would use up, for the days after. Two
+// passes, each in mealOrder: first every meal takes a dish it can really
+// make, then a meal with none takes the closest match from what's left --
+// so a dish one ingredient short never holds back what another meal could
+// cook. Either way, what one meal uses no other meal uses that day.
+function planDay(sourceFridge, day, next = defaultMeal()){
+  let working = sourceFridge.slice();
+  const plan = {meals: {}, cookedIds: new Set()};
+  const order = mealOrder(next);
+  const take = (meal, r, tier) => {
+    plan.meals[meal] = {meal, day, tier, result: r};
+    const ids = r.matched.map(k => r.have[k].id);
+    if (tier === 'recommend') ids.forEach(id => plan.cookedIds.add(id));
+    working = working.filter(it => !ids.includes(it.id));
+  };
+  order.forEach(meal => {
+    const r = recommendAt(working, day, skippedMeals[meal], true, meal);
+    if (r) take(meal, r, 'recommend');
+  });
+  order.forEach(meal => {
+    if (plan.meals[meal]) return;
+    const skip = skippedMeals[meal];
+    const r = nearMissAt(working, day, skip, true, meal);
+    if (r) return take(meal, r, 'nearmiss');
+    const any = recommendAt(working, day, skip, false, meal) || nearMissAt(working, day, skip, false, meal);
+    plan.meals[meal] = {meal, day, tier: any ? 'noRisk' : 'terminal', result: null};
+  });
+  return plan;
+}
+const dishTier = t => t === 'recommend' || t === 'nearmiss';
 
 function joinWords(arr){
   if (arr.length <= 1) return arr[0] || '';
@@ -3044,33 +3188,45 @@ function joinWords(arr){
 // States what a projected day's suggestion actually assumes, built from
 // what the prior days really resolved to rather than a fixed phrase -- a
 // near-miss or terminal day upstream consumed nothing, so nothing after it
-// gets to claim a plan happened.
+// gets to claim a plan happened. Today is its meals.
 function assumptionClause(dayIndex, results){
   const cooked = [], notCooked = [];
+  const name = i => i === 0 ? "today's meals" : DAY_LABELS[i].toLowerCase();
   for (let i = 0; i < dayIndex; i++){
-    (results[i].tier === 'recommend' ? cooked : notCooked).push(DAY_LABELS[i].toLowerCase());
+    (results[i].tier === 'recommend' ? cooked : notCooked).push(name(i));
   }
   if (!cooked.length) return 'nothing before this was a real plan — same fridge, further along';
-  let clause = `assumes ${joinWords(cooked)} ${cooked.length === 1 ? 'happens' : 'happen'}`;
-  if (notCooked.length) clause += `; ${joinWords(notCooked)} ${notCooked.length === 1 ? "wasn't" : "weren't"} a plan either`;
+  const one = arr => arr.length === 1 && arr[0] !== name(0);
+  let clause = `assumes ${joinWords(cooked)} ${one(cooked) ? 'happens' : 'happen'}`;
+  if (notCooked.length) clause += `; ${joinWords(notCooked)} ${one(notCooked) ? "wasn't" : "weren't"} a plan either`;
   return clause;
 }
 
 // Walks up to three simulated days forward on a working copy of the real
-// fridge. Only a real recommendation (tier 'recommend') gets its matched
-// ingredients removed before the next day is computed -- a near-miss or
-// terminal day assumes nothing, so the next day starts from the identical
-// fridge, just aged by one more day. Stops the moment a day is terminal:
-// with nothing ever added back and shelf life only ever counting down,
-// every day after a terminal one is guaranteed terminal too, so there is
-// nothing further to discover by continuing.
+// fridge. Today is its meal plan (planDay); Tomorrow and The day after one
+// dish each. Only a real recommendation (tier 'recommend') gets its
+// matched ingredients removed before the next day is computed -- a
+// near-miss or terminal day assumes nothing, so the next day starts from
+// the identical fridge, just aged by one more day. Stops the moment a day
+// is terminal: with nothing ever added back and shelf life only ever
+// counting down, every day after a terminal one is guaranteed terminal
+// too, so there is nothing further to discover by continuing.
 function buildDayProjections(){
   const results = [];
   let workingFridge = fridge.slice();
-  const skipSets = [skipped, skippedTomorrow, skippedDayAfter];
+  const skipSets = [null, skippedTomorrow, skippedDayAfter];
   for (let d = 0; d < 3; d++){
     const day = today() + d;
     const fridgeAtStart = workingFridge; // this day's fact reads from here, not the live global fridge
+    if (d === 0){
+      const plan = planDay(workingFridge, day);
+      const tiers = MEALS.map(m => plan.meals[m].tier);
+      const tier = ['recommend', 'nearmiss', 'noRisk'].find(t => tiers.includes(t)) || 'terminal';
+      results.push({dayIndex: 0, day, tier, plan, fridgeAtStart});
+      if (tier === 'terminal') break;
+      workingFridge = workingFridge.filter(it => !plan.cookedIds.has(it.id));
+      continue;
+    }
     let r = recommendAt(workingFridge, day, skipSets[d]);
     let tier = r ? 'recommend' : null;
     if (!r){ r = nearMissAt(workingFridge, day, skipSets[d]); tier = r ? 'nearmiss' : null; }
@@ -5512,7 +5668,7 @@ Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 
 // some: what's left after "Used some" (usedSomeOf; null for a whole
 // item) and key, the FOODS key, which picks a cut face before the shape.
-function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some = null, key = null){
+function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some = null, key = null, wrap = true){
   if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed, some);
   if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape, some);
   if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed, some);
@@ -5555,8 +5711,14 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   // whole food: cut, its face to us, and wrapped. The film's outline is
   // the drawing's first path, so frost and Tonight's dash trace the film.
   const cut = cutShape(shape, key, raw, deformed, color, fraction, size, seed, some);
-  const film = clingFilmMarkup(cut.film, size, seed);
   const outline = cut.outline ? `<path d="${cut.outline}" fill="none" stroke="${INK_HEX}" stroke-width="${strokeW}"/>` : '';
+  // cut for a dish (dishMarkup): no film
+  if (!wrap) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath><clipPath id="${uid}-cut"><path d="${cut.clip}"/></clipPath></defs>
+    <g clip-path="url(#${uid}-cut)">${body}</g>
+    ${outline}${cut.face}
+  </svg>`;
+  const film = clingFilmMarkup(cut.film, size, seed);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath><clipPath id="${uid}-clip"><path d="${path}"/></clipPath><clipPath id="${uid}-cut"><path d="${cut.clip}"/></clipPath></defs>
     <g clip-path="url(#${uid}-cut)">${body}</g>
@@ -6708,26 +6870,31 @@ function rfRenderFreezer(day){
   rfFillRow(row, rfFitRow(items, day, x1 - x0, 1, sizeU), day, {z: (i, n) => n - i});
 }
 // Every drawn item opens its popover (fridge, freezer and door bins).
-// The fridge items tonight's dish uses get a thin traced outline.
+// The fridge items the default meal's dish uses (the one the line under
+// the bag names) get a thin traced outline.
 function rfMarkTonight(unit){
-  const ids = new Set(boardItems.map(it => it.id));
+  const ids = new Set(nextMealItems.map(it => it.id));
   unit.querySelectorAll('.rf-cavity [data-rf-item], .rf-door [data-rf-item]').forEach(b => b.classList.toggle('rf-tonight', ids.has(+b.dataset.rfItem)));
 }
 
-// "Tonight: <dish> →" under the grocery bag (on a phone too, the bag
-// under the fridge): switches to the Kitchen panel. Nothing when there's no dish.
+// "Breakfast: Banana oatmeal →" under the grocery bag (on a phone too,
+// the bag under the fridge), the dish drawn small beside it: the default
+// meal (defaultMeal), whatever the Kitchen has selected. Switches to the
+// Kitchen panel on that meal. Nothing when there's no dish.
 function renderTonightLine(){
   const line = document.getElementById('tonightLine');
-  line.hidden = !tonightDish;
-  if (!tonightDish){ document.getElementById('rfUnit').classList.remove('tonight-show'); return; }
-  line.innerHTML = `<span class="mono">Tonight</span>${esc(tonightDish)} →`;
+  line.hidden = !nextMealDish;
+  if (!nextMealDish){ document.getElementById('rfUnit').classList.remove('tonight-show'); return; }
+  const meal = defaultMeal(), label = MEAL_LABEL[meal];
+  line.innerHTML = `<span class="tonight-line-art" aria-hidden="true">${dishMarkup(nextMealDish, 44)}</span><span class="mono">${label}:</span>${esc(nextMealDish.name)} →`;
   // while it's hovered or focused, the fridge outlines what the dish uses
   const unit = document.getElementById('rfUnit');
   const show = on => unit.classList.toggle('tonight-show', on);
   line.onmouseenter = () => show(true); line.onmouseleave = () => show(line === document.activeElement);
   line.onfocus = () => show(true); line.onblur = () => show(line.matches(':hover'));
-  line.setAttribute('aria-label', `Tonight: ${tonightDish}. Show the kitchen`);
+  line.setAttribute('aria-label', `${label}: ${nextMealDish.name}. Show the kitchen`);
   line.onclick = () => {
+    if (mealPick && mealPick !== meal){ mealPick = meal; render(); }
     showRoom(1);
     const tabs = document.getElementById('roomTabs');
     if (tabs.getBoundingClientRect().top < 0) tabs.scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
@@ -7096,13 +7263,203 @@ function rfInit(){
   document.addEventListener('keydown', e => { if (e.key === 'Escape') rfHidePopover(); });
 }
 
+/* ---------- dish drawings ----------
+   Composed, not drawn per dish (dishMarkup): the dish's vessel
+   (DISHES[].vessel: bowl, plate, glass, mug, toast, pan) in the fridge's
+   line-and-wash, and inside it the dish's own ingredients, drawn with
+   their own food drawings cut (the Used some drawing, no film) and
+   cooked: warmer (a warm colour matrix over them), no decay, a cooked
+   sear on meat, and a wisp of steam over a hot dish (hot:true). Large on
+   the Kitchen's cutting board, small beside the line under the bag and on
+   the meals beside the selected one. The vessel's few flat tones are
+   scoped to these drawings, as the counter's are to it: a grey glaze for
+   bowls, plates and mugs, iron for the pan, clear glass, a toasted slice. */
+const DISH_TONES = {glaze: '#CBD4D6', glaze2: '#B7C2C5', glazeIn: '#DDE4E6', iron: '#5E6664', iron2: '#474E4C', ironIn: '#747C79',
+  glass: '#E9EFEF', crust: '#C3925A', crust2: '#A87843', crumb: '#EBD6A8'};
+// What a pantry staple lays under the ingredients (its own colour;
+// flour is the pancakes themselves).
+const DISH_BASES = {oats: '#E2D2AE', rice: '#F2EFE6', noodles: '#EAD8A2', pasta: '#EAD8A2', stock: '#E9D7A8', flour: '#D9A766'};
+// Dairy that goes into a dish rather than sitting on it: the porridge's
+// milk, the bowl's yogurt, the toast's cream cheese, the pan's butter.
+const DISH_INTO = new Set(['milk', 'yogurt', 'cottagecheese', 'creamcheese', 'heavycream', 'halfandhalf', 'sourcream', 'butter']);
+const DISH_SEAR = '#B9824A';
+let dishArtCounter = 0;
+function dishSeed(name){ let h = 7; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 100000; return h; }
+// What the dish is laid on: its staple, the dairy it's made with, or both.
+function dishFill(dish){
+  const staple = dish.pantry.find(k => DISH_BASES[k]) || (dish.needs.includes('cookedrice') ? 'rice' : null);
+  const dairy = dish.needs.filter(k => DISH_INTO.has(k) && k !== 'butter').map(k => FOODS[k].base);
+  if (staple === 'flour') return {staple, color: DISH_BASES.flour};
+  if (staple && dairy.length) return {staple, color: hexLerp(DISH_BASES[staple], dairy[0], 0.35)};
+  if (staple) return {staple, color: DISH_BASES[staple]};
+  if (dairy.length) return {staple: null, color: dairy[0]};
+  return null;
+}
+// The ingredients drawn as pieces: everything but what went into the dish
+// (dairy; egg in a batter), the rice that is its base, and the bread a
+// toast is.
+function dishPieceKeys(dish){
+  const batter = dish.pantry.includes('flour');
+  return dish.needs.filter(k => FOODS[k] && !DISH_INTO.has(k) && k !== 'cookedrice'
+    && !(k === 'bread' && dish.vessel === 'toast') && !(batter && (k === 'egg' || k === 'milk')));
+}
+// One ingredient, cut and cooked, w units wide, its foot at (cx, base).
+function dishPiece(k, cx, base, w, px, seed, vessel, hot){
+  const f = FOODS[k], sw = f1(Math.max(0.9, 100 / px));
+  const x0 = cx - w / 2;
+  const ink = `stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"`;
+  if (k === 'egg'){
+    // fried in a pan or on toast; halved, boiled, anywhere else
+    if (vessel === 'pan' || vessel === 'toast'){
+      const r = w * 0.42, y = base - w * 0.12;
+      return `<path d="M${f1(cx - r)} ${f1(y)} C ${f1(cx - r)} ${f1(y - r * 0.55)}, ${f1(cx - r * 0.2)} ${f1(y - r * 0.62)}, ${f1(cx + r * 0.25)} ${f1(y - r * 0.5)} C ${f1(cx + r * 1.05)} ${f1(y - r * 0.45)}, ${f1(cx + r * 1.02)} ${f1(y + r * 0.3)}, ${f1(cx + r * 0.3)} ${f1(y + r * 0.34)} C ${f1(cx - r * 0.3)} ${f1(y + r * 0.42)}, ${f1(cx - r)} ${f1(y + r * 0.3)}, ${f1(cx - r)} ${f1(y)} Z" fill="#F7F3E8" ${ink}/>
+        <ellipse cx="${f1(cx + r * 0.05)}" cy="${f1(y - r * 0.08)}" rx="${f1(r * 0.36)}" ry="${f1(r * 0.27)}" fill="#F0B43C" ${ink}/>`;
+    }
+    const r = w * 0.3, y = base - r * 0.9;
+    return `<ellipse cx="${f1(cx)}" cy="${f1(y)}" rx="${f1(r)}" ry="${f1(r * 0.78)}" fill="#F7F3E8" ${ink}/>
+      <circle cx="${f1(cx)}" cy="${f1(y + r * 0.05)}" r="${f1(r * 0.45)}" fill="#F0B43C" ${ink}/>`;
+  }
+  if (k === 'tofu'){
+    return [-1, 0, 1].map(i => {
+      const s = w * 0.26, x = cx + i * s * 1.05 - s / 2, y = base - s - (i === 0 ? s * 0.35 : 0);
+      return `<path d="M${f1(x)} ${f1(y + s * 0.25)} L${f1(x + s * 0.25)} ${f1(y)} H${f1(x + s * 1.1)} L${f1(x + s * 0.85)} ${f1(y + s * 0.25)} Z" fill="${hexLerp(f.base, '#ffffff', 0.25)}" ${ink}/>
+        <rect x="${f1(x)}" y="${f1(y + s * 0.25)}" width="${f1(s * 0.85)}" height="${f1(s * 0.75)}" fill="${hot ? hexLerp(f.base, DISH_SEAR, 0.18) : f.base}" ${ink}/>`;
+    }).join('');
+  }
+  if (k === 'bacon'){
+    return [0, 1].map(i => {
+      const y = base - w * (0.2 + i * 0.16), a = w * 0.07;
+      return `<path d="M${f1(x0)} ${f1(y)} q ${f1(w / 6)} ${f1(-a * 2)} ${f1(w / 3)} 0 t ${f1(w / 3)} 0 t ${f1(w / 3)} 0 l 0 ${f1(w * 0.1)} q ${f1(-w / 6)} ${f1(a * 2)} ${f1(-w / 3)} 0 t ${f1(-w / 3)} 0 t ${f1(-w / 3)} 0 Z" fill="${hexLerp(f.base, DISH_SEAR, 0.4)}" ${ink}/>`;
+    }).join('');
+  }
+  if (f.cat === 'protein' || k === 'rotisserie'){
+    // cooked pieces, seared
+    const col = hexLerp(f.base, DISH_SEAR, hot ? 0.45 : 0.25);
+    return [[-0.24, 0, 0.26], [0.22, 0.02, 0.24], [0, -0.16, 0.25]].map(([dx, dy, r], i) => {
+      const x = cx + dx * w, y = base - w * 0.2 + dy * w, R = r * w;
+      const pts = Array.from({length: 7}, (_, j) => {
+        const t = j / 7 * Math.PI * 2, q = 1 + 0.12 * Math.sin(seed + i * 3 + j * 1.7);
+        return [x + Math.cos(t) * R * q, y + Math.sin(t) * R * 0.7 * q];
+      });
+      return `<path d="${smoothClosedPath(pts)}" fill="${col}" ${ink}/>
+        <path d="M${f1(x - R * 0.4)} ${f1(y - R * 0.1)} l ${f1(R * 0.7)} ${f1(-R * 0.15)}" fill="none" stroke="${INK_HEX}" stroke-width="${sw}" stroke-opacity=".45" stroke-linecap="round"/>`;
+    }).join('');
+  }
+  if (k === 'shreddedcheese'){
+    return Array.from({length: 7}, (_, j) => {
+      const x = x0 + w * (0.1 + 0.8 * ((j * 0.37 + seed * 0.001) % 1)), y = base - w * (0.08 + 0.18 * ((j * 0.61) % 1));
+      const a = (j * 47 + seed) % 180 * Math.PI / 180;
+      return `<line x1="${f1(x)}" y1="${f1(y)}" x2="${f1(x + Math.cos(a) * w * 0.16)}" y2="${f1(y + Math.sin(a) * w * 0.07)}" stroke="${f.base}" stroke-width="${f1(w * 0.07)}" stroke-linecap="round"/>`;
+    }).join('');
+  }
+  const it = {key: k, bought: today(), custom: null, part: 0.5};
+  const shape = fridgeShapeOf(it);
+  if (opensWhenUsed(shape)) return ''; // a package: what's in it went in
+  const cat = fridgeCatOf(it);
+  const S = Math.max(8, Math.round(w * px / 100));
+  const art = foodShapeMarkupLine(shape, f.base || DEFAULT_BASE_HEX, 0, cat.sag, cat.mold, cat.wrinkle, S, seed, f.en, 0.5, k, false);
+  return art.replace(/^<svg width="\d+" height="\d+"/, `<svg x="${f1(x0)}" y="${f1(base - w * 0.9)}" width="${f1(w)}" height="${f1(w)}" overflow="visible"`);
+}
+// Where each vessel holds its pieces: from x0 to x1, standing on base,
+// none wider than max; and where its steam rises from.
+const DISH_VESSELS = {
+  bowl:  {x0: 16, x1: 84, base: 58, max: 40, steam: 26},
+  plate: {x0: 16, x1: 84, base: 73, max: 40, steam: 36},
+  pan:   {x0: 10, x1: 76, base: 68, max: 38, steam: 32, cx: 43},
+  glass: {x0: 52, x1: 88, base: 21, max: 34},
+  mug:   {x0: 33, x1: 61, base: 40, max: 28, steam: 22, cx: 47},
+  toast: {x0: 18, x1: 82, base: 70, max: 38, steam: 34}
+};
+function dishVesselBack(v, fill, sw){
+  const T = DISH_TONES, o = `stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"`;
+  const fc = fill && fill.color;
+  if (v === 'bowl') return `<ellipse cx="50" cy="89" rx="16" ry="3" fill="${T.glaze2}" ${o}/>
+    <ellipse cx="50" cy="50" rx="42" ry="10" fill="${T.glazeIn}" ${o}/>
+    ${fc ? `<ellipse cx="50" cy="52" rx="37" ry="7" fill="${fc}" ${o} stroke-opacity=".6"/>` : ''}`;
+  if (v === 'plate') return `<ellipse cx="50" cy="77" rx="30" ry="5" fill="${T.glaze2}" ${o}/>
+    <ellipse cx="50" cy="71" rx="47" ry="14" fill="${T.glaze}" ${o}/>
+    <ellipse cx="50" cy="72" rx="33" ry="9" fill="${T.glazeIn}" ${o} stroke-opacity=".5"/>
+    ${fill && fill.staple === 'flour' ? [72, 67, 62].map(y => `<path d="M22 ${y - 1} A28 7 0 0 0 78 ${y - 1} V${y + 1.5} A28 7 0 0 1 22 ${y + 1.5} Z" fill="${hexLerp(fc, DISH_SEAR, 0.35)}" ${o}/>
+      <ellipse cx="50" cy="${y - 1}" rx="28" ry="7" fill="${fc}" ${o}/>`).join('')
+      : fc ? `<ellipse cx="50" cy="71" rx="26" ry="6.5" fill="${fc}" ${o}/>` : ''}`;
+  if (v === 'pan') return `<path d="M79 60 L97 51 Q100 50 100.5 53 L83 64 Z" fill="${T.iron2}" ${o}/>
+    <path d="M5 62 A38 13 0 0 0 81 62 L79 69 A36 12 0 0 1 7 69 Z" fill="${T.iron2}" ${o}/>
+    <ellipse cx="43" cy="62" rx="38" ry="13" fill="${T.iron}" ${o}/>
+    <ellipse cx="43" cy="62.5" rx="33" ry="10" fill="${fc || T.ironIn}" ${o} stroke-opacity=".6"/>`;
+  if (v === 'glass') return `<path d="M30.4 30 L69.6 30 L65.7 89 L34.3 89 Z" fill="${fc || T.glass}"/>
+    <ellipse cx="50" cy="30" rx="19.6" ry="3" fill="${fc ? hexLerp(fc, '#ffffff', 0.25) : T.glass}" ${o} stroke-opacity=".5"/>`;
+  if (v === 'mug') return `<path d="M69 42 C 90 42, 90 78, 68 78 L68 71 C 82 71, 82 49, 69 49 Z" fill="${T.glaze2}" ${o}/>
+    <path d="M24 34 L70 34 L68 84 Q67 90 60 90 L34 90 Q27 90 26 84 Z" fill="${T.glaze}" ${o}/>
+    <ellipse cx="47" cy="34" rx="23" ry="5" fill="${T.glazeIn}" ${o}/>
+    <ellipse cx="47" cy="35" rx="19.5" ry="3.6" fill="${fc || '#D8B46E'}" ${o} stroke-opacity=".5"/>`;
+  // toast: a slice lying flat, its crown at the back, crust round its crumb
+  const slice = 'M16 76 L14 54 C 12 42, 20 37, 30 40 C 36 31, 64 31, 70 40 C 80 37, 88 42, 86 54 L84 76 Z';
+  return `<path d="M16 76 L84 76 L83 82 L17 82 Z" fill="${T.crust2}" ${o}/>
+    <path d="${slice}" fill="${T.crust}" ${o}/>
+    <path d="M21 72 L19.5 55 C 18.5 46, 24 42, 32 45 C 38 37, 62 37, 68 45 C 76 42, 81.5 46, 80.5 55 L79 72 Z" fill="${T.crumb}" ${o} stroke-opacity=".45"/>
+    ${fc ? `<path d="M27 68 L26 56 C 26 50, 30 48, 35 50 C 41 44, 59 44, 65 50 C 70 48, 74 50, 74 56 L73 68 Z" fill="${fc}" ${o} stroke-opacity=".4"/>` : ''}`;
+}
+function dishVesselFront(v, sw){
+  const T = DISH_TONES, o = `stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"`;
+  if (v === 'bowl') return `<path d="M8 50 A42 10 0 0 0 92 50 C 90 74, 70 88, 50 88 C 30 88, 10 74, 8 50 Z" fill="${T.glaze}" ${o}/>
+    <path d="M16 62 C 22 74, 34 82, 44 83" fill="none" stroke="${INK_HEX}" stroke-width="${sw}" stroke-opacity=".4" stroke-linecap="round"/>`;
+  if (v === 'pan') return `<path d="M10 66 A34 9.5 0 0 0 76 66" fill="none" stroke="${T.iron}" stroke-width="${f1(sw * 2.4)}" stroke-linecap="round"/>
+    <path d="M5 62 A38 13 0 0 0 81 62" fill="none" ${o}/>`;
+  if (v === 'glass') return `<path d="M28 16 L72 16 L66 92 L34 92 Z" fill="${T.glass}" fill-opacity=".28" ${o}/>
+    <ellipse cx="50" cy="16" rx="22" ry="3.5" fill="none" ${o}/>
+    <path d="M34 24 L37.5 84" stroke="#ffffff" stroke-opacity=".75" stroke-width="${f1(sw * 1.6)}" stroke-linecap="round"/>`;
+  if (v === 'mug') return `<path d="M30 46 C 30 62, 31 76, 33 84" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="${f1(sw * 1.4)}" stroke-linecap="round"/>`;
+  return '';
+}
+function dishMarkup(dish, px){
+  const v = DISH_VESSELS[dish.vessel] ? dish.vessel : 'plate', V = DISH_VESSELS[v];
+  const sw = f1(Math.max(0.9, 100 / px)), seed = dishSeed(dish.name), id = 'dish' + (dishArtCounter++);
+  let fill = dishFill(dish);
+  // a glass is blended: the fruit's own flesh and the dairy, together
+  if (v === 'glass'){
+    const cols = dish.needs.filter(k => FOODS[k]).map(k => (CUT_FACES[k] && CUT_FACES[k].flesh) || FOODS[k].base);
+    fill = {staple: null, color: cols.slice(1).reduce((c, x, i) => oklchLerp(c, x, 1 / (i + 2)), cols[0])};
+  }
+  let keys = dishPieceKeys(dish);
+  // a drink shows its ingredients only beside it on the board, never on
+  // or in the glass or mug
+  if (v === 'glass' || v === 'mug') keys = [];
+  const n = keys.length;
+  const w = n ? Math.min(V.max, (V.x1 - V.x0) / n * 1.6) : 0;
+  const step = n > 1 ? (V.x1 - V.x0 - w) / (n - 1) : 0;
+  const pieces = keys.map((k, i) => {
+    const cx = n > 1 ? V.x0 + w / 2 + step * i : (V.cx || (V.x0 + V.x1) / 2);
+    const lift = n > 2 && i % 2 ? -3 : 0;
+    return dishPiece(k, cx, V.base + lift, w, px, seed + i * 13, v, !!dish.hot);
+  }).join('');
+  // the steam: two thin wisps over a hot dish
+  const steam = dish.hot && V.steam != null ? [-7, 6].map((dx, i) => {
+    const x = (V.cx || 50) + dx, y = V.steam - i * 2;
+    return `<path d="M${x} ${y} C ${x - 4} ${y - 5}, ${x + 4} ${y - 9}, ${x} ${y - 14} C ${x - 4} ${y - 18}, ${x + 3} ${y - 21}, ${x + 1} ${y - 24}" fill="none" stroke="${INK_HEX}" stroke-width="${sw}" stroke-opacity=".38" stroke-linecap="round"/>`;
+  }).join('') : '';
+  // warmer: the pieces through a warm colour matrix, a little more for a
+  // hot dish; nothing decays
+  const m = dish.hot ? '1.05 0 0 0 .03  0 1 0 0 .01  0 0 .86 0 0  0 0 0 1 0' : '1.03 0 0 0 .02  0 1 0 0 .005  0 0 .92 0 0  0 0 0 1 0';
+  return `<svg class="dish-art" width="${px}" height="${px}" viewBox="0 0 100 100" overflow="visible" aria-hidden="true">
+    <defs><filter id="${id}w" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${m}"/></filter></defs>
+    <g filter="url(#rfWobble)">${dishVesselBack(v, fill, sw)}</g>
+    <g filter="url(#${id}w)">${pieces}</g>
+    <g filter="url(#rfWobble)">${dishVesselFront(v, sw)}</g>
+    ${steam}
+  </svg>`;
+}
+
 /* ---------- kitchen ---------- */
 
-// Tonight's dish's owned ingredients, set by renderTodayCard.
+// The selected meal's owned ingredients, set by renderMealCard.
 let boardItems = [];
-// Tonight's dish name when the Kitchen shows one (a recommendation or the
-// closest match), else null: the Fridge panel's Tonight line reads it.
-let tonightDish = null;
+// The selected meal's dish, drawn on the board with its ingredients.
+let boardDish = null;
+// The default meal's dish (defaultMeal: a recommendation or the closest
+// match), else null, and the items it uses: the Fridge panel's line under
+// the bag names it, and the fridge outlines what it uses.
+let nextMealDish = null;
+let nextMealItems = [];
 // The counter's geometry, in its SVG's own units (360 x 150; the same 360
 // wide as the fridge drawing, so rfBuildFoodItem's cqw sizes carry over).
 const KC = {
@@ -7110,6 +7467,7 @@ const KC = {
   top: {back: 34, front: 112, face: 122},
   board: {bx0: 32, bx1: 196, by: 48, fx0: 20, fx1: 208, fy: 102, t: 5},
   bowl: {cx: 284, cy: 70, rx: 50, ry: 11, base: 110},
+  dish: 86, // the dish drawing's width on the board
   scale: 0.8
 };
 
@@ -7164,8 +7522,20 @@ function renderKitchen(){
   rfPlaceRow(uprightEl, w.cx - w.rx - 20, KC.W - 6, w.cy - w.ry - 4, KC.W, KC.H);
   rfFillRow(uprightEl, rfFitRow(upright, day, KC.W - 6 - (w.cx - w.rx - 20), KC.scale), day, {z: (i, n) => n - i});
 
-  rfPlaceRow(boardEl, b.fx0 + 12, b.fx1 - 12, b.fy - 10, KC.W, KC.H);
-  rfFillRow(boardEl, rfFitRow(boardItems, day, b.fx1 - b.fx0 - 24, KC.scale), day);
+  // The selected meal's dish, drawn large at the board's left; what it
+  // uses from the fridge and the bowl beside it, as they are now.
+  const dishEl = document.getElementById('kcDish');
+  const dishU = KC.dish;
+  dishEl.hidden = !boardDish;
+  dishEl.innerHTML = boardDish ? dishMarkup(boardDish, 200) : '';
+  if (boardDish){
+    dishEl.style.left = rfPct(b.fx0 + 2, KC.W);
+    dishEl.style.width = rfPct(dishU, KC.W);
+    dishEl.style.bottom = rfPct(KC.H - (b.fy + 4), KC.H);
+  }
+  const rowX0 = boardDish ? b.fx0 + dishU : b.fx0 + 12;
+  rfPlaceRow(boardEl, rowX0, b.fx1 - 12, b.fy - 10, KC.W, KC.H);
+  rfFillRow(boardEl, rfFitRow(boardItems, day, b.fx1 - 12 - rowX0, KC.scale), day);
   // the same food may also be in the fridge or the bowl: the board's
   // drawing is its own button, not a second copy of that one
   boardEl.innerHTML = boardEl.innerHTML.replace(/data-rf-item=/g, 'data-board-item=');
@@ -7503,10 +7873,6 @@ function wireDishCard(r, boxId, skipSet){
   });
 }
 
-function renderTodayCard(entry){
-  renderTodayCardBody(entry);
-  renderLeftoversAsk();
-}
 // After Cook this, the board asks "Any leftovers?" above whatever comes
 // next. Yes puts a lidded container named for the dish in the fridge
 // (addLeftovers); No drops the question. Asked once per dish cooked.
@@ -7522,56 +7888,77 @@ function renderLeftoversAsk(){
   box.querySelector('.js-leftovers-yes').onclick = () => addLeftovers();
   box.querySelector('.js-leftovers-no').onclick = () => { leftoversAsk = null; render(); };
 }
-function renderTodayCardBody(entry){
+// The meal switcher: Breakfast / Lunch / Dinner / Snack, in place of the
+// old "Tonight". Opens on defaultMeal(); a switch lasts until reload.
+function mealSwitchHTML(sel){
+  return `<div class="meal-switch" role="group" aria-label="Meal">${MEALS.map(m =>
+    `<button type="button" class="meal-tab" data-meal="${m}" aria-pressed="${m === sel}">${MEAL_LABEL[m]}</button>`).join('')}</div>`;
+}
+function wireMealSwitch(box){
+  box.querySelectorAll('[data-meal]').forEach(b => { b.onclick = () => { mealPick = b.dataset.meal; render(); }; });
+}
+// The other meals, small, beside the selected one: each its dish drawn
+// small (dishMarkup) and its name; tapping one selects it.
+function mealPlatesHTML(plan, sel){
+  return `<div class="meal-plates">${MEALS.filter(m => m !== sel).map(m => {
+    const e = plan.meals[m], r = dishTier(e.tier) ? e.result : null;
+    const name = r ? r.dish.name : e.tier === 'noRisk' ? 'Nothing about to turn' : 'No dish';
+    return `<button type="button" class="meal-plate" data-meal="${m}" aria-label="${MEAL_LABEL[m]}: ${esc(name)}">
+      <span class="meal-plate-art" aria-hidden="true">${r ? dishMarkup(r.dish, 64) : ''}</span>
+      <span class="meal-plate-text"><span class="mono">${MEAL_LABEL[m]}</span><span class="meal-plate-name${r ? '' : ' none'}">${esc(name)}</span></span>
+    </button>`;
+  }).join('')}</div>`;
+}
+// The board's card: the selected meal large, the others as small plates.
+function renderMealCard(plan, sel){
   const box = document.getElementById('tonight');
-  const day = entry.day;
-
-  if (entry.tier === 'terminal'){
-    box.innerHTML = `<div>
-      <div class="eyebrow mono">Tonight</div>
-      <h2>Not even one ingredient away from a dish.</h2>
-      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-        Nothing on file gets closer than that with what's here. Add what you actually have and try again.</p>
-    </div>`;
-    return;
-  }
-
-  if (entry.tier === 'noRisk'){
-    box.innerHTML = `<div>
-      <div class="eyebrow mono">Tonight</div>
-      <h2>Nothing here is about to turn.</h2>
-      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-        Everything in the fridge has more than a few days left. No dish needed tonight.</p>
-    </div>`;
-    return;
-  }
-
-  const r = entry.result;
-  const {missingHTML, usesUpHTML, atRiskCount, gramsAtRisk, usdAtRisk} = buildDishCard(r, day);
-  // What cooking it keeps out of the bin: the at-risk ingredients only,
-  // the same amounts cook() credits to the ledger.
-  const savesHTML = gramsAtRisk > 0
-    ? `<p class="dish-saves mono">Saves about ${(gramsAtRisk / 1000).toFixed(1)} kg · $${usdAtRisk.toFixed(2)}</p>` : '';
-  const eyebrow = entry.tier === 'recommend'
-    ? `Tonight · rescues ${atRiskCount} ${atRiskCount === 1 ? 'item' : 'items'}`
-    : 'Closest match · one ingredient short';
-  // The ingredients are drawn on the cutting board (renderKitchen), not
-  // listed: what you own of the dish, soonest to turn first.
-  boardItems = r.matched.map(k => r.have[k]).sort((a, b) => leftAt(a, day) - leftAt(b, day));
-  tonightDish = r.dish.name;
-  box.innerHTML = `
-    <div>
-      <div class="eyebrow mono">${eyebrow}</div>
+  const e = plan.meals[sel], day = e.day;
+  const first = mealOrder(defaultMeal())[0] === sel;
+  let main;
+  if (e.tier === 'terminal'){
+    main = `<h2>Not even one ingredient away from a dish.</h2>
+      <p class="meal-note">${first ? "Nothing on file gets closer than that with what's here. Add what you actually have and try again."
+        : `Nothing on file for ${MEAL_LABEL[sel].toLowerCase()} gets closer than that with what the other meals leave.`}</p>`;
+  } else if (e.tier === 'noRisk'){
+    main = `<h2>Nothing here is about to turn.</h2>
+      <p class="meal-note">${first ? 'Everything in the fridge has more than a few days left.' : 'What the other meals leave has more than a few days left.'} No dish needed for ${MEAL_LABEL[sel].toLowerCase()}.</p>`;
+  } else {
+    const r = e.result;
+    const {missingHTML, usesUpHTML, atRiskCount, gramsAtRisk, usdAtRisk} = buildDishCard(r, day);
+    // What cooking it keeps out of the bin: the at-risk ingredients only,
+    // the same amounts cook() credits to the ledger.
+    const savesHTML = gramsAtRisk > 0
+      ? `<p class="dish-saves mono">Saves about ${(gramsAtRisk / 1000).toFixed(1)} kg · $${usdAtRisk.toFixed(2)}</p>` : '';
+    const eyebrow = e.tier === 'recommend'
+      ? `Rescues ${atRiskCount} ${atRiskCount === 1 ? 'item' : 'items'}`
+      : 'Closest match · one ingredient short';
+    // The ingredients are drawn on the cutting board (renderKitchen), with
+    // the dish itself: what you own of it, soonest to turn first.
+    boardItems = r.matched.map(k => r.have[k]).sort((a, b) => leftAt(a, day) - leftAt(b, day));
+    boardDish = r.dish;
+    main = `<div class="eyebrow mono">${eyebrow}</div>
       <h2>${r.dish.name}</h2>
       ${savesHTML}
       ${usesUpHTML}
       ${missingHTML}
-    </div>
-    <div class="actions">
-      ${entry.tier === 'recommend' ? '<button class="solid js-cook">Cook this</button>' : ''}
-      <button class="js-skip">Show another</button>
-    </div>`;
-  wireDishCard(r, 'tonight', skipped);
+      <div class="actions">
+        ${e.tier === 'recommend' ? '<button class="solid js-cook">Cook this</button>' : ''}
+        <button class="js-skip">Show another</button>
+      </div>`;
+  }
+  box.innerHTML = `${mealSwitchHTML(sel)}
+    <div class="meal-day"><div class="meal-main">${main}</div>${mealPlatesHTML(plan, sel)}</div>`;
+  wireMealSwitch(box);
+  if (dishTier(e.tier)) wireDishCard(e.result, 'tonight', skippedMeals[sel]);
+  renderLeftoversAsk();
+}
+// Before there's any plan (an empty fridge, or nothing still good): the
+// switcher and the one line that applies to every meal.
+function renderMealEmpty(inner){
+  const box = document.getElementById('tonight');
+  box.innerHTML = `${mealSwitchHTML(selectedMeal())}<div class="meal-day"><div class="meal-main">${inner}</div></div>`;
+  wireMealSwitch(box);
+  renderLeftoversAsk();
 }
 
 // Tomorrow / the day after: the fact (certain, from real fridge shelf life)
@@ -7584,11 +7971,17 @@ function renderProjectedCard(entry, boxId, skipSet){
   box.style.display = '';
   const day = entry.day;
   const label = DAY_LABELS[entry.dayIndex];
-  // factAt can legitimately return null now that it reads the projected
-  // fridge: if an earlier day's recommendation used up everything, there's
-  // nothing left to report on. That's a real, if unusual, outcome -- say
-  // so plainly rather than let the template print the literal word null.
-  const fact = factAt(day, entry.fridgeAtStart) || 'Nothing would be left in the fridge by then.';
+  // factAt returns null when it reads an empty projected fridge: the days
+  // before used up everything. No headline and no dish line then, only
+  // one small line saying so.
+  const fact = factAt(day, entry.fridgeAtStart);
+  if (!fact){
+    box.innerHTML = `<div>
+      <div class="eyebrow mono">${label}</div>
+      <p class="projected-empty">Nothing left to plan for ${label.toLowerCase()}</p>
+    </div>`;
+    return;
+  }
 
   let subHTML;
   if (entry.tier === 'terminal'){
@@ -7623,7 +8016,7 @@ function renderProjectedCard(entry, boxId, skipSet){
   if (entry.repeatsPrevious){
     subHTML = `<div class="dish-sub">
       <div class="eyebrow mono">${entry.clause}</div>
-      <div class="dish-name" style="color:var(--ink-3);font-weight:700">Same dish as ${entry.repeatsPrevious.toLowerCase()}: ${entry.result.dish.name}.</div>
+      <div class="dish-name" style="color:var(--ink-3);font-weight:700">Same dish as ${entry.repeatsPrevious}: ${entry.result.dish.name}.</div>
     </div>`;
     box.innerHTML = `<div>
       <div class="eyebrow mono">${label}</div>
@@ -7663,8 +8056,9 @@ function renderProjectedCard(entry, boxId, skipSet){
 
 function renderTonight(){
   boardItems = [];
-  tonightDish = null;
-  const box = document.getElementById('tonight');
+  boardDish = null;
+  nextMealDish = null;
+  nextMealItems = [];
   const tomorrowBox = document.getElementById('tomorrow');
   const dayAfterBox = document.getElementById('dayAfter');
   tomorrowBox.style.display = 'none';
@@ -7673,26 +8067,24 @@ function renderTonight(){
   dayAfterBox.innerHTML = '';
 
   if (!fridge.length){
-    box.innerHTML = `<div>
-      <div class="eyebrow mono">Tonight</div>
-      <p class="mono" style="color:var(--ink-3)">—</p>
-    </div>`;
-    renderLeftoversAsk();
+    renderMealEmpty(`<p class="mono" style="color:var(--ink-3)">—</p>`);
     return;
   }
   if (!fridge.some(it => left(it) >= 0)){
-    box.innerHTML = `<div>
-      <div class="eyebrow mono">Tonight</div>
-      <h2>Nothing here is still good.</h2>
-      <p style="margin-top:12px;color:var(--ink-2);max-width:44ch">
-        Everything in the fridge is already past date. Clear it out, then restock to start again.</p>
-    </div>`;
-    renderLeftoversAsk();
+    renderMealEmpty(`<h2>Nothing here is still good.</h2>
+      <p class="meal-note">Everything in the fridge is already past date. Clear it out, then restock to start again.</p>`);
     return;
   }
 
   const results = buildDayProjections();
-  renderTodayCard(results[0]);
+  const plan = results[0].plan;
+  // The Fridge panel's line names the default meal, whatever is selected.
+  const next = plan.meals[defaultMeal()];
+  if (dishTier(next.tier)){
+    nextMealDish = next.result.dish;
+    nextMealItems = next.result.matched.map(k => next.result.have[k]);
+  }
+  renderMealCard(plan, selectedMeal());
 
   const boxIds = [null, 'tomorrow', 'dayAfter'];
   const skipSets = [null, skippedTomorrow, skippedDayAfter];
@@ -7703,12 +8095,17 @@ function renderTonight(){
     // got cooked in the simulation (nearmiss, or recommend's own match
     // failed to clear requireAtRisk), the working fridge carries straight
     // through unchanged, and the closest match for the next day can be
-    // the exact same dish. Showing the full card again would just repeat
-    // it -- collapse to one line instead.
+    // the exact same dish -- for today, any of its meals. Showing the
+    // full card again would just repeat it -- collapse to one line instead.
     const prev = results[i - 1];
-    const dishTier = t => t === 'recommend' || t === 'nearmiss';
-    entry.repeatsPrevious = (dishTier(entry.tier) && dishTier(prev.tier) &&
-      entry.result.dish.name === prev.result.dish.name) ? DAY_LABELS[i - 1] : null;
+    entry.repeatsPrevious = null;
+    if (dishTier(entry.tier)){
+      const name = entry.result.dish.name;
+      if (i === 1){
+        const m = MEALS.find(m => dishTier(plan.meals[m].tier) && plan.meals[m].result.dish.name === name);
+        if (m) entry.repeatsPrevious = `today's ${MEAL_LABEL[m].toLowerCase()}`;
+      } else if (dishTier(prev.tier) && prev.result.dish.name === name) entry.repeatsPrevious = DAY_LABELS[i - 1].toLowerCase();
+    }
     renderProjectedCard(entry, boxIds[i], skipSets[i]);
   }
 }

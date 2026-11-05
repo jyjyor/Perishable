@@ -188,7 +188,7 @@ consumer food app.
        the receipt and says it goes in the fridge.
      - Frozen items have no countdown (leftAt is Infinity, as for keeps):
        out of the headline, the decay line, every at-risk count
-       (counted()), the Kitchen and Tonight's dish; in All items as
+       (counted()), the Kitchen and every meal's dish; in All items as
        "frozen" in plain ink. Freezing records nothing in the ledger; Used
        and Tossed count as usual. Saved data from before the freezer
        loads with nothing frozen.
@@ -352,6 +352,29 @@ inside is used down (a bottle's level, a bag's pieces, the eggs left in
 the carton). tools/used-some-study.js shows every food whole, half,
 quarter and half at 60% decayed.
 
+Dishes (DISHES) carry the meals they suit (meals: breakfast, lunch,
+dinner, snack), a vessel (bowl, plate, glass, mug, toast, pan) and
+hot:true when served hot -- nothing else, no prep times or anything there
+is no data for. Breakfast and snack dishes cover the foods that had no
+dish, fruit above all (oatmeal, banana pancakes, smoothies, yogurt bowls,
+eggs on toast, fruit salads), matched by the same rule as every dish.
+Their drawings are composed, not drawn per dish (dishMarkup): the vessel
+in the line-and-wash, with a few flat tones scoped to these drawings as
+the counter's are to it (a grey glaze for bowl, plate and mug, iron for
+the pan, clear glass, a toasted slice), and inside it the dish's own
+ingredients with their own food drawings, cut (the Used some drawing,
+without film) and cooked: no decay, a slightly warmer colour matrix over
+them (a little more for a hot dish), meat seared into pieces, an egg
+fried in a pan or on toast and halved elsewhere, and a wisp of steam
+over a hot dish. A pantry staple lays the base (oats, rice, noodles,
+broth; flour is the pancakes); dairy goes into the dish rather than
+sitting on it; a glass is the blend of its fruit. A drink (glass, mug)
+has nothing on or in it: its ingredients show only beside it on the
+board. The warmth is the food
+bodies' own exception, scoped to the dish drawing: the vessel, the page
+and every control stay cold. tools/dish-study.js shows every dish large
+and small.
+
 Type: Caslonian (caslonian-std-l) for the wordmark, the headline, dish
 names, and body text — regular and bold only, the two weights the family
 has; nothing is synthetically bolded or italicised beyond what it ships.
@@ -488,26 +511,53 @@ it when there are many). Top to bottom:
   restocked ones and the usuals as they were, the lines back on the
   receipt.
 The top bar's Add switches to the Fridge panel first, then scrolls to the
-bag and focuses the receipt's field. Tonight stays reachable from the
-Fridge panel: under the bag, one line "Tonight <dish> →" that switches
-to the Kitchen panel. The fridge items tonight's dish uses (.rf-tonight,
-from boardItems, door bins included) show no outline by default; only
+bag and focuses the receipt's field. The next meal stays reachable from
+the Fridge panel: under the bag, one line naming the default meal
+(defaultMeal, below) and its dish, "Breakfast: Banana oatmeal →", the
+dish drawn small beside it (dishMarkup), that switches to the Kitchen
+panel on that meal. It names the default meal whatever the Kitchen has
+selected. The fridge items that meal's dish uses (.rf-tonight, from
+nextMealItems, door bins included) show no outline by default; only
 while that line is hovered or focused (#rfUnit.tonight-show) does each get
 a thin dashed ink line around its own outline, drawn into its SVG
 (rfTonightDash: the first path, plus the carton or tray for eggs,
 chicken, tofu and protein so the whole package is traced; no box, no
-halo, no urgency colour). No outline on a phone. With no dish
-(tonightDish null), no line and no outline. On a phone the usuals, the receipt's field, its
+halo, no urgency colour). No outline on a phone. With no dish for the
+default meal (nextMealDish null), no line and no outline. On a phone the usuals, the receipt's field, its
 × and questions, Scan receipt, "+N more" and Put away are 44px tap
 targets, and the receipt grows as long as it needs.
 
 Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
-top, a cutting board and a bowl, nothing else. The board carries
-Tonight's dish: its owned ingredients drawn with the same food drawings
-and decay, the dish name, "Saves about 0.9 kg · $11.20" under it (the
-at-risk ingredients, what Cook this credits), the "uses up" line, Cook
-this and Show another. Tomorrow and The day after follow as text under
-the counter. The bowl holds what's kept out of the fridge (onCounter:
+top, a cutting board and a bowl, nothing else. Its card opens with the
+meal switcher -- Breakfast / Lunch / Dinner / Snack, plain text buttons,
+the selected one underlined, where "Tonight" was. It opens on the next
+meal by the clock (defaultMeal: before 10:30 Breakfast, until 15:00
+Lunch, until 21:00 Dinner, then Snack); the person can switch (mealPick),
+and the switch isn't remembered -- not saved, gone on reload. Today is
+planned as a day (planDay): Breakfast, Lunch and Dinner each get a dish
+(only dishes tagged for that meal), and the Snack picks from what's left.
+The meals choose in order from the earliest main meal still ahead
+(mealOrder; after Dinner, round to Breakfast), Snack last, and each
+chooses from what the ones before it left, so no ingredient is used by
+two meals in a day. Within a meal, the most urgent ingredient any of its
+dishes can use decides: only dishes that use it compete, then the usual
+score (bestFor) -- so the most urgent go to the earliest meal ahead.
+Two passes: every meal first takes a dish it can really make, then a
+meal with none takes the closest match (one ingredient short) from
+what's left, so a near-miss never holds back what another meal could
+cook. The selected meal is the large card: the board carries its dish,
+drawn large at the board's left (dishMarkup), and its owned ingredients
+beside it with the same food drawings and decay; the dish name, "Saves
+about 0.9 kg · $11.20" under it (the at-risk ingredients, what Cook this
+credits), the "uses up" line, Cook this and Show another (per meal,
+skippedMeals). The other three meals stand beside the card as small
+plates -- each its dish drawn small and its name -- and tapping one
+selects it. Tomorrow and The day after follow as text under the counter,
+one dish each, from the fridge as today's meals would leave it ("assumes
+today's meals happen"; a recommendation is assumed cooked, a near-miss
+isn't). A day the days before would leave with nothing in the fridge is
+one small line, "Nothing left to plan for tomorrow" -- no headline, no
+dish line. The bowl holds what's kept out of the fridge (onCounter:
 store:'pantry' foods -- potatoes, onions, garlic, bread, whole melons,
 coconut -- plus bananas) and anything marked "Not ripe yet"; those leave
 the fridge shelves. A ripe avocado goes in the fridge; only an unripe one
@@ -515,7 +565,7 @@ is in the bowl. Drinks never go in the bowl: one counted by a pantry
 figure (store:'pantry' -- spirits, unopened wine, cream liqueur;
 drinkOnCounter) stands upright at the back of the counter behind the
 bowl; one counted in the refrigerator (beer, cans, an opened wine) goes
-in the fridge's door bins, or the upper shelf on a phone. Counter food that tonight's dish uses is on the board,
+in the fridge's door bins, or the upper shelf on a phone. Counter food that the selected meal's dish uses is on the board,
 not also in the bowl. Counter food cut by Used some is wrapped and in the
 fridge. More than three in the bowl (two on a phone) heap
 in two rows, drawn larger on a phone. On a phone the peek beside the
@@ -644,7 +694,10 @@ repo root:
 
   node tools/scenarios.js
 
-never as a loop over ONLY= (ONLY=someScenario is for debugging one
+Every browser context in it runs on a mocked clock (Playwright's
+clock.setFixedTime), 18:00 today unless a scenario sets its own
+(mealContext), so the meal the Kitchen opens on never depends on when the
+suite is run. Never as a loop over ONLY= (ONLY=someScenario is for debugging one
 scenario while working, not for reporting). Every summary of a test run
 states that exact command and the runner's own count line, "N of N
 scenarios passed" -- if it says fewer than all, say which failed. Every
