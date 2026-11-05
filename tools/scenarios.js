@@ -1108,6 +1108,8 @@ async function typeEntry(page, text) {
 // The receipt asks: there are lines on it waiting for Put away.
 const previewOpen = page => page.$eval('#receiptLines', el => !!el.querySelector('.receipt-row'));
 // Every typed line taken off the receipt with its own ×.
+// Where a receipt line's match comes from, whether or not the line says so.
+const lineSource = (page, i) => page.evaluate(i => pendingItems[i].key ? sourceOf(pendingItems[i].key) : '', i);
 async function takeOffReceipt(page) {
   while (await page.$('#receiptLines .rl-void')) {
     await page.click('#receiptLines .rl-void');
@@ -1340,7 +1342,7 @@ async function receiptNewItemsScenario(browser) {
     ['Strawberries', 'Rotisserie chicken', 'Avocados', 'Sour cream', 'Tortillas', 'Plums', 'Salmon']);
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
   if (!rows[2].match.includes('Not ripe yet')) throw new Error('avocados should offer the ripeness choice');
-  if (!rows[5].match.includes('FOODS, FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FOODS (#266) and offer the ripeness choice');
+  if (!(await lineSource(page, 5)).includes('FOODS, FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FOODS (#266) and offer the ripeness choice');
   if (!(await page.$eval('#addbtn', b => b.disabled))) throw new Error('confirm should be blocked');
 
   await page.check('#receiptLines .entry-ripe[data-idx="2"][value="unripe"]');
@@ -2041,8 +2043,9 @@ async function drinksScenario(browser) {
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match, r.options])));
   expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
   expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
-  if (!rows[2].match.includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539: ' + rows[2].match);
-  if (!rows[3].match.includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
+  if (!(await lineSource(page, 2)).includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539');
+  if (rows[2].match.includes('matched')) throw new Error('vodka typed as its own name: no "matched" line: ' + rows[2].match);
+  if (!(await lineSource(page, 3)).includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
   await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 120));
   await page.dispatchEvent('#receiptLines .entry-date[data-idx="0"]', 'change');
   await page.selectOption('#receiptLines .entry-pick[data-idx="1"]', 'redwine');
@@ -2114,7 +2117,8 @@ async function drinksScenario(browser) {
   // The rest of the drinks: what each name matches, and what it asks.
   await typeEntry(page, 'whisky, bourbon, scotch, rum, gin, tequila, mezcal, brandy, cognac, baijiu, liquor, spirits, cream liqueur, canned beer, hard cider, hard seltzer');
   rows = await readReview(page, '#receiptLines');
-  const got = rows.map(r => [r.name, r.flag, (r.match.match(/FoodKeeper #\d+/) || ['none'])[0]]);
+  const sources = await page.evaluate(() => pendingItems.map(e => e.key ? sourceOf(e.key) : ''));
+  const got = rows.map((r, i) => [r.name, r.flag, (sources[i].match(/FoodKeeper #\d+/) || ['none'])[0]]);
   console.log(JSON.stringify(got));
   const keepsNames = ['Whiskey', 'Bourbon', 'Scotch', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Baijiu', 'Liquor', 'Liquor'];
   expectEqual('spirits: #539, nothing asked', got.slice(0, 12), keepsNames.map(n => [n, '', 'FoodKeeper #539']));
@@ -2138,8 +2142,11 @@ async function moreDrinksScenario(browser) {
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
   expectEqual('names', rows.map(r => r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
   rows.forEach(r => { if (r.flag !== 'needs date') throw new Error(r.name + ' unopened should need the printed date: ' + JSON.stringify(r)); });
+  for (let i = 0; i < 6; i++) if (!(await lineSource(page, i)).includes('estimated')) throw new Error(rows[i].name + ' should be estimated');
+  // "matched" only where the match isn't the name as typed: champagne -> Sparkling wine, yes; rosé -> Rosé, no
+  expectEqual('matched line only when the name differs', rows.map(r => r.match.includes('matched')), [true, true, true, false, true, true, false, false]);
   rows.slice(0, 6).forEach(r => {
-    if (!r.match.includes('estimated') || !r.match.includes('opened or unopened?')) throw new Error(r.name + ' should be estimated and ask opened: ' + r.match);
+    if (!r.match.includes('opened or unopened?')) throw new Error(r.name + ' should ask opened: ' + r.match);
   });
   rows.slice(6).forEach(r => {
     if (r.match.includes('opened or unopened?') || r.match.includes('FoodKeeper')) throw new Error(r.name + ' asks nothing but the date: ' + r.match);
@@ -2598,7 +2605,7 @@ async function cantFreezeScenario(browser) {
   await typeEntry(page, 'frozen cucumber');
   const rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows));
-  if (!rows[0].match.includes('freezing not recommended') || rows[0].match.includes('Frozen')) throw new Error('frozen cucumber: ' + rows[0].match);
+  if (!rows[0].match.includes('freezing not recommended') || await page.$('#receiptLines .entry-frozen')) throw new Error('frozen cucumber, no freeze toggle: ' + rows[0].match);
   await page.click('#addbtn');
   await page.waitForTimeout(100);
   expectEqual('cucumber went in the fridge', await page.evaluate(() => fridge.filter(i => i.key === 'cucumber').map(i => !!i.frozen)), [false, false]);
@@ -2621,11 +2628,11 @@ async function frozenEntryScenario(browser) {
   await typeEntry(page, 'salmon, chicken nuggets, frozen peas, frozen edamame');
   let rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
-  const checked = await page.$$eval('#receiptLines .entry-frozen', bs => bs.map(b => b.checked));
+  const checked = await page.$$eval('#receiptLines .entry-frozen', bs => bs.map(b => b.getAttribute('aria-pressed') === 'true'));
   expectEqual('Frozen toggles: salmon off, nuggets, peas and edamame on', checked, [false, true, true, true]);
   expectEqual('only the peas need a date', rows.map(r => r.flag), ['', '', 'no match / choice', '']);
   if (!rows[3].match.includes('FoodKeeper #641')) throw new Error('frozen edamame should be #641: ' + rows[3].match);
-  await page.check('#receiptLines .entry-frozen[data-idx="0"]');
+  await page.click('#receiptLines .entry-frozen[data-idx="0"]');
   await page.waitForTimeout(60);
   await page.fill('#receiptLines .entry-date[data-idx="2"]', await isoIn(page, 120));
   await page.dispatchEvent('#receiptLines .entry-date[data-idx="2"]', 'change');
@@ -2664,9 +2671,9 @@ async function frozenReceiptScenario(browser) {
   fs.writeFileSync(fixturePath, FIXTURE_JPEG);
   await page.setInputFiles('#receiptFile', fixturePath);
   await page.waitForSelector('#receiptLines .receipt-row');
-  const checked = await page.$$eval('#receiptLines .receipt-row', rs => rs.map(r => { const c = r.querySelector('.entry-frozen'); return c ? c.checked : null; }));
+  const checked = await page.$$eval('#receiptLines .receipt-row', rs => rs.map(r => { const c = r.querySelector('.entry-frozen'); return c ? c.getAttribute('aria-pressed') === 'true' : null; }));
   expectEqual('Frozen: shrimp and broccoli ticked, beef not, romaine none', checked, [true, true, false, null]);
-  await page.check('#receiptLines .entry-frozen[data-idx="2"]');
+  await page.click('#receiptLines .entry-frozen[data-idx="2"]');
   await page.waitForTimeout(60);
   await page.click('#addbtn');
   await page.waitForTimeout(200);
@@ -3548,7 +3555,7 @@ async function bagPhoneScenario(browser) {
       fridgeBottom: r(document.getElementById('rfUnit')).bottom, receiptTop: r(document.getElementById('receipt')).top,
       bagTop: r(document.querySelector('#addFood .bag-body')).top, receiptBottom: r(document.getElementById('receipt')).bottom,
       usuals: [...document.querySelectorAll('#restock .usual')].map(size),
-      field: size(document.getElementById('entry')), voids: [...document.querySelectorAll('.rl-void')].map(size),
+      field: size(document.getElementById('entry')), voids: [...document.querySelectorAll('.rl-void, .rl-freeze')].map(size),
       putAway: size(document.getElementById('addbtn')), scan: size(document.getElementById('scanReceiptBtn')),
       more: (m => m ? size(m) : null)(document.getElementById('usualsMore')),
       inside: [...document.querySelectorAll('#addFood *')].every(el => { const b = r(el); return !b.width || b.right <= innerWidth - 16 + 1; }),
@@ -3558,6 +3565,7 @@ async function bagPhoneScenario(browser) {
   if (g.receiptTop < g.fridgeBottom) throw new Error('the bag and its receipt should sit under the fridge');
   if (g.receiptBottom <= g.bagTop) throw new Error('the receipt should rise out of the bag');
   expectEqual('six usuals', g.usuals.length, 6);
+  expectEqual('× on each line, freeze on milk and salmon (FoodKeeper: spinach not recommended)', g.voids.length, 5);
   const small = [...g.usuals, g.field, ...g.voids, g.putAway, g.scan, ...(g.more ? [g.more] : [])].filter(([w, h]) => w < 44 || h < 44);
   if (small.length) throw new Error('every bag control should be a 44px tap target: ' + JSON.stringify(small));
   expectEqual('nothing hangs out of the panel', g.inside, true);

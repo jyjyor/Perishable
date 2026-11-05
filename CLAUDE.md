@@ -135,7 +135,7 @@ consumer food app.
      - Entering frozen food: "frozen" in a typed or scanned name ("frozen
        shrimp"; a receipt line printed or expanded with it) puts it in the
        freezer, its freezer value counted from purchase; its receipt line
-       carries a Frozen toggle (the last choice per food is remembered
+       carries a "freeze" toggle (the last choice per food is remembered
        for restock). A frozen entry whose plain
        match has no freezer value takes the kept-frozen FoodKeeper item of
        the same name if there is one (frozen edamame -> #641); otherwise
@@ -345,10 +345,15 @@ it when there are many). Top to bottom:
   in Tonos Mono: the name on the left (editable; renaming re-matches),
   on the right the days it keeps ("7 days", "frozen · 540 days",
   "keeps", "ripening") or the question it still needs answered ("date?",
-  "which?", "ripe?", "opened?"), and × to take it off (a scanned line is
-  voided instead, struck through, + restores it). Under each name, the
-  old preview's match line and questions: matched and source, pick a
-  match, Ripe / Not ripe yet, Opened / Unopened, Frozen, the date. A
+  "which?", "ripe?", "opened?"), a small "freeze" text toggle for
+  anything that can go in the freezer (none for what FoodKeeper says not
+  to freeze, none while a choice between matches is open), and × to take
+  it off (a scanned line is voided instead, struck through, + restores
+  it). Under each name, only what tells something: "matched <name> ·
+  source" only when the match isn't the name as typed or scanned
+  (normName, so plurals and capitals don't count) or it came from the
+  FoodKeeper fallback table; then the questions -- pick a match, Ripe /
+  Not ripe yet, Opened / Unopened, the date. A
   first-time ripe or opened choice is left unanswered ("ripe?",
   "opened?"); unanswered, Put away counts the default (Ripe, Unopened),
   and a remembered choice is the default and shows its days. The

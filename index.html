@@ -830,6 +830,12 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .receipt .receipt-row.unresolved input.receipt-name{border:none;border-bottom:1px dotted transparent;color:var(--ink)}
 .rl-days{flex:none;white-space:nowrap;color:var(--ink-2);font-size:11.5px}
 .rl-days.ask{color:var(--ink);border-bottom:1px solid var(--ink)}
+.rl-freeze{
+  flex:none;border:none;background:none;padding:0 2px;font-size:10.5px;letter-spacing:.02em;
+  text-transform:none;color:var(--ink-3);text-decoration:underline dotted;text-underline-offset:3px;
+}
+.rl-freeze:hover{background:none;color:var(--ink)}
+.rl-freeze.on{color:var(--ink);text-decoration:underline solid}
 .rl-void{flex:none;border:none;background:none;padding:0 2px;width:20px;color:var(--ink-3);font-size:13px;line-height:1}
 .rl-void:hover{background:none;color:var(--ink)}
 .receipt .receipt-row.void input.receipt-name{text-decoration:line-through;color:var(--ink-3)}
@@ -936,6 +942,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   .receipt #entry{min-height:44px;font-size:16px}
   .receipt .receipt-row input.receipt-name{min-height:36px;font-size:14px}
   .rl-void{width:44px;height:44px;margin:-6px -12px -6px 0}
+  .rl-freeze{min-height:44px;min-width:44px;margin:-6px 0}
   .receipt .receipt-scan{min-height:44px}
   .receipt .suggest-row{padding:12px 0}
   .receipt .receipt-row .match label{min-height:44px}
@@ -7332,8 +7339,12 @@ function entryMatchMarkup(e, i, kind){
   const bits = [];
   const need = entryNeeds(e);
   if (e.key){
-    bits.push('<span>matched ' + esc(foodOf(e.key).en) + ' · ' + sourceOf(e.key) + '</span>');
-    if (foodOf(e.key).estWeight) bits.push('<span>weight and price estimated</span>');
+    // Said only when it tells something: the match isn't the name as
+    // typed (or scanned), or it came from the FoodKeeper fallback table.
+    if (!FOODS[e.key] || normName(String(e.raw).replace(/\bfrozen\b/ig, ' ')) !== normName(foodOf(e.key).en)){
+      bits.push('<span>matched ' + esc(foodOf(e.key).en) + ' · ' + sourceOf(e.key) + '</span>');
+      if (foodOf(e.key).estWeight) bits.push('<span>weight and price estimated</span>');
+    }
   } else if (need === 'choice'){
     bits.push('<span class="why">' + e.options.length + ' entries match equally — pick one</span>');
   } else {
@@ -7361,17 +7372,23 @@ function entryMatchMarkup(e, i, kind){
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>opened or unopened?</span>' + opt('unopened', 'Unopened') + opt('opened', 'Opened'));
   }
-  if (need !== 'choice'){
-    if (entryCanFreeze(e)) bits.push('<label><input type="checkbox" class="entry-frozen" data-kind="' + kind + '" data-idx="' + i + '"' +
-      (entryFrozen(e) ? ' checked' : '') + '> Frozen</label>');
-    else if (e.frozen) bits.push('<span class="why">FoodKeeper: freezing not recommended — goes in the fridge</span>');
-  }
+  // Frozen is a "freeze" toggle on the line itself (freezeToggle).
+  if (need !== 'choice' && !entryCanFreeze(e) && e.frozen)
+    bits.push('<span class="why">FoodKeeper: freezing not recommended — goes in the fridge</span>');
   if (need !== 'choice' && entryDated(e)){
     if (need === 'pkgdate') bits.push('<span class="why">needs the date printed on the package</span>');
     bits.push('<label>' + (e.key ? 'date on package' : 'use by') + ' <input type="date" class="entry-date" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + esc(e.date) + '"></label>');
   }
-  return '<div class="match">' + bits.join('') + '</div>';
+  return bits.length ? '<div class="match">' + bits.join('') + '</div>' : '';
+}
+// The line's "freeze" toggle: only for something that can go in the
+// freezer, never while a choice between matches is open.
+function freezeToggle(e, i){
+  if (!e.included || entryNeeds(e) === 'choice' || !entryCanFreeze(e)) return '';
+  const on = entryFrozen(e);
+  return '<button type="button" class="rl-freeze entry-frozen' + (on ? ' on' : '') + '" data-idx="' + i + '" aria-pressed="' + on +
+    '" aria-label="Freeze ' + esc(e.label) + '">freeze</button>';
 }
 function entryRowClass(e){
   const need = entryNeeds(e);
@@ -7394,8 +7411,8 @@ function wireEntryControls(box, entries, rerender){
   box.querySelectorAll('.entry-open').forEach(r => {
     r.onclick = () => { entries[+r.dataset.idx].open = r.value; rerender(); };
   });
-  box.querySelectorAll('.entry-frozen').forEach(cb => {
-    cb.onchange = () => { entries[+cb.dataset.idx].frozen = cb.checked; rerender(); };
+  box.querySelectorAll('.entry-frozen').forEach(b => {
+    b.onclick = () => { const e = entries[+b.dataset.idx]; e.frozen = !entryFrozen(e); rerender(); };
   });
   box.querySelectorAll('.entry-date').forEach(inp => {
     inp.onchange = () => { entries[+inp.dataset.idx].date = inp.value; rerender(); };
@@ -7572,6 +7589,7 @@ function renderReceipt(){
         '<span class="qty">' + qty + '</span>' +
         '<input type="text" class="receipt-name" data-idx="' + i + '" value="' + esc(e.label) + '" aria-label="Line ' + (i + 1) + ' on the receipt">' +
         '<span class="rl-days' + (d.ask ? ' ask' : '') + '">' + d.text + '</span>' +
+        freezeToggle(e, i) +
         '<button type="button" class="rl-void" data-idx="' + i + '" aria-label="' +
           (e.scanned ? (e.included ? 'Void ' : 'Restore ') : 'Take off ') + esc(e.label) + '">' + (e.scanned && !e.included ? '+' : '×') + '</button>' +
       '</div>' +
