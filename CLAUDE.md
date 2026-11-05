@@ -474,11 +474,19 @@ Two fridge views, one after the other, from the same `fridge` array.
 The illustrated fridge opens the page: a literal drawing of a fridge
 (door, shelves, crisper, door bins, and the freezer compartment at the
 top). On desktop it keeps its aspect ratio (360:640, never stretched)
-and scales to fit its column (the unit plus the open door's room, 1.5 x
+and scales to fit its column (the unit plus the open door's room, 1.86 x
 --rf-w), capped at about 90% of the window height -- a cap, not a fixed
 height -- and lower on a short screen, so the whole fridge, freezer to
 crisper, is inside the window under the bar and the tabs, which are
-compact on desktop for it (about 96px above the fridge). The freezer has its own door on the same right-hand hinge, closed
+compact on desktop for it (about 96px above the fridge). On desktop the
+door swings fully open, to about 180 degrees: its inside, with the door
+bins, faces the viewer front-on beside the fridge, in the same flat
+front view as the interior, not at an angle (an angled door was the one
+part of the drawing in another perspective). The load animation swings
+it from closed to fully open; the freezer door opens the same way. On a
+phone the door turns only to square. At 1280 x 800 the unit is 386 px
+wide, at 1440 x 900 also 386 (443 before, when the door opened to 116
+degrees and took 1.5 x). The freezer has its own door on the same right-hand hinge, closed
 on every load, opened and closed by its handle (or its inside face once
 open); the door front carries a small count ("3 inside", "empty"),
 which opens it too when tapped.

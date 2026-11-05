@@ -171,9 +171,11 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rf-stage{display:flex;justify-content:center;padding:4px 0 34px;--rf-w:min(300px,45vh)}
 .rf-unit{
   position:relative;width:var(--rf-w);aspect-ratio:360/640;
-  /* The door opens past square, right of the hinge, so its inside (liner,
-     bins) faces the viewer -- the unit keeps that much room to its right. */
-  flex:none;margin-right:calc(var(--rf-w) * .5);
+  /* The door swings fully open, to about 180 degrees, right of the hinge:
+     its inside (liner, bins) faces the viewer front-on, in the same
+     perspective as the interior. It reaches 300 of the drawing's 360
+     units past the hinge, so the unit keeps that much room to its right. */
+  flex:none;margin-right:calc(var(--rf-w) * .86);
   container-type:inline-size;
   perspective:3400px;perspective-origin:50% 42%;
   --rf-ink:var(--ink);
@@ -271,7 +273,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   transform:rotateY(0deg);
   --rf-t:3cqw; /* door thickness */
 }
-.rf-unit.open .rf-door{transform:rotateY(116deg)}
+.rf-unit.open .rf-door{transform:rotateY(180deg)}
 .rf-door-front,.rf-door-inside{position:absolute;inset:0;backface-visibility:hidden}
 .rf-door-front{transform:translateZ(calc(var(--rf-t) / 2))}
 .rf-door-inside{transform:rotateY(180deg) translateZ(calc(var(--rf-t) / 2))}
@@ -350,7 +352,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
   transform:rotateY(0deg);
   --rf-t:3cqw;
 }
-.rf-unit.fz-open .rf-fz-door{transform:rotateY(116deg)}
+.rf-unit.fz-open .rf-fz-door{transform:rotateY(180deg)}
 .rf-fz-front,.rf-fz-inside{position:absolute;inset:0;backface-visibility:hidden}
 .rf-fz-front{transform:translateZ(calc(var(--rf-t) / 2))}
 .rf-fz-inside{transform:rotateY(180deg) translateZ(calc(var(--rf-t) / 2))}
@@ -751,14 +753,14 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    takes the panel's width less the bag's (330 to 380px, narrower than
    the old Add column; any width the fridge can't use for its height
    cap is left over at the right) -- the unit
-   plus the open door's room, 1.5 x --rf-w -- capped at about 90% of the
+   plus the fully open door's room, 1.86 x --rf-w -- capped at about 90% of the
    window height (50.6vh wide), and lower on a short screen, so the whole
    fridge, freezer to crisper, is in the window under the compact bar and
    tabs (about 96px above it, and a little room under its feet). A cap,
    not a fixed height. */
 .fridge-panel{
-  --fp-w:min(calc((100cqw - 362px) / 1.5), 50.6vh, calc((100vh - 112px) * .5625));
-  display:grid;grid-template-columns:calc(var(--fp-w) * 1.5) minmax(0,380px);column-gap:32px;
+  --fp-w:min(calc((100cqw - 362px) / 1.86), 50.6vh, calc((100vh - 112px) * .5625));
+  display:grid;grid-template-columns:calc(var(--fp-w) * 1.86) minmax(0,380px);column-gap:32px;
   grid-template-areas:"fridge bag" ". tonight";grid-template-rows:auto auto;align-items:start;
 }
 .fridge-panel > .rf{grid-area:fridge}
