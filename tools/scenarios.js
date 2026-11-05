@@ -4085,32 +4085,48 @@ async function dupTypedRepeatScenario(browser) {
   await ctx.close();
 }
 
-// "2 milk" and "2x milk": a count before the name. "2% milk" is not one.
+// A count before the name. "×N"/"xN" is always N; a bare number is one
+// pack when it's a common pack size for that food (eggs 6, 12, 18; canned
+// drinks 6, 12, 24), otherwise 2-9 is a count and 10 or more one pack.
+// "2% milk" has no count.
 async function dupCountBeforeScenario(browser) {
-  console.log('\n--- DUPLICATES: "2 milk", a count before the name ---');
+  console.log('\n--- DUPLICATES: "3 milk", "12 eggs", a number before the name ---');
   const { ctx, page, errors } = await dupPage(browser);
-  for (const [text, name, n, q] of [['2 milk', 'Milk', '×2', 2], ['3x yogurt', 'Yogurt', '×3', 3], ['2% milk', 'Milk', '', 1]]) {
+  const cases = [
+    ['3 milk', 'Milk', 3], ['2x milk', 'Milk', 2], ['2% milk', 'Milk', 1],
+    ['12 eggs', 'Eggs', 1], ['6 eggs', 'Eggs', 1], ['18 eggs', 'Eggs', 1], ['4 eggs', 'Eggs', 4], ['12x eggs', 'Eggs', 12],
+    // beer is the bottle; canned beer and hard seltzer come in packs
+    ['6 beer', 'Beer', 6], ['6 canned beer', 'Canned beer', 1], ['24 hard seltzer', 'Hard seltzer', 1], ['3 hard seltzer', 'Hard seltzer', 3],
+    ['10 lemons', 'Lemon', 1], ['9 lemons', 'Lemon', 9]
+  ];
+  const got = [];
+  for (const [text] of cases) {
     await page.fill('#entry', text);
     await page.press('#entry', 'Enter');
-    await page.waitForTimeout(60);
+    await page.waitForTimeout(40);
     const l = (await dupLines(page)).pop();
-    expectEqual(`"${text}"`, [l.name, l.n, l.q], [name, n, q]);
+    got.push([text, l.name, l.q, l.n]);
     await takeOffReceipt(page);
   }
-  await page.fill('#entry', '3 milk');
+  console.log(JSON.stringify(got));
+  expectEqual('names and counts', got.map(g => [g[0], g[1], g[2]]), cases);
+  expectEqual('a count shows ×N, one pack shows none', got.map(g => g[3]), cases.map(c => c[2] > 1 ? '×' + c[2] : ''));
+  // put away: "12 eggs" is one carton, "3 milk" three cartons
+  await page.fill('#entry', '12 eggs, 3 milk');
   await page.press('#entry', 'Enter');
-  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 7));
+  await page.fill('#receiptLines .entry-date[data-idx="1"]', await isoIn(page, 7));
   await dupPutAway(page);
-  expectEqual('"3 milk" put away: three cartons', (await dupRecs(page, 'milk')).length, 3);
+  expectEqual('"12 eggs": one carton; "3 milk": three', [(await dupRecs(page, 'egg')).length, (await dupRecs(page, 'milk')).length], [1, 3]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await ctx.close();
 }
 
-// "milk x2" and "milk ×2": a count after the name; "2d" still dates it.
+// "milk x2", "eggs x2": a count after the name, always that many (x2 is
+// two cartons of eggs); "2d" still dates it.
 async function dupCountAfterScenario(browser) {
   console.log('\n--- DUPLICATES: "milk x2", a count after the name ---');
   const { ctx, page, errors } = await dupPage(browser);
-  for (const [text, name] of [['spinach x2', 'Spinach'], ['spinach ×2', 'Spinach'], ['spinach x 2', 'Spinach']]) {
+  for (const [text, name] of [['spinach x2', 'Spinach'], ['spinach ×2', 'Spinach'], ['spinach x 2', 'Spinach'], ['eggs x2', 'Eggs'], ['eggs ×12', 'Eggs']]) {
     await page.fill('#entry', text);
     await page.press('#entry', 'Enter');
     await page.waitForTimeout(60);
@@ -4123,6 +4139,9 @@ async function dupCountAfterScenario(browser) {
   const recs = await dupRecs(page, 'spinach');
   console.log('spinach:', JSON.stringify(recs));
   expectEqual('"spinach x2 2d": two bags, bought two days ago', recs.map(r => [r.bought, r.left]), [[2, 5], [2, 5]]);
+  await page.fill('#entry', 'eggs x2');
+  await dupPutAway(page);
+  expectEqual('"eggs x2": two cartons', (await dupRecs(page, 'egg')).length, 2);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await ctx.close();
 }

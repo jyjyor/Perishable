@@ -450,9 +450,14 @@ it when there are many). Top to bottom:
   same food under the same name, bought the same day, typed or tapped
   ("milk, milk", a usual tapped twice) or on two lines of one scan --
   is one line with a count after the name, "Milk ×2", with small − and +
-  beside it (44px on a phone; − stops at one). A count typed before or
-  after the name is the same ("2 milk", "2x milk", "milk x2", "milk ×2";
-  "2% milk" is not a count). Its questions are answered once for all of
+  beside it (44px on a phone; − stops at one). A typed count is the
+  same: "×N" or "xN", before or after the name ("milk x2", "2x milk",
+  "eggs x2"), is always N of it. A bare leading number is one pack when
+  it's a common pack size for that food (packSizes: eggs 6, 12, 18;
+  canned drinks -- canned beer, hard cider, hard seltzer -- 6, 12, 24),
+  so "12 eggs" is one carton; otherwise 2-9 is a count ("3 milk") and 10
+  or more is one pack. Beer is the bottle, not a pack: "6 beer" is six.
+  "2% milk" has no count. Its questions are answered once for all of
   them. Put away makes each its own record, with its own purchase date
   and clock. A new one never replaces, refreshes or merges with one
   already in the fridge, freezer or bowl: the older keeps its date and

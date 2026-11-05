@@ -8398,21 +8398,37 @@ function restock(key, shelf){
 }
 
 // Pure: text in, entries out. No fridge/standing mutation, no render.
-// A count before or after the name ("2 milk", "2x milk", "milk x2",
-// "milk ×2") is that many of it: one line, quantity 2. "2% milk" is not a
-// count. A repeat ("milk, milk") joins the line already printed
-// (printLines).
-const COUNT_BEFORE = /^(\d{1,2})\s*[x×]?\s+(?=\D)/i, COUNT_AFTER = /\s*[x×]\s*(\d{1,2})$/i;
+// A count before or after the name. "×N" or "xN", either side ("milk
+// x2", "2x milk"), is always N of it. A bare leading number is one pack
+// when it's a common pack size for that food (PACK_SIZES: "12 eggs" is a
+// carton of 12, "6 hard seltzer" a six-pack); otherwise 2-9 is a count
+// ("3 milk") and 10 or more one pack. "2% milk" has no count. A repeat
+// ("milk, milk") joins the line already printed (printLines).
+const COUNT_X_BEFORE = /^(\d{1,2})\s*[x×]\s*(?=\D)/i, COUNT_X_AFTER = /\s*[x×]\s*(\d{1,2})$/i;
+const COUNT_BARE = /^(\d{1,3})\s+(?=\D)/;
+// Eggs come by the half dozen; canned drinks (canned beer, hard seltzer,
+// cider in cans) by the six, twelve and case.
+function packSizes(key){
+  if (!key) return [];
+  if (key === 'egg') return [6, 12, 18];
+  const b = BOTTLES[foodOf(key).shape || key];
+  return b && b.p === 'can' ? [6, 12, 24] : [];
+}
 function parseText(text){
   const parts = text.split(/[,\n;]+/).map(s => s.trim()).filter(Boolean);
   return parts.map(part => {
-    let age = 0, quantity = 1;
+    let age = 0, quantity = 1, bare = null;
     const m = part.match(/(\d+)\s*d\b/i);
     if (m){ age = parseInt(m[1], 10); part = part.replace(m[0], '').replace(/\s+/g, ' ').trim(); }
-    const c = part.match(COUNT_BEFORE) || part.match(COUNT_AFTER);
-    if (c){ quantity = parseInt(c[1], 10); part = part.replace(c[0], ' ').trim(); }
+    const x = part.match(COUNT_X_BEFORE) || part.match(COUNT_X_AFTER);
+    if (x){ quantity = parseInt(x[1], 10); part = part.replace(x[0], ' ').trim(); }
+    else {
+      const b = part.match(COUNT_BARE);
+      if (b){ bare = parseInt(b[1], 10); part = part.replace(b[0], '').trim(); }
+    }
     if (!part.length || !(quantity >= 1)) return null;
     const e = entryFor(part, age);
+    if (bare != null && !packSizes(e.key).includes(bare) && bare >= 2 && bare <= 9) quantity = bare;
     if (quantity > 1) e.quantity = quantity;
     return e;
   }).filter(Boolean);
