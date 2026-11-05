@@ -62,7 +62,7 @@ body{
   text-transform:uppercase;
 }
 .bar .mono{color:var(--ink-2)}
-/* The Add jump lands with the Add food panel clear of the sticky bar. */
+/* The Add jump lands with the bag clear of the sticky bar. */
 #addFood{scroll-margin-top:64px}
 
 button{
@@ -647,7 +647,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 
 /* Suggestions are a menu of things you could add — a plain attached list,
    the same row/border-bottom vocabulary as the inventory table. Deliberately
-   not chip-styled and not accented: the entry preview (.missing, turn accent,
+   not chip-styled and not accented: a receipt line's questions (turn accent,
    pill chips) means "about to be added, confirm or drop it" — a different
    claim than "here's what exists," so the two must not read alike. */
 .suggest{
@@ -700,7 +700,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 
 /* ---------- the page's four parts ----------
-   Fridge / Kitchen, Add food, What's turning, So far. A part's title is
+   Fridge / Kitchen (the bag inside it), What's turning, So far. A part's title is
    Caslonian at 22px, sentence case, so it never reads as data; the small
    mono caps stay on data labels, axis ticks, legends, chips and buttons.
    About three times as much space between parts as within one, and rules
@@ -739,40 +739,173 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .part-turning .sub-title{margin-top:calc(var(--gap-in) * 1.5)}
 .part-turning .chart{margin-top:8px}
 
-/* The Fridge panel: two top-aligned columns, the fridge about 60% and
-   the Add column the rest; on a phone the Add column stacks under the
-   fridge, the Tonight line between them. */
+/* The Fridge panel: the fridge, as large as the window allows, and the
+   grocery bag beside its open door; on a phone the bag stands under the
+   fridge, the Tonight line under the bag. */
+#panelFridge{container-type:inline-size}
+/* The fridge keeps its aspect ratio (360:640, tall = 1.78 x wide) and
+   takes the panel's width less the bag's (330 to 380px, narrower than
+   the old Add column; any width the fridge can't use for its height
+   cap is left over at the right) -- the unit
+   plus the open door's room, 1.5 x --rf-w -- capped at about 90% of the
+   window height (50.6vh wide), and lower on a short screen, so the whole
+   fridge, freezer to crisper, is in the window under the compact bar and
+   tabs (about 96px above it, and a little room under its feet). A cap,
+   not a fixed height. */
 .fridge-panel{
-  display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);column-gap:32px;
-  grid-template-areas:"fridge add" "fridge tonight";grid-template-rows:auto 1fr;align-items:start;
+  --fp-w:min(calc((100cqw - 362px) / 1.5), 50.6vh, calc((100vh - 112px) * .5625));
+  display:grid;grid-template-columns:calc(var(--fp-w) * 1.5) minmax(0,380px);column-gap:32px;
+  grid-template-areas:"fridge bag" ". tonight";grid-template-rows:auto auto;align-items:start;
 }
-.fridge-panel > .rf{grid-area:fridge;container-type:inline-size}
-.fridge-panel > .add-col{grid-area:add}
+.fridge-panel > .rf{grid-area:fridge}
+.fridge-panel .rf-stage{--rf-w:var(--fp-w)}
+.fridge-panel > .bag{grid-area:bag}
 .fridge-panel > .tonight-line{grid-area:tonight}
-/* The fridge keeps its aspect ratio and scales to fit its column (the
-   unit plus the open door's room, 1.5 x --rf-w), capped at about 80% of
-   the window height -- and lower on a short screen, so that the whole
-   fridge, freezer to crisper, is in the window under the bar and the
-   tabs (about 190px above it). The unit is 360:640: tall = 1.78 x wide. */
-.fridge-panel .rf-stage{--rf-w:min(calc(100cqw / 1.5), 45vh, calc((100vh - 210px) * .5625))}
-/* The Add column: a faint tinted panel -- flat, square, no shadow -- so
-   it reads as the place you do something. */
-.add-col{background:var(--panel);padding:var(--gap-in) 28px 28px;margin-top:var(--gap-in)}
-.add-title{
-  font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;
-  font-weight:400;font-size:22px;line-height:1.2;color:var(--ink);
+/* Compact above the fridge on a wide screen: the bar, the tabs and the
+   space between them, so the fridge gets the height. */
+@media (min-width:721px){
+  .bar{padding:9px 0 8px}
+  .part-rooms{padding-top:12px}
+  .room-tab{font-size:20px}
+  .part-rooms .rf{padding-top:6px}
 }
-.add-col .add{margin-top:var(--gap-in)}
-/* The field, Add and Scan receipt on one row, so the suggestions open
-   over the usuals, never over Add. */
-.add-col .add .entrywrap{flex:1 1 140px;min-width:140px}
-.add-col .add input{background:var(--paper)}
-.add-col .usuals{margin-top:calc(var(--gap-in) * 1.25)}
-/* Six usuals, the rest behind "+N more": expanded they wrap into short
-   rows inside the column, never sideways. */
-.rescue .more{font-size:11px;padding:6px 8px}
+
+/* ---------- the grocery bag ----------
+   A paper bag standing on the fridge's floor line (the unit's foot line,
+   --rf-floor above the bottom of the fridge column), drawn in the same
+   line-and-wash. It is an illustrated object like the fridge, so it gets
+   its own few flat kraft tones, scoped to .bag and never used elsewhere.
+   Everything drawn is real data: the usuals peek out of its mouth, and the
+   receipt -- the entry field -- rises out of it. Desktop: the stand fills
+   the column from the top of the fridge to its floor and never makes the
+   row taller; the receipt's lines scroll inside it when there are many. */
+.bag{
+  position:relative;align-self:stretch;min-height:0;
+  --rf-floor:44px;
+  --bag-1:#DCCDAE;--bag-2:#CBB994;--bag-3:#B9A47D;--bag-in:#A8936D;
+  --receipt:#F5F5F0;
+}
+.bag-stand{
+  position:absolute;inset:0 0 var(--rf-floor) 0;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  isolation:isolate;container-type:inline-size;
+  --bag-w:min(100cqw,380px);--bag-rim:calc(var(--bag-w) * .1);
+  --peek:46px;--shape:66px;
+}
+/* The receipt: a strip of thermal paper rising out of the bag's mouth,
+   behind the usuals and the bag's front, its torn top edge a row of
+   teeth. Its lines are the receipt; its next line is the entry field. */
+.receipt{
+  position:relative;z-index:1;flex:0 1 auto;min-height:0;
+  display:flex;flex-direction:column;
+  width:calc(var(--bag-w) * .68);margin-left:calc(var(--bag-w) * .17);
+  margin-top:10px;margin-bottom:calc(-1 * (var(--bag-rim) + 18px));
+  padding:10px 12px calc(var(--bag-rim) + 18px + var(--peek) + 4px);
+  background:var(--receipt);border:1px solid var(--ink);border-top:none;border-bottom:none;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:12px;color:var(--ink);
+}
+.receipt::before{
+  content:'';position:absolute;left:-1px;right:-1px;top:-6px;height:7px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M0 7 L5 1 L10 7 Z' fill='%23F5F5F0'/%3E%3Cpath d='M0 7 L5 1 L10 7' fill='none' stroke='%23141817' stroke-width='1'/%3E%3C/svg%3E") repeat-x left bottom;
+}
+.receipt-top{flex:none;border-bottom:1px dashed var(--ink-3);padding-bottom:6px;margin-bottom:4px}
+.receipt .receipt-scan{
+  display:block;width:100%;border:none;background:none;padding:4px 0;text-align:center;color:var(--ink);
+}
+.receipt .receipt-scan:hover{background:none;text-decoration:underline}
+.receipt-scanline{color:var(--ink-2);font-size:11px;text-align:center;padding:2px 0}
+.receipt-scanline .sub{display:flex;gap:6px;justify-content:center;margin-top:4px}
+.receipt-scanline button{padding:3px 8px;font-size:11px}
+.receipt-lines{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.receipt .receipt-row{display:block;padding:5px 0;border-bottom:none}
+.rl-main{display:flex;align-items:baseline;gap:6px}
+.receipt .receipt-row .qty{min-width:0;font-size:11px;color:var(--ink-2);text-align:left}
+.receipt .receipt-row .qty:empty{display:none}
+.receipt .receipt-row input.receipt-name{
+  flex:1;min-width:0;border:none;border-bottom:1px dotted transparent;background:transparent;
+  font-family:inherit;font-size:12.5px;color:var(--ink);padding:1px 0;letter-spacing:0;
+}
+.receipt .receipt-row input.receipt-name:hover{border-bottom-color:var(--ink-3)}
+.receipt .receipt-row input.receipt-name:focus{outline:none;border-bottom-color:var(--ink)}
+.receipt .receipt-row.unresolved input.receipt-name{border:none;border-bottom:1px dotted transparent;color:var(--ink)}
+.rl-days{flex:none;white-space:nowrap;color:var(--ink-2);font-size:11.5px}
+.rl-days.ask{color:var(--ink);border-bottom:1px solid var(--ink)}
+.rl-void{flex:none;border:none;background:none;padding:0 2px;width:20px;color:var(--ink-3);font-size:13px;line-height:1}
+.rl-void:hover{background:none;color:var(--ink)}
+.receipt .receipt-row.void input.receipt-name{text-decoration:line-through;color:var(--ink-3)}
+.receipt .receipt-row .match{padding:3px 0 0 0;gap:4px 8px;font-size:10.5px;letter-spacing:.02em}
+.receipt .receipt-row .match label{display:inline-flex;align-items:center;gap:3px}
+.receipt .receipt-row select,.receipt .receipt-row input[type="date"]{font-size:11px;padding:2px 4px;max-width:100%}
+.receipt-next{flex:none;margin-top:2px}
+.receipt #entry{
+  width:100%;border:none;border-bottom:1px dashed var(--ink-3);background:transparent;
+  font-family:inherit;font-size:12.5px;color:var(--ink);padding:7px 0 5px;
+}
+.receipt #entry:focus{outline:none;border-bottom:1px solid var(--ink)}
+.receipt #entry::placeholder{color:var(--ink-3)}
+/* Suggestions sit in the flow under the field, as the receipt's next
+   lines: the stand clips anything hanging out of it. */
+.receipt .suggest{position:static;border:none;background:none;max-height:none}
+.receipt .suggest-row{padding:5px 0;font-size:12.5px;border-bottom:none;color:var(--ink-2)}
+.receipt .suggest-row:hover,.receipt .suggest-row.active{background:none;color:var(--ink);text-decoration:underline}
+/* "+N more" opens the rest of the usuals as a heap over the bag's mouth,
+   in front of the receipt's tail. */
+.bag-heap{position:relative;z-index:3;flex:none;display:flex;flex-wrap:wrap;width:var(--bag-w);padding:0 10% 0 1.5%}
+.bag-heap:empty{display:none}
+.bag-heap .usual{flex:0 0 calc(100% / 6)}
+.bag-body{position:relative;flex:none;width:var(--bag-w);aspect-ratio:300/172}
+.bag-body .rf-svg{--rf-ink:var(--ink)}
+.bag-body .bag-front-svg{z-index:2;pointer-events:none}
+.bag-body .bag-back-svg{z-index:0}
+.rf-svg .g1{fill:var(--bag-1)} .rf-svg .g2{fill:var(--bag-2)} .rf-svg .g3{fill:var(--bag-3)} .rf-svg .gin{fill:var(--bag-in)}
+/* The six usuals stand in the mouth, the bottom of each drawing behind
+   the bag's front; each name is on the front under its food. */
+.bag-usuals{
+  position:absolute;z-index:3;left:1.5%;right:10%;top:calc(var(--bag-rim) - var(--peek));
+  display:flex;
+}
+.usual{
+  flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
+  border:none;background:none;padding:0;text-transform:none;letter-spacing:0;color:var(--ink);
+}
+.usual:hover{background:none}
+.usual-peek{position:relative;width:100%;height:var(--peek);overflow:hidden}
+.bag-heap .usual-peek{height:var(--shape);overflow:visible}
+.usual-shape{
+  position:absolute;left:50%;bottom:calc(var(--peek) - var(--shape));width:var(--shape);height:var(--shape);
+  transform:translateX(-50%);transition:transform .14s ease;
+}
+.bag-heap .usual-shape{bottom:0}
+.usual-shape svg{width:100%;height:100%;display:block;overflow:visible}
+.usual:hover .usual-shape,.usual:focus-visible .usual-shape{transform:translate(-50%,-4px)}
+.usual-name{
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:10px;line-height:1.2;letter-spacing:0;
+  text-align:center;padding:4px 1px 0;color:var(--ink);max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;
+}
+.bag-heap .usual-name{color:var(--ink-2)}
+.usual.removing .usual-name{text-decoration:line-through}
+/* The bag's front: the usuals' small text controls, Put away, and what
+   still stands between the receipt and the fridge. */
+.bag-front{
+  position:absolute;z-index:3;left:4%;right:12%;top:calc(var(--bag-rim) + 30px);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.bag-ctl{display:flex;gap:6px;align-items:center;min-height:22px}
+.bag-ctl:empty{display:none}
+.bag-ctl button{border:none;background:none;padding:3px 4px;font-size:10.5px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.bag-ctl button[hidden]{display:none}
+.bag-ctl .mono{font-size:10.5px;color:var(--ink-2)}
+.bag-front #addbtn{padding:8px 16px}
+.bag-front #addbtn:disabled{opacity:.45;cursor:default}
+.putaway-note{font-size:10.5px;color:var(--ink);text-align:center;min-height:13px}
+/* Put away: each item flies from the bag to its place, one after another
+   (flyPutAway); none under reduced motion. */
+.bag-flying{position:fixed;z-index:40;pointer-events:none;margin:0}
+.bag-flying svg{width:100%;height:100%;display:block;overflow:visible}
+
 .tonight-line{
-  justify-self:start;margin-top:14px;border:none;background:none;padding:6px 0;
+  justify-self:start;margin-top:4px;border:none;background:none;padding:6px 0;
   font-family:'caslonian-std-l',Georgia,'Times New Roman',serif;font-size:17px;
   text-transform:none;letter-spacing:0;color:var(--ink);text-align:left;
   border-bottom:1px solid var(--line);
@@ -790,16 +923,27 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 @media (max-width:720px){
   :root{--gap-in:20px;--gap-out:60px}
   .part-title,.room-tab{font-size:20px}
-  .fridge-panel{grid-template-columns:minmax(0,1fr);grid-template-areas:"fridge" "tonight" "add";grid-template-rows:auto}
+  .fridge-panel{grid-template-columns:minmax(0,1fr);grid-template-areas:"fridge" "bag" "tonight";grid-template-rows:auto}
   .fridge-panel .rf-stage{--rf-w:min(82vw,440px)}
-  .add-col{padding:var(--gap-in) 16px 24px}
-  /* On a phone the field has its own row, and the suggestions sit in the
-     flow under it (pushing Add down, never covering it): the swipe area
-     clips anything that hangs out of its panel. */
-  .add-col .add .entrywrap{flex-basis:100%}
-  .add-col .suggest{position:static}
-  .add-title{font-size:20px}
-  .tonight-line{margin:0 0 4px}
+  /* On a phone the bag stands under the fridge, in the flow: nothing to
+     line up with, and the receipt grows as long as it needs. Usuals and
+     receipt controls keep 44px tap targets. */
+  .bag{align-self:auto}
+  .bag-stand{position:static;--peek:46px;--shape:62px}
+  .fridge-panel .rf-stage{padding-bottom:12px}
+  .receipt{width:calc(var(--bag-w) * .8);margin-left:calc(var(--bag-w) * .08)}
+  .receipt-lines{overflow:visible}
+  .receipt #entry{min-height:44px;font-size:16px}
+  .receipt .receipt-row input.receipt-name{min-height:36px;font-size:14px}
+  .rl-void{width:44px;height:44px;margin:-6px -12px -6px 0}
+  .receipt .receipt-scan{min-height:44px}
+  .receipt .suggest-row{padding:12px 0}
+  .receipt .receipt-row .match label{min-height:44px}
+  .usual{min-height:44px;min-width:44px}
+  .bag-ctl button{min-height:44px;padding:4px 8px}
+  .bag-front{top:calc(var(--bag-rim) + 30px);gap:2px}
+  .bag-front #addbtn{min-height:44px}
+  .tonight-line{margin:10px 0 4px}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -904,25 +1048,36 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       </div>
     </div>
   </section>
-      <!-- The Add column: beside the fridge on desktop, under it on a
-           phone. The top bar's Add switches to this panel and focuses the
-           entry field. -->
-      <section class="add-col" id="addFood" aria-labelledby="addTitle">
-        <h2 class="add-title" id="addTitle">Add food</h2>
-        <div class="add">
-          <div class="entrywrap">
-            <input id="entry" placeholder="what did you buy?" autocomplete="off">
-            <div class="suggest" id="suggest" style="display:none"></div>
+      <!-- The grocery bag: beside the fridge's open door on desktop,
+           standing on its floor line; under the fridge on a phone. The
+           usuals peek out of it, the receipt rising out of it is the entry
+           field, and Put away sends everything on it to its place. The
+           top bar's Add switches to this panel and focuses the receipt. -->
+      <section class="bag" id="addFood" aria-label="Grocery bag">
+        <div class="bag-stand">
+          <div class="receipt" id="receipt">
+            <div class="receipt-top">
+              <button type="button" class="receipt-scan mono" id="scanReceiptBtn">Scan receipt</button>
+              <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
+              <div class="receipt-scanline" id="receiptPreview" style="display:none"></div>
+            </div>
+            <div class="receipt-lines" id="receiptLines" aria-label="On the receipt"></div>
+            <div class="receipt-next">
+              <input id="entry" placeholder="what did you buy?" autocomplete="off" aria-label="What did you buy?">
+              <div class="suggest" id="suggest" style="display:none"></div>
+            </div>
           </div>
-          <button class="solid" id="addbtn">Add</button>
-          <button id="scanReceiptBtn">Scan receipt</button>
-          <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none">
-        </div>
-        <div class="missing" id="entryPreview" style="display:none"></div>
-        <div class="missing" id="receiptPreview" style="display:none"></div>
-        <div class="usuals">
-          <div class="sub-head"><h3 class="sub-title">Your usuals</h3><button class="ghost" id="restockEdit" hidden>Edit</button></div>
-          <div class="rescue" id="restock"></div>
+          <div class="bag-heap" id="restockMore"></div>
+          <div class="bag-body">
+            <svg class="rf-svg bag-back-svg" id="bagBackSvg" viewBox="0 0 300 172" aria-hidden="true"></svg>
+            <svg class="rf-svg bag-front-svg" id="bagFrontSvg" viewBox="0 0 300 172" aria-hidden="true"></svg>
+            <div class="bag-usuals" id="restock" aria-label="Your usuals"></div>
+            <div class="bag-front">
+              <div class="bag-ctl" id="usualsCtl"><button type="button" class="ghost mono" id="restockEdit" hidden>Edit</button></div>
+              <button class="solid" id="addbtn">Put away</button>
+              <div class="putaway-note mono" id="putAwayNote" aria-live="polite"></div>
+            </div>
+          </div>
         </div>
       </section>
       <!-- Tonight stays one tap away from the fridge: the dish's name,
@@ -2819,6 +2974,7 @@ function render(){
   renderKitchen();
   renderTonightLine();
   renderRestock();
+  renderReceipt();
   saveState();
 }
 
@@ -5725,8 +5881,8 @@ function rfMarkTonight(unit){
   unit.querySelectorAll('.rf-cavity [data-rf-item], .rf-door [data-rf-item]').forEach(b => b.classList.toggle('rf-tonight', ids.has(+b.dataset.rfItem)));
 }
 
-// "Tonight: <dish> →" at the foot of the Add column (under the fridge on a
-// phone): switches to the Kitchen panel. Nothing when there's no dish.
+// "Tonight: <dish> →" under the grocery bag (on a phone too, the bag
+// under the fridge): switches to the Kitchen panel. Nothing when there's no dish.
 function renderTonightLine(){
   const line = document.getElementById('tonightLine');
   line.hidden = !tonightDish;
@@ -6715,42 +6871,70 @@ function setUsualsOpen(open){
   if (!open) editingRestock = false;
   renderRestock();
 }
+// The grocery bag, drawn once: the inside of its mouth behind what stands
+// in it (back), and its front and side over it (front). 300 x 172 units;
+// the front's serrated top edge, the rim, is at y 30 (--bag-rim, 10% of
+// the bag's width), its foot on the floor line at the bottom.
+function bagDraw(){
+  const back = document.getElementById('bagBackSvg');
+  if (back.dataset.drawn) return;
+  back.dataset.drawn = '1';
+  let teeth = 'M4 30';
+  for (let x = 4; x < 268; x += 6) teeth += ` L${Math.min(x + 3, 268)} 27.5 L${Math.min(x + 6, 268)} 30`;
+  back.innerHTML = `<g filter="url(#rfWobble)">
+    <polygon class="gin" points="4,30 16,18 294,18 268,30"/>
+    <line class="o" x1="16" y1="18" x2="294" y2="18"/>
+    <line class="i" x1="4" y1="30" x2="16" y2="18"/>
+  </g>`;
+  document.getElementById('bagFrontSvg').innerHTML = `<g filter="url(#rfWobble)">
+    <path class="g2 o" d="M268 30 L294 18 L294 163 L268 170 Z"/>
+    <path class="g3 i" d="M268 30 L281 40 L294 18 Z"/>
+    <path class="i nf" d="M281 40 L281 166.5"/>
+    <path class="g1 o" d="${teeth} L268 170 L4 170 Z"/>
+    <path class="i nf" d="M4 158 L268 158" stroke-opacity=".4"/>
+    <path class="i nf" d="M268 158 L281 154 L294 151" stroke-opacity=".4"/>
+  </g>`;
+}
+
+// One usual's drawing: the food as it is bought, fresh (the same food
+// drawings as the fridge, decay 0).
+function usualShape(key, i){
+  const st = standing[key] || {};
+  const it = {id: -(i + 1), key, bought: today(), custom: st.custom || null};
+  if (st.name) it.name = st.name;
+  try {
+    const cat = fridgeCatOf(it);
+    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 64, 900 + i);
+  } catch (e){ return ''; }
+}
+function usualButton(key, i){
+  const label = labelOf(key);
+  const shape = `<span class="usual-peek"><span class="usual-shape">${usualShape(key, i)}</span></span><span class="usual-name">${esc(label)}</span>`;
+  return editingRestock
+    ? `<button type="button" class="usual removing" data-remove-standing="${key}" aria-label="Remove ${esc(label)} from your usuals">${shape}</button>`
+    : `<button type="button" class="usual" data-restock="${key}" aria-label="${esc(label)}: onto the receipt">${shape}</button>`;
+}
+// Usuals: the six most-bought peek out of the bag; the rest open behind
+// "+N more" as a heap over its mouth. Tapping one prints it on the
+// receipt. Open or closed is remembered on this device.
 function renderRestock(){
+  bagDraw();
   const box = document.getElementById('restock');
-  const edit = document.getElementById('restockEdit');
-  edit.textContent = editingRestock ? 'Done' : 'Edit';
+  const heap = document.getElementById('restockMore');
+  const ctl = document.getElementById('usualsCtl');
   const keys = Object.keys(standing).sort(compareStanding);
-  // Edit lives in the expanded state (or when all of them already show).
   const extra = Math.max(0, keys.length - USUALS_SHOWN);
-  edit.hidden = !keys.length || (extra > 0 && !usualsOpen);
-  if (!keys.length){
-    box.innerHTML = `<div class="mono" style="color:var(--ink-3)">—</div>`;
-    return;
-  }
-  if (editingRestock){
-    box.innerHTML = `<div class="mono" style="color:var(--ink-3);width:100%;margin-bottom:2px">tap to remove</div>` +
-      keys.map(key => {
-        const label = labelOf(key);
-        return `<button class="chip pantry" data-remove-standing="${key}">${label}</button>`;
-      }).join('');
-    box.querySelectorAll('[data-remove-standing]').forEach(b => b.onclick = () => removeStanding(b.dataset.removeStanding));
-    return;
-  }
-  const shown = usualsOpen ? keys : keys.slice(0, USUALS_SHOWN);
-  box.innerHTML = shown.map(key => {
-    const matches = fridge.filter(it => it.key === key);
-    const freshest = matches.reduce((best, it) => (!best || left(it) > left(best)) ? it : best, null);
-    const label = labelOf(key);
-    let cls = '', style = '';
-    if (freshest){
-      if (left(freshest) < 0){ style = ' style="border-color:var(--crit);color:var(--crit)"'; }
-      else { cls = ' use'; }
-    }
-    return `<button class="chip${cls}" data-restock="${key}"${style}>${label}</button>`;
-  }).join('') + (extra ? `<button type="button" class="ghost mono more" id="usualsMore" aria-expanded="${usualsOpen}">${usualsOpen ? 'Show fewer' : `+${extra} more`}</button>` : '');
-  box.querySelectorAll('[data-restock]').forEach(b => b.onclick = () => restock(b.dataset.restock));
-  const more = document.getElementById('usualsMore');
+  box.innerHTML = keys.slice(0, USUALS_SHOWN).map(usualButton).join('');
+  heap.innerHTML = usualsOpen || editingRestock ? keys.slice(USUALS_SHOWN).map((k, i) => usualButton(k, i + USUALS_SHOWN)).join('') : '';
+  // Edit lives in the expanded state (or when all of them already show).
+  const editHidden = !keys.length || (extra > 0 && !usualsOpen);
+  ctl.innerHTML = (extra ? `<button type="button" class="ghost mono more" id="usualsMore" aria-expanded="${usualsOpen}">${usualsOpen ? 'Show fewer' : `+${extra} more`}</button>` : '') +
+    `<button type="button" class="ghost mono" id="restockEdit"${editHidden ? ' hidden' : ''}>${editingRestock ? 'Done' : 'Edit'}</button>` +
+    (editingRestock ? '<span class="mono">tap to remove</span>' : '');
+    const more = document.getElementById('usualsMore');
   if (more) more.onclick = () => setUsualsOpen(!usualsOpen);
+  document.querySelectorAll('#addFood [data-restock]').forEach(b => b.onclick = () => addUsualLine(b.dataset.restock));
+  document.querySelectorAll('#addFood [data-remove-standing]').forEach(b => b.onclick = () => removeStanding(b.dataset.removeStanding));
 }
 
 /* ---------- actions ---------- */
@@ -7120,7 +7304,7 @@ const lastRipeChoice = key => (standing[key] && standing[key].ripe) || 'ripe';
 // A wine: "Opened" or "Unopened" at entry, the last choice the default.
 const opensKey = key => !!(key && foodOf(key) && foodOf(key).opens != null);
 const lastOpenChoice = key => (standing[key] && standing[key].open) || 'unopened';
-// Whether typed entry has to stop at the preview for this entry.
+// Whether a just-typed line has to stop on the receipt (Put away waits).
 // A name that said "frozen" for a food FoodKeeper says not to freeze
 // stops too, so the person sees it's going in the fridge.
 const entryAsks = e => !!entryNeeds(e) || ripensKey(e.key) || opensKey(e.key) || (!!e.frozen && !entryCanFreeze(e));
@@ -7142,7 +7326,7 @@ function entryRecord(e, bought){
   return {key: '_c_' + (slug(name) || 'item' + (uid + 1)), custom: {en: name, g: m.g, usd: m.usd, estWeight: true}, shelf, frozen};
 }
 
-// One review row, shared by the add preview and the receipt review: what
+// One receipt line's details, typed, tapped or scanned: what
 // the name matched and where that came from, or what is still missing.
 function entryMatchMarkup(e, i, kind){
   const bits = [];
@@ -7163,14 +7347,16 @@ function entryMatchMarkup(e, i, kind){
         esc(foodOf(k).en) + ' (' + (FOODS[k] ? 'FOODS' : 'FoodKeeper #' + foodOf(k).fk) + ')</option>').join('') +
       '</select>');
   }
+  // a first-time choice is left open on the receipt ("ripe?", "opened?");
+  // unanswered, Put away counts the default (Ripe, Unopened)
   if (ripensKey(e.key) && !entryFrozen(e)){
-    const choice = e.ripe || lastRipeChoice(e.key);
+    const choice = e.ripe || (standing[e.key] && standing[e.key].ripe);
     const opt = (v, text) => '<label><input type="radio" class="entry-ripe" name="ripe-' + kind + '-' + i + '" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>counts from ripeness:</span>' + opt('ripe', 'Ripe') + opt('unripe', 'Not ripe yet'));
   }
   if (opensKey(e.key)){
-    const choice = e.open || lastOpenChoice(e.key);
+    const choice = e.open || (standing[e.key] && standing[e.key].open);
     const opt = (v, text) => '<label><input type="radio" class="entry-open" name="open-' + kind + '-' + i + '" data-kind="' + kind +
       '" data-idx="' + i + '" value="' + v + '"' + (choice === v ? ' checked' : '') + '> ' + text + '</label>';
     bits.push('<span>opened or unopened?</span>' + opt('unopened', 'Unopened') + opt('opened', 'Opened'));
@@ -7200,11 +7386,13 @@ function wireEntryControls(box, entries, rerender){
       rerender();
     };
   });
+  // click, not change: tapping the choice already shown (the default)
+  // answers the receipt line's "ripe?" or "opened?" too
   box.querySelectorAll('.entry-ripe').forEach(r => {
-    r.onchange = () => { entries[+r.dataset.idx].ripe = r.value; rerender(); };
+    r.onclick = () => { entries[+r.dataset.idx].ripe = r.value; rerender(); };
   });
   box.querySelectorAll('.entry-open').forEach(r => {
-    r.onchange = () => { entries[+r.dataset.idx].open = r.value; rerender(); };
+    r.onclick = () => { entries[+r.dataset.idx].open = r.value; rerender(); };
   });
   box.querySelectorAll('.entry-frozen').forEach(cb => {
     cb.onchange = () => { entries[+cb.dataset.idx].frozen = cb.checked; rerender(); };
@@ -7226,25 +7414,22 @@ function touchStanding(key, custom, name){
   if (name) standing[key].name = name;
 }
 
-// shelf: days from today, from a date the person gave in the preview.
-// Without it, anything that needs a date goes through the preview first.
+// A usual put away from the receipt (commitItems). shelf: days from
+// today, from a date the person gave on its receipt line; a line that
+// needs one never gets here without it. Returns the record put away and
+// the note for the toast.
 function restock(key, shelf){
   const entry = standing[key];
-  if (!entry) return;
-  if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null, !!entry.frozen)){
-    const label = labelOf(key);
-    showEntryPreview([{raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
-      suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key, frozen: !!entry.frozen}],
-      'Restocking ' + label + ' needs the date on the new one.');
-    return;
-  }
+  if (!entry) return null;
+  if (shelf == null && needsDate(key, opensKey(key) ? lastOpenChoice(key) : null, !!entry.frozen)) return null;
   const label = labelOf(key);
   // Only a toss counts as waste. A past-date one of these stays in the
   // drawer for the person to check, toss or remove; the new one is a
   // separate record.
   const existing = entry.frozen ? null : fridge.find(it => it.key === key && !it.frozen && left(it) >= 0);
-  let msg = label + ' restocked';
+  let note = '', id;
   if (existing){
+    id = existing.id;
     existing.bought = today();
     existing.crossed = false;
     delete existing.ripeOn;
@@ -7262,11 +7447,11 @@ function restock(key, shelf){
     if (shelf != null){ it.shelf = shelf; it.shelfFrom = 'date'; }
     if (entry.frozen){ it.frozen = true; delete it.ripening; }
     fridge.push(it);
-    if (fridge.some(x => x.key === key && left(x) < 0)) msg += ' · the old one stays in the drawer until you toss it';
+    id = it.id;
+    if (fridge.some(x => x.key === key && left(x) < 0)) note = 'the old ' + label + ' stays in the drawer until you toss it';
   }
   touchStanding(key, entry.custom, entry.name);
-  toast(msg);
-  render();
+  return {id, note};
 }
 
 // Pure: text in, entries out. No fridge/standing mutation, no render.
@@ -7281,11 +7466,13 @@ function parseText(text){
   }).filter(Boolean);
 }
 
-// Commits entries that need nothing more (entryNeeds() null): pushes to
-// fridge, updates standing, renders, toasts. A restock entry goes back
-// through restock() with the date it now has.
+// Puts away entries that need nothing more (entryNeeds() null): pushes to
+// fridge, updates standing. A usual's line goes through restock() with
+// the date it now has. No render, no toast: Put away does both, once for
+// the whole batch. Returns the records put away, in receipt order, and
+// any notes for the toast.
 function commitItems(entries){
-  let added = 0;
+  const ids = [], notes = [];
   // Every record is settled before any of them touches standing: an
   // entry's ripe and opened defaults are the last choice per food, and the
   // first one committed must not change what the next was shown as.
@@ -7293,10 +7480,13 @@ function commitItems(entries){
   entries.forEach((e, idx) => {
     const bought = today() - e.age;
     const rec = recs[idx];
-    if (e.restockKey){
+    if (e.restockKey && standing[e.restockKey]){
       const st = standing[e.restockKey];
-      if (st){ if (rec.frozen) st.frozen = true; else delete st.frozen; }
-      restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined);
+      if (rec.frozen) st.frozen = true; else delete st.frozen;
+      if (rec.ripe) st.ripe = rec.ripe;
+      if (rec.open) st.open = rec.open;
+      const r = restock(e.restockKey, rec.shelf != null ? rec.shelf : undefined);
+      if (r){ ids.push(r.id); if (r.note) notes.push(r.note); }
       return;
     }
     for (let n = 0; n < (e.quantity || 1); n++){
@@ -7311,25 +7501,206 @@ function commitItems(entries){
       if (rec.ripe) standing[rec.key].ripe = rec.ripe;
       if (rec.open) standing[rec.key].open = rec.open;
       if (rec.frozen) standing[rec.key].frozen = true; else delete standing[rec.key].frozen;
-      added++;
+      ids.push(it.id);
     }
   });
-  if (added){
-    render();
-    toast(added + ' added');
-  }
+  return {ids, notes};
 }
 
-// Typed entry goes straight in when every name matched one food that
-// needs no date; otherwise the preview asks first.
-function addEntry(text){
+/* ---------- the receipt ----------
+   pendingItems is the receipt: every line on it, typed, tapped from the
+   usuals or scanned, in the order it was printed. Nothing touches the
+   fridge until Put away. */
+
+// The field's text, printed as receipt lines ("2d" still dates a line
+// two days back). Returns the new lines.
+function printEntry(text){
   const entries = parseText(text);
-  if (entries.every(e => !entryAsks(e))){
-    document.getElementById('entry').value = '';
-    commitItems(entries);
-  } else {
-    showEntryPreview(entries, 'Check these before adding.');
+  document.getElementById('entry').value = '';
+  suggestItems = []; suggestIndex = -1;
+  renderSuggestions();
+  if (!entries.length) return [];
+  pendingItems.push(...entries);
+  renderReceipt();
+  return entries;
+}
+// A usual tapped in the bag: printed as a line that restocks it.
+function addUsualLine(key){
+  const entry = standing[key];
+  if (!entry) return;
+  const label = labelOf(key);
+  pendingItems.push({raw: label, age: 0, included: true, options: foodOf(key) ? [key] : [],
+    suggestions: [], key: foodOf(key) ? key : null, date: '', label, restockKey: key, frozen: !!entry.frozen});
+  renderReceipt();
+}
+
+// What a line says on the right: the days it keeps, or the question it
+// still needs answered.
+const lineAsksRipe = e => ripensKey(e.key) && !entryFrozen(e) && !e.ripe && !(standing[e.key] && standing[e.key].ripe);
+const lineAsksOpen = e => opensKey(e.key) && !e.open && !(standing[e.key] && standing[e.key].open);
+function lineDays(e){
+  if (!e.included) return {text: 'void'};
+  const need = entryNeeds(e);
+  if (need === 'choice') return {text: 'which?', ask: true};
+  if (need) return {text: 'date?', ask: true};
+  if (lineAsksRipe(e)) return {text: 'ripe?', ask: true};
+  if (lineAsksOpen(e)) return {text: 'opened?', ask: true};
+  try {
+    const bought = today() - e.age, rec = entryRecord(e, bought);
+    const it = {id: -1, key: rec.key, bought, custom: rec.custom};
+    if (rec.name) it.name = rec.name;
+    if (rec.shelf != null){ it.shelf = rec.shelf; it.shelfFrom = 'date'; }
+    if (rec.ripe === 'unripe') it.ripening = true;
+    if (rec.open === 'opened') it.opened = true;
+    if (rec.frozen) it.frozen = true;
+    if (keeps(it)) return {text: 'keeps'};
+    if (it.ripening) return {text: 'ripening'};
+    const n = it.frozen ? shelfOf(it) - (today() - clockStart(it)) : leftAt(it, today());
+    if (n === Infinity) return {text: 'keeps'};
+    if (n < 0) return {text: 'past date'};
+    return {text: (it.frozen ? 'frozen · ' : '') + (n === 0 ? 'today' : dayCount(n))};
+  } catch (err){ return {text: ''}; }
+}
+
+function renderReceipt(){
+  const box = document.getElementById('receiptLines');
+  box.innerHTML = pendingItems.map((e, i) => {
+    const d = lineDays(e);
+    const qty = [(e.quantity || 1) > 1 ? '×' + e.quantity : '', !e.scanned && e.age ? e.age + 'd' : ''].filter(Boolean).join(' ');
+    return '<div class="receipt-row' + (e.included ? entryRowClass(e) : ' void') + '" data-idx="' + i + '">' +
+      '<div class="rl-main">' +
+        '<span class="qty">' + qty + '</span>' +
+        '<input type="text" class="receipt-name" data-idx="' + i + '" value="' + esc(e.label) + '" aria-label="Line ' + (i + 1) + ' on the receipt">' +
+        '<span class="rl-days' + (d.ask ? ' ask' : '') + '">' + d.text + '</span>' +
+        '<button type="button" class="rl-void" data-idx="' + i + '" aria-label="' +
+          (e.scanned ? (e.included ? 'Void ' : 'Restore ') : 'Take off ') + esc(e.label) + '">' + (e.scanned && !e.included ? '+' : '×') + '</button>' +
+      '</div>' +
+      (e.included ? entryMatchMarkup(e, i, 'entry') : '') +
+    '</div>';
+  }).join('');
+  box.querySelectorAll('.receipt-name').forEach(inp => {
+    inp.onchange = () => {
+      const e = pendingItems[+inp.dataset.idx];
+      if (inp.value.trim() === e.label) return;
+      rematchEntry(e, inp.value);
+      delete e.restockKey; // renamed: a new food, not that usual
+      renderReceipt();
+    };
+  });
+  box.querySelectorAll('.rl-void').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.idx, e = pendingItems[i];
+      if (e.scanned) e.included = !e.included; else pendingItems.splice(i, 1);
+      renderReceipt();
+    };
+  });
+  wireEntryControls(box, pendingItems, renderReceipt);
+  renderPutAway();
+}
+// Put away is ready when there is something on the receipt (or in the
+// field) and no line still needs a date or a match.
+function renderPutAway(){
+  const btn = document.getElementById('addbtn');
+  const typed = !!document.getElementById('entry').value.trim();
+  const on = pendingItems.filter(e => e.included);
+  const waiting = on.filter(e => entryNeeds(e)).length;
+  btn.disabled = !typed && (!on.length || waiting > 0);
+  document.getElementById('putAwayNote').textContent = waiting
+    ? waiting + ' ' + (waiting === 1 ? 'needs' : 'need') + ' a date or a match first' : '';
+}
+
+// Put away: whatever is in the field is printed first; a line just
+// printed with a question stops there so it can be answered. Then every
+// line goes to its automatic place at once, flies there from the bag one
+// after another, and one Undo covers the whole batch.
+function putAway(){
+  const el = document.getElementById('entry');
+  const printed = el.value.trim() ? printEntry(el.value) : [];
+  if (printed.some(entryAsks)) return;
+  const items = pendingItems.filter(e => e.included);
+  if (!items.length){ toast('Nothing on the receipt to put away'); return; }
+  const waiting = items.filter(e => entryNeeds(e)).length;
+  if (waiting){ toast(waiting + (waiting === 1 ? ' needs' : ' need') + ' a date or a match first'); renderReceipt(); return; }
+  // what Undo puts back: the records as they were, the usuals as they
+  // stood, and the lines on the receipt
+  const before = new Map(fridge.map(it => [it.id, structuredClone(it)]));
+  const standingBefore = structuredClone(standing);
+  const lines = pendingItems.slice();
+  const scan = {state: receiptState, pending: receiptPending, photo: receiptPhoto};
+  const {ids, notes} = commitItems(items);
+  pendingItems = [];
+  receiptState = 'idle'; receiptPending = null; receiptPhoto = null; receiptErrorMsg = '';
+  const touched = new Set(ids.map(id => fridge.find(x => x.id === id)).filter(Boolean).map(it => it.key));
+  items.forEach(e => { if (e.restockKey) touched.add(e.restockKey); });
+  render();
+  renderReceiptBox();
+  const first = fridge.find(x => x.id === ids[0]);
+  const msg = (ids.length === 1 && first ? food(first).en : ids.length) + ' put away' + (notes.length ? ' · ' + notes.join(' · ') : '');
+  toast(msg, () => {
+    const added = new Set(ids.filter(id => !before.has(id)));
+    fridge = fridge.filter(it => !added.has(it.id)).map(it => ids.includes(it.id) && before.has(it.id) ? before.get(it.id) : it);
+    touched.forEach(k => { if (standingBefore[k]) standing[k] = standingBefore[k]; else delete standing[k]; });
+    pendingItems = lines.concat(pendingItems);
+    if (scan.pending && receiptState === 'idle'){ receiptState = scan.state; receiptPending = scan.pending; receiptPhoto = scan.photo; }
+    render();
+    renderReceiptBox();
+  });
+  flyPutAway(ids);
+}
+
+// The flight: each record put away leaves the bag's mouth, one after
+// another, and lands on its own drawing -- in the fridge (its door opened
+// if shut), the freezer (opened) or, for the kitchen bowl in the other
+// panel, the Kitchen tab. Its drawing is hidden until it lands. None
+// under reduced motion.
+const PUTAWAY_STAGGER = 240, PUTAWAY_FLIGHT = 620;
+function flyPutAway(ids){
+  if (!ids.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const day = today();
+  const unit = document.getElementById('rfUnit');
+  const its = ids.map(id => fridge.find(x => x.id === id)).filter(Boolean);
+  if (its.some(it => it.frozen) && rfSetFreezer && !unit.classList.contains('fz-open')) rfSetFreezer(true);
+  if (its.some(it => !it.frozen && inFridgeAt(it, day)) && rfSetDoor && !unit.classList.contains('open')) rfSetDoor(true);
+  // On a phone the bag is under the fridge: bring the fridge into view
+  // first (the receipt just emptied, so the page got shorter), and let the
+  // food rise into it from the bag below.
+  const u = unit.getBoundingClientRect(), barH = document.querySelector('.bar').getBoundingClientRect().bottom;
+  let wait = 0;
+  if (u.top < barH - 4 || u.bottom > innerHeight + 4){
+    window.scrollTo({top: scrollY + u.top - barH - 8, behavior: 'smooth'});
+    wait = 380;
   }
+  its.forEach((it, i) => {
+    const counter = !it.frozen && !inFridgeAt(it, day);
+    const shape = (counter ? document.getElementById('kcUnit') : unit).querySelector(`[data-rf-item="${it.id}"] .rf-foodshape`);
+    if (!shape) return;
+    if (!counter) shape.style.visibility = 'hidden';
+    setTimeout(() => {
+      if (!shape.isConnected) return;
+      const mouth = document.querySelector('#addFood .bag-body').getBoundingClientRect();
+      const fromX = mouth.left + mouth.width * .45, fromY = mouth.top + mouth.width * .06;
+      const r = shape.getBoundingClientRect();
+      const size = counter ? 44 : Math.max(18, r.width);
+      const g = shape.cloneNode(true);
+      g.className = 'bag-flying';
+      g.removeAttribute('style');
+      g.style.visibility = 'visible';
+      Object.assign(g.style, {left: (fromX - size / 2) + 'px', top: (fromY - size / 2) + 'px', width: size + 'px', height: size + 'px'});
+      document.body.appendChild(g);
+      const to = counter ? document.getElementById('tabKitchen').getBoundingClientRect() : r;
+      const tx = to.left + to.width / 2 - fromX, ty = to.top + to.height / 2 - fromY;
+      const lift = Math.min(140, 40 + Math.abs(tx) * .25);
+      g.animate([
+        {transform: 'translate(0,0) scale(.7)', opacity: 0},
+        {transform: `translate(${tx * .1}px, ${ty * .1 - lift * .4}px) scale(.85)`, opacity: 1, offset: .12},
+        {transform: `translate(${tx * .5}px, ${Math.min(0, ty) * .5 - lift}px) scale(1)`, offset: .5},
+        {transform: `translate(${tx}px, ${ty}px) scale(${counter ? .3 : 1})`, opacity: counter ? 0 : 1}
+      ], {duration: PUTAWAY_FLIGHT, easing: 'cubic-bezier(.3,.1,.3,1)'}).onfinish = () => {
+        g.remove();
+        shape.style.visibility = '';
+      };
+    }, wait + i * PUTAWAY_STAGGER);
+  });
 }
 
 /* ---------- settings (API key) ---------- */
@@ -7341,10 +7712,10 @@ function setApiKey(k){
   try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch(e){ /* unavailable */ }
 }
 
-// The top bar's Add: down to Add food, cursor in the entry field.
+// The top bar's Add: down to the bag, cursor on the receipt's next line.
 function jumpToAdd(){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  showRoom(0); // the Add column is in the Fridge panel
+  showRoom(0); // the bag is in the Fridge panel
   // The window scrolls, not scrollIntoView: that would also scroll the
   // swipe area itself vertically, which initRooms then snaps back.
   const add = document.getElementById('addFood');
@@ -7391,7 +7762,7 @@ function renderSettingsStatus(){
    call keeps the photo and offers Retry — nothing is logged silently. */
 
 let receiptState = 'idle'; // idle | scanning | review | error
-let receiptPending = null; // {age, dateKnown, items:[entry + {quantity}]}; see entryFor()
+let receiptPending = null; // {age, dateKnown}: the scanned receipt's date; its lines are on the receipt (pendingItems, scanned:true)
 let receiptPhoto = null;   // cached downscaled dataURL, kept only for Retry
 let receiptErrorMsg = '';
 
@@ -7504,10 +7875,13 @@ function buildReceiptPending(parsed){
       : {raw: expanded, age, options: [], suggestions: [], key: null, date: '',
          label: expanded ? capFirst(expanded) : 'Unrecognized item'};
     // a line that says frozen goes straight into the freezer
-    return Object.assign(e, {raw: String(it.raw || ''), included: isFood, quantity: isFood ? qty : 1,
+    return Object.assign(e, {raw: String(it.raw || ''), included: isFood, quantity: isFood ? qty : 1, scanned: true,
       frozen: isFood && (!!e.frozen || FROZEN_WORD.test(String(it.raw || '')))});
   });
-  receiptPending = {age, dateKnown: dateDay != null, items};
+  // a new scan replaces the last one's lines, never the typed ones
+  pendingItems = pendingItems.filter(e => !e.scanned).concat(items);
+  receiptPending = {age, dateKnown: dateDay != null};
+  renderReceipt();
 }
 
 function initReceipt(){
@@ -7557,32 +7931,36 @@ function retryReceiptScan(){
     .then(renderReceiptBox);
 }
 
+// Discard: the scanned lines come off the receipt; typed ones stay.
 function discardReceipt(){
   receiptState = 'idle';
   receiptPending = null;
   receiptPhoto = null;
   receiptErrorMsg = '';
+  pendingItems = pendingItems.filter(e => !e.scanned);
+  renderReceipt();
   renderReceiptBox();
 }
 
+// The receipt's top line, under Scan receipt: reading, an error with
+// Retry, or the scanned receipt's date with Discard. The scanned lines
+// themselves are on the receipt with the rest (renderReceipt).
 function renderReceiptBox(){
   const box = document.getElementById('receiptPreview');
-  if (receiptState === 'idle'){
+  if (receiptState === 'idle' || (receiptState === 'review' && !receiptPending)){
     box.style.display = 'none';
     box.innerHTML = '';
     return;
   }
   box.style.display = '';
-
   if (receiptState === 'scanning'){
     box.innerHTML = '<div>Reading the receipt…</div>';
     return;
   }
-
   if (receiptState === 'error'){
     box.innerHTML =
-      '<div>' + receiptErrorMsg + '</div>' +
-      '<div class="sub" style="margin-top:10px">' +
+      '<div>' + esc(receiptErrorMsg) + '</div>' +
+      '<div class="sub">' +
         '<button class="solid" id="receiptRetry">Retry</button>' +
         '<button id="receiptDiscard">Discard</button>' +
       '</div>';
@@ -7590,136 +7968,14 @@ function renderReceiptBox(){
     document.getElementById('receiptDiscard').onclick = discardReceipt;
     return;
   }
-
-  // review
-  const dateLine = receiptPending.dateKnown
+  box.innerHTML = '<div>' + (receiptPending.dateKnown
     ? 'Bought ' + receiptPending.age + (receiptPending.age === 1 ? ' day' : ' days') + ' ago, per the receipt'
-    : 'No legible date on the receipt — logging as bought today';
-  const rows = receiptPending.items.map((it, i) =>
-    '<div class="receipt-row' + (it.included ? entryRowClass(it) : '') + '">' +
-      '<input type="checkbox" class="receipt-check" data-idx="' + i + '"' + (it.included ? ' checked' : '') + '>' +
-      '<input type="text" class="receipt-name" data-idx="' + i + '" value="' + esc(it.label) + '">' +
-      '<span class="qty">' + (it.quantity > 1 ? '×' + it.quantity : '') + '</span>' +
-      (it.included ? entryMatchMarkup(it, i, 'receipt') : '') +
-    '</div>'
-  ).join('');
-  const waiting = receiptPending.items.filter(it => it.included && entryNeeds(it)).length;
-  box.innerHTML =
-    '<div>' + dateLine + '</div>' +
-    '<div style="margin-top:10px">' + rows + '</div>' +
-    '<div class="sub" style="margin-top:12px">' +
-      '<button class="solid" id="receiptConfirm"' + (waiting ? ' disabled' : '') + '>Add checked</button>' +
-      '<button id="receiptDiscard">Discard</button>' +
-      (waiting ? '<span class="mono">' + waiting + (waiting === 1 ? ' line needs' : ' lines need') + ' a date or a match first</span>' : '') +
-    '</div>';
-  box.querySelectorAll('.receipt-check').forEach(cb => {
-    cb.onchange = () => { receiptPending.items[+cb.dataset.idx].included = cb.checked; renderReceiptBox(); };
-  });
-  // An edited name is matched again once the field is left, not on every
-  // keystroke -- re-rendering mid-word would steal the cursor.
-  box.querySelectorAll('.receipt-name').forEach(inp => {
-    inp.onchange = () => { rematchEntry(receiptPending.items[+inp.dataset.idx], inp.value); renderReceiptBox(); };
-  });
-  wireEntryControls(box, receiptPending.items, renderReceiptBox);
-  document.getElementById('receiptConfirm').onclick = confirmReceipt;
+    : 'No legible date on the receipt — logging as bought today') + '</div>' +
+    '<div class="sub"><button id="receiptDiscard">Discard scan</button></div>';
   document.getElementById('receiptDiscard').onclick = discardReceipt;
 }
 
-// Committing goes through the same entryRecord() typed entry
-// use, with every line dated by the receipt. Nothing goes in while a
-// checked line still lacks a match or a date.
-function confirmReceipt(){
-  const items = receiptPending.items.filter(it => it.included);
-  const waiting = items.filter(it => entryNeeds(it)).length;
-  if (waiting){ toast(waiting + (waiting === 1 ? ' line needs' : ' lines need') + ' a date or a match first'); return; }
-  let added = 0;
-  const bought = today() - receiptPending.age;
-  // settled before any touches standing, as in commitItems
-  const recs = items.map(it => entryRecord(it, bought));
-  items.forEach((it, idx) => {
-    const rec = recs[idx];
-    for (let n = 0; n < it.quantity; n++){
-      const item = {id: ++uid, key: rec.key, bought, custom: rec.custom};
-      if (rec.name) item.name = rec.name;
-      if (rec.shelf != null){ item.shelf = rec.shelf; item.shelfFrom = 'date'; }
-      if (rec.ripe === 'unripe') item.ripening = true;
-      if (rec.open === 'opened') item.opened = true;
-      if (rec.frozen) item.frozen = true;
-      fridge.push(item);
-      touchStanding(rec.key, rec.custom, rec.name);
-      if (rec.ripe) standing[rec.key].ripe = rec.ripe;
-      if (rec.open) standing[rec.key].open = rec.open;
-      if (rec.frozen) standing[rec.key].frozen = true; else delete standing[rec.key].frozen;
-      added++;
-    }
-  });
-  discardReceipt();
-  if (added){ render(); toast(added + ' added from receipt'); }
-  else toast('Nothing checked to add');
-}
-
-/* ---------- entry preview ---------- */
-
-let pendingItems = null;
-let pendingHeading = '';
-// The one preview for typed and restocked entries.
-function showEntryPreview(entries, heading){
-  pendingItems = entries;
-  pendingHeading = heading;
-  renderEntryPreview();
-}
-
-function renderEntryPreview(){
-  const box = document.getElementById('entryPreview');
-  if (!pendingItems || !pendingItems.length){
-    box.style.display = 'none';
-    box.innerHTML = '';
-    return;
-  }
-  box.style.display = '';
-  const rows = pendingItems.map((e, i) =>
-    '<div class="receipt-row' + (e.included ? entryRowClass(e) : '') + '">' +
-      '<input type="checkbox" class="entry-check" data-idx="' + i + '"' + (e.included ? ' checked' : '') + '>' +
-      '<span class="entry-name">' + esc(e.label) + '</span>' +
-      '<span class="qty">' + (e.age ? e.age + 'd' : '') + '</span>' +
-      (e.included ? entryMatchMarkup(e, i, 'entry') : '') +
-    '</div>').join('');
-  const included = pendingItems.filter(e => e.included);
-  const waiting = included.filter(e => entryNeeds(e)).length;
-  box.innerHTML = `
-    <div>${pendingHeading}</div>
-    <div style="margin-top:10px">${rows}</div>
-    <div class="sub" style="margin-top:10px">
-      <button class="solid" id="entryAdd"${waiting ? ' disabled' : ''}>Add ${included.length}</button>
-      <button id="entryDiscard">Discard</button>
-      ${waiting ? `<span class="mono">${waiting} ${waiting === 1 ? 'needs' : 'need'} a date or a match first</span>` : ''}
-    </div>`;
-  box.querySelectorAll('.entry-check').forEach(cb => {
-    cb.onchange = () => { pendingItems[+cb.dataset.idx].included = cb.checked; renderEntryPreview(); };
-  });
-  wireEntryControls(box, pendingItems, renderEntryPreview);
-  document.getElementById('entryAdd').onclick = confirmEntryPreview;
-  document.getElementById('entryDiscard').onclick = discardEntryPreview;
-}
-
-// Also called by #addbtn when a preview is pending, so there is exactly one
-// code path for "commit the preview" — clicking either button can never
-// disagree about what gets added, because they're the same call.
-function confirmEntryPreview(){
-  const items = pendingItems.filter(it => it.included);
-  const waiting = items.filter(it => entryNeeds(it)).length;
-  if (waiting){ toast(waiting + (waiting === 1 ? ' needs' : ' need') + ' a date or a match first'); return; }
-  pendingItems = null;
-  document.getElementById('entry').value = '';
-  renderEntryPreview();
-  if (items.length) commitItems(items); else toast('Nothing to add');
-}
-
-function discardEntryPreview(){
-  pendingItems = null;
-  document.getElementById('entry').value = '';
-  renderEntryPreview();
-}
+let pendingItems = [];
 
 /* ---------- autocomplete ---------- */
 
@@ -7822,20 +8078,10 @@ function toast(msg, undo){
 
 /* ---------- wire up ---------- */
 
-document.getElementById('restockEdit').onclick = () => { editingRestock = !editingRestock; renderRestock(); };
-document.getElementById('addbtn').onclick = () => {
-  // A pending preview always wins: this button and the preview's own Add N
-  // must never disagree about what "Add" does while one is open.
-  if (pendingItems){ confirmEntryPreview(); return; }
-  const el = document.getElementById('entry');
-  if (el.value.trim()) addEntry(el.value);
-};
+document.getElementById('addbtn').onclick = putAway;
 document.getElementById('entry').addEventListener('input', () => {
-  // Editing the field while a preview is open means the shown chips no
-  // longer describe what's in the field — drop them rather than re-parse
-  // live and have the chips flicker mid-correction.
-  if (pendingItems) discardEntryPreview();
   updateSuggestions();
+  renderPutAway();
 });
 document.getElementById('entry').addEventListener('keydown', e => {
   if (suggestItems.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
@@ -7853,7 +8099,8 @@ document.getElementById('entry').addEventListener('keydown', e => {
   if (e.key === 'Enter'){
     e.preventDefault();
     if (suggestItems.length && suggestIndex >= 0){ selectSuggestion(suggestIndex); return; }
-    document.getElementById('addbtn').click();
+    // Enter prints the line on the receipt; Put away puts it away.
+    if (e.target.value.trim()) printEntry(e.target.value);
   }
 });
 document.getElementById('entry').addEventListener('blur', () => {

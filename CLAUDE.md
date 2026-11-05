@@ -40,7 +40,7 @@ consumer food app.
   4. Units: days x1, weeks x7, months x30, years x365. Hours give no value.
   5. No number:
      - Package use-by date (milk and similar): ask for the date printed on
-       the package at entry, and flag it in receipt review (pkgDate).
+       the package at entry, and ask it on its receipt line (pkgDate).
      - No printed date and no FoodKeeper number (tomato, and the
        vegetables FoodKeeper doesn't list): keep the current number,
        marked estimated:true, with a note saying why.
@@ -62,7 +62,7 @@ consumer food app.
        sparkling 3 days, rosé 7, fortified wines (vermouth) 4 weeks.
        Entry asks "Opened" or "Unopened"; opened counts that figure from
        purchase (opens), unopened asks for the printed date (pkgDate) --
-       entry and receipt review ask the date only for an unopened one.
+       its receipt line asks the date only for an unopened one.
        No extension service gives a figure for sake or soju: printed
        date only. All five are refrigerated (door bins).
      - No spoilage limit at all (FoodKeeper "Indefinitely": #539 Hard
@@ -134,14 +134,14 @@ consumer food app.
        back to fresh.
      - Entering frozen food: "frozen" in a typed or scanned name ("frozen
        shrimp"; a receipt line printed or expanded with it) puts it in the
-       freezer, its freezer value counted from purchase; the entry
-       preview and receipt review carry a Frozen toggle (the last choice
-       per food is remembered for restock). A frozen entry whose plain
+       freezer, its freezer value counted from purchase; its receipt line
+       carries a Frozen toggle (the last choice per food is remembered
+       for restock). A frozen entry whose plain
        match has no freezer value takes the kept-frozen FoodKeeper item of
        the same name if there is one (frozen edamame -> #641); otherwise
        it asks for a date, which governs in the freezer. A food FoodKeeper
-       says not to freeze has no toggle; typed with "frozen", it stops at
-       the preview and says it goes in the fridge.
+       says not to freeze has no toggle; typed with "frozen", it stops on
+       the receipt and says it goes in the fridge.
      - Frozen items have no countdown (leftAt is Infinity, as for keeps):
        out of the headline, the decay line, every at-risk count
        (counted()), the Kitchen and Tonight's dish; in All items as
@@ -228,7 +228,10 @@ Its interior stays a pale cold blue. The page, the type, the tags and
 every control stay in the cold fridge palette above; the cream never
 leaves the fridge body. The kitchen counter is the third exception, on
 the same terms: a pale cold stone top, a bleached cutting board and a
-grey glazed bowl, a few flat tones scoped to .kc-unit.
+grey glazed bowl, a few flat tones scoped to .kc-unit. The grocery bag
+is the fourth: a muted kraft front, side and mouth (--bag-1, --bag-2,
+--bag-3, --bag-in) and an off-white thermal receipt (--receipt), scoped
+to .bag; the kraft never leaves the bag.
 
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a
@@ -281,8 +284,8 @@ mid-list).
 
 The page is three parts, in this order, about three times as far apart
 as anything within one, with rules only between parts: Fridge / Kitchen
-(the tabs are its title; Add food is inside the Fridge panel; All items
-under the swipe area); What's turning (the headline, its subline, and
+(the tabs are its title; the grocery bag is inside the Fridge panel;
+All items under the swipe area); What's turning (the headline, its subline, and
 the decay line under its own small title); and So far (the ledger). All
 items, What's turning and So far are full width, below and outside the
 swipe area. There is no voice entry. Both come from an Adobe Fonts web project tied to a
@@ -319,27 +322,74 @@ tap there never starts a swipe. showRoom(i) switches panels from outside
 the tabs. Nothing scrolls the area vertically: jumpToAdd scrolls the
 window, never scrollIntoView, which would scroll the area itself.
 
-The Fridge panel, on desktop, is two top-aligned columns: the fridge
-about 60% of the width, the Add column the rest. On a phone the Add
-column stacks under the fridge in the same panel. The Add column is a
-faint flat tinted panel, top to bottom: the "Add food" heading, the entry
-field (placeholder "what did you buy?") with Add and Scan receipt on one
-row (on a phone the field has its own row and its suggestions sit in the
-flow under it, since the swipe area clips anything hanging out of a
-panel; no hint under it, and "2d" after an item still dates it two days
-back), then Your usuals: the six most-bought chips, the rest behind "+N
-more" (the real count), which expands them in short wrapping rows inside
-the column, never sideways, and "Show fewer" collapses them; Edit lives
-in the expanded state (or shows whenever all of them already fit). Open
-or closed is remembered per device (localStorage perishable.usualsOpen,
-in try/catch). The top bar's Add switches to the Fridge panel first, then
-scrolls to the Add column and focuses the field. Tonight stays reachable
-from the Fridge panel: at the foot of the Add column (on a phone between
-the fridge and the Add column), one line "Tonight <dish> →" that switches
+Every action on the page is a physical object drawn in the fridge's
+line-and-wash: the fridge is for looking, a paper grocery bag is for
+putting things away, a plate (to come) for using things up, a bin (to
+come) for what's thrown away. Everything drawn is real data; no
+decorative props.
+
+The Fridge panel, on desktop, is the fridge (its column exactly the unit
+plus the open door's room) and, beside the open door, the grocery bag's
+column, 330 to 380px -- narrower than the Add column it replaced; width
+the fridge can't use under its height cap is left at the right. On a
+phone the bag stands under the fridge in the same panel. There is no
+"Add food" heading. The bag stands on the fridge's floor line (its foot
+line; on desktop the bag's column runs from the fridge's top to that
+line and never makes the row taller -- the receipt's lines scroll inside
+it when there are many). Top to bottom:
+- The receipt (pendingItems), a strip of thermal paper rising out of the
+  bag's mouth, its tail behind the usuals and the bag's front. Its top
+  line is Scan receipt (under it, while scanning, "Reading the
+  receipt…", an error with Retry, or the scanned receipt's date with
+  "Discard scan", which takes only scanned lines off). Then its lines,
+  in Tonos Mono: the name on the left (editable; renaming re-matches),
+  on the right the days it keeps ("7 days", "frozen · 540 days",
+  "keeps", "ripening") or the question it still needs answered ("date?",
+  "which?", "ripe?", "opened?"), and × to take it off (a scanned line is
+  voided instead, struck through, + restores it). Under each name, the
+  old preview's match line and questions: matched and source, pick a
+  match, Ripe / Not ripe yet, Opened / Unopened, Frozen, the date. A
+  first-time ripe or opened choice is left unanswered ("ripe?",
+  "opened?"); unanswered, Put away counts the default (Ripe, Unopened),
+  and a remembered choice is the default and shows its days. The
+  receipt's next line is the entry field itself (a real text input,
+  placeholder "what did you buy?"; suggestions in the flow under it, as
+  the receipt's next lines; "2d" after an item still dates it two days
+  back). Enter prints the field as lines; nothing reaches the fridge
+  until Put away.
+- Usuals: the six most-bought peek out of the bag's mouth, drawn with the
+  same food drawings (fresh, decay 0), the bottom of each behind the
+  bag's front, a small name label on the front under each. Tapping one
+  prints it on the receipt (a restock line: Put away refreshes a fresh
+  one already in the fridge, as restock always has). "+N more" (the real
+  count) is a small text control on the bag's front; it opens the rest as
+  the same small drawings, heaped over the mouth in wrapping rows, never
+  sideways, and "Show fewer" closes them; Edit (tap a drawing to remove
+  it from the usuals) lives in the open state or whenever all of them
+  already show. Open or closed is remembered per device (localStorage
+  perishable.usualsOpen, in try/catch).
+- Put away (#addbtn; interface text only), on the bag's front, with what
+  it waits for under it ("1 needs a date or a match first"). It prints
+  anything left in the field first; a line just printed that asks a
+  question stops there so it can be answered. Otherwise every line goes
+  in at once (commitItems), to its automatic place: fridge, freezer or
+  kitchen bowl. Each then flies from the bag's mouth to its own drawing,
+  one after another (flyPutAway: 240 ms apart, 620 ms each, the drawing
+  hidden until it lands; the freezer opens for frozen food, a shut
+  fridge door for fridge food, and bowl food flies to the Kitchen tab);
+  reduced motion skips the flight. One toast ("5 put away", any restock
+  note after it) with Undo covers the whole batch: new records out,
+  restocked ones and the usuals as they were, the lines back on the
+  receipt.
+The top bar's Add switches to the Fridge panel first, then scrolls to the
+bag and focuses the receipt's field. Tonight stays reachable from the
+Fridge panel: under the bag, one line "Tonight <dish> →" that switches
 to the Kitchen panel, and in the fridge the items tonight's dish uses get
 a thin ink line traced around their own outline (rfTonightRing, an SVG
 filter, not a box; no urgency colour). With no dish (tonightDish null),
-no line and no outline.
+no line and no outline. On a phone the usuals, the receipt's field, its
+× and questions, Scan receipt, "+N more" and Put away are 44px tap
+targets, and the receipt grows as long as it needs.
 
 Kitchen is a small counter drawn in the fridge's line-and-wash: a counter
 top, a cutting board and a bowl, nothing else. The board carries
@@ -370,9 +420,10 @@ The illustrated fridge opens the page: a literal drawing of a fridge
 (door, shelves, crisper, door bins, and the freezer compartment at the
 top). On desktop it keeps its aspect ratio (360:640, never stretched)
 and scales to fit its column (the unit plus the open door's room, 1.5 x
---rf-w), capped at about 80% of the window height -- a cap, not a fixed
+--rf-w), capped at about 90% of the window height -- a cap, not a fixed
 height -- and lower on a short screen, so the whole fridge, freezer to
-crisper, is inside the window under the bar and the tabs. The freezer has its own door on the same right-hand hinge, closed
+crisper, is inside the window under the bar and the tabs, which are
+compact on desktop for it (about 96px above the fridge). The freezer has its own door on the same right-hand hinge, closed
 on every load, opened and closed by its handle (or its inside face once
 open); the door front carries a small count ("3 inside", "empty"),
 which opens it too when tapped.

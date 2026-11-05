@@ -93,9 +93,9 @@ async function receiptScenario(browser) {
   await page.waitForSelector('.receipt-row');
 
   console.log('\n--- RECEIPT SCAN ---');
-  const readRows = () => page.$$eval('#receiptPreview .receipt-row', els => els.map(el => ({
-    checked: el.querySelector('input[type=checkbox]').checked,
-    name: el.querySelector('input[type=text]').value,
+  const readRows = () => page.$$eval('#receiptLines .receipt-row', els => els.map(el => ({
+    checked: !el.classList.contains('void'),
+    name: el.querySelector('.receipt-name').value,
     flag: el.classList.contains('unresolved') ? 'no match' : el.classList.contains('needs-date') ? 'needs date' : '',
     match: (el.querySelector('.match') || {textContent: ''}).textContent.trim(),
     qty: el.querySelector('.qty').textContent.trim()
@@ -113,16 +113,16 @@ async function receiptScenario(browser) {
   if (rows[0].flag || !rows[0].match.includes('FoodKeeper #259') || rows[0].match.includes('FOODS')) throw new Error('cranberries should match FoodKeeper #259 alone: ' + JSON.stringify(rows[0]));
   if (rows[1].flag !== 'needs date' || !rows[1].match.includes('FOODS')) throw new Error('milk should match FOODS and ask for its package date: ' + JSON.stringify(rows[1]));
   if (rows[2].flag !== 'no match' || !rows[2].match.includes('no shelf-life data')) throw new Error('potato chips should match nothing: ' + JSON.stringify(rows[2]));
-  if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked while lines need answers');
+  if (!(await page.$eval('#addbtn', b => b.disabled))) throw new Error('confirm should be blocked while lines need answers');
 
   // Answer through the real controls: milk's printed date 7 days after
   // purchase, the chips' use-by 60 days after.
   const purchase = await page.evaluate(() => receiptPending.age);
   const isoAfter = n => page.evaluate(([a, d]) => new Date((today() - a + d - DAY_OFFSET) * 86400000).toISOString().slice(0, 10), [purchase, n]);
-  await page.fill('#receiptPreview .entry-date[data-idx="1"]', await isoAfter(7));
-  await page.fill('#receiptPreview .entry-date[data-idx="2"]', await isoAfter(60));
-  if (await page.$eval('#receiptConfirm', b => b.disabled)) throw new Error('confirm still blocked after every line was answered');
-  await page.click('#receiptConfirm');
+  await page.fill('#receiptLines .entry-date[data-idx="1"]', await isoAfter(7));
+  await page.fill('#receiptLines .entry-date[data-idx="2"]', await isoAfter(60));
+  if (await page.$eval('#addbtn', b => b.disabled)) throw new Error('confirm still blocked after every line was answered');
+  await page.click('#addbtn');
   await page.waitForTimeout(150);
 
   await page.waitForTimeout(300);
@@ -151,23 +151,23 @@ async function receiptScenario(browser) {
 // purchase (milk's old fixed value), then adds. No-op when nothing opened.
 async function answerPreview(page) {
   await page.waitForTimeout(50);
-  if (!(await page.$('#entryPreview .receipt-row'))) return;
+  if (!(await page.$('#receiptLines .receipt-row'))) return;
   for (;;) {
-    const pick = await page.$('#entryPreview .receipt-row.unresolved .entry-pick');
+    const pick = await page.$('#receiptLines .receipt-row.unresolved .entry-pick');
     if (!pick) break;
     const first = await pick.$eval('option:nth-child(2)', o => o.value);
     await pick.selectOption(first);
   }
   for (;;) {
-    const input = await page.$('#entryPreview .entry-date:not([data-done])');
+    const input = await page.$('#receiptLines .entry-date:not([data-done])');
     if (!input) break;
     const idx = await input.getAttribute('data-idx');
     const iso = await page.evaluate(i => new Date((today() - pendingItems[i].age + 7 - DAY_OFFSET) * 86400000)
       .toISOString().slice(0, 10), +idx);
     await input.fill(iso);
-    await page.$eval(`#entryPreview .entry-date[data-idx="${idx}"]`, el => el.setAttribute('data-done', ''));
+    await page.$eval(`#receiptLines .entry-date[data-idx="${idx}"]`, el => el.setAttribute('data-done', ''));
   }
-  await page.click('#entryAdd');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
 }
 
@@ -1105,7 +1105,15 @@ async function typeEntry(page, text) {
   await page.click('#addbtn');
   await page.waitForTimeout(120);
 }
-const previewOpen = page => page.$eval('#entryPreview', el => el.style.display !== 'none' && !!el.querySelector('.receipt-row'));
+// The receipt asks: there are lines on it waiting for Put away.
+const previewOpen = page => page.$eval('#receiptLines', el => !!el.querySelector('.receipt-row'));
+// Every typed line taken off the receipt with its own ×.
+async function takeOffReceipt(page) {
+  while (await page.$('#receiptLines .rl-void')) {
+    await page.click('#receiptLines .rl-void');
+    await page.waitForTimeout(20);
+  }
+}
 function readReview(page, box) {
   return page.$$eval(`${box} .receipt-row`, els => els.map(el => ({
     name: (el.querySelector('.entry-name') || el.querySelector('input[type=text]')).textContent.trim() ||
@@ -1173,11 +1181,11 @@ async function fkOnlyScenario(browser) {
   if (!pop.includes('FoodKeeper #253 “Berries (blackberries, boysenberries, currant)”')) throw new Error('popover source should name #253 and its title');
   // A FoodKeeper-only food counted from ripeness offers Ripe / Not ripe yet.
   await typeEntry(page, 'apricots');
-  const [apricot] = await readReview(page, '#entryPreview');
+  const [apricot] = await readReview(page, '#receiptLines');
   console.log(' ', apricot.name, '|', apricot.flag || 'ok', '|', apricot.match);
   if (apricot.match.includes('FOODS') || !apricot.match.includes('FoodKeeper #249')) throw new Error('apricots should match FoodKeeper #249 alone');
   if (!apricot.match.includes('Ripe') || !apricot.match.includes('Not ripe yet')) throw new Error('apricots should offer the ripeness choice');
-  await page.click('#entryDiscard');
+  await takeOffReceipt(page);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1204,7 +1212,7 @@ async function noFalseMatchScenario(browser) {
   console.log('\n--- NO FALSE MATCH: apple juice is not Apple, almond milk is not Milk ---');
   await typeEntry(page, 'apple juice, chicken salad, almond milk, potato chips');
   if (!(await previewOpen(page))) throw new Error('almond milk and potato chips need answers; the preview should open');
-  const rows = await readReview(page, '#entryPreview');
+  const rows = await readReview(page, '#receiptLines');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
   const byName = n => rows.find(r => r.name === n);
   const expectMatch = (n, src, not) => {
@@ -1220,7 +1228,7 @@ async function noFalseMatchScenario(browser) {
   if (!byName('Potato chips').match.includes('no shelf-life data')) throw new Error('potato chips should say no shelf-life data');
   const keys = await page.evaluate(() => ['apple juice', 'chicken salad', 'almond milk', 'potato chips'].map(t => resolveName(t).keys));
   if (keys.flat().some(k => ['apple', 'chicken', 'milk', 'potato'].includes(k))) throw new Error('a generic FOODS key matched: ' + JSON.stringify(keys));
-  await page.click('#entryDiscard');
+  await takeOffReceipt(page);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -1257,16 +1265,15 @@ async function ambiguousScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- AMBIGUOUS: "cheese" and "tortillas" ask which one ---');
   await typeEntry(page, 'cheese, tortillas');
-  const rows = await readReview(page, '#entryPreview');
+  const rows = await readReview(page, '#receiptLines');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag, '|', r.options.join(' / ')));
   expectEqual('cheese options', rows[0].options, ['Hard cheese (FOODS)', 'Shredded cheese (FOODS)', 'Soft cheese (FOODS)']);
   expectEqual('tortilla options', rows[1].options, ['Flour tortillas (FOODS)', 'Corn tortillas (FOODS)']);
-  if (!(await page.$eval('#entryAdd', b => b.disabled))) throw new Error('Add should be blocked while a choice is open');
-  await page.click('#addbtn');   // the other Add path refuses too
+  if (!(await page.$eval('#addbtn', b => b.disabled))) throw new Error('Add should be blocked while a choice is open');
   if ((await readInventory(page)).length) throw new Error('nothing should be added before the choices are made');
-  await page.selectOption('#entryPreview .entry-pick[data-idx="0"]', 'softcheese');
-  await page.selectOption('#entryPreview .entry-pick[data-idx="1"]', 'corntortilla');
-  await page.click('#entryAdd');
+  await page.selectOption('#receiptLines .entry-pick[data-idx="0"]', 'softcheese');
+  await page.selectOption('#receiptLines .entry-pick[data-idx="1"]', 'corntortilla');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   const inv = await readInventory(page);
   console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
@@ -1282,14 +1289,13 @@ async function noMatchScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- NO MATCH: cannot be saved without a date ---');
   await typeEntry(page, 'potato chips 2d');
-  const [row] = await readReview(page, '#entryPreview');
+  const [row] = await readReview(page, '#receiptLines');
   console.log(' ', row.name, '|', row.flag, '|', row.match);
-  if (!(await page.$eval('#entryAdd', b => b.disabled))) throw new Error('Add should be blocked with no date');
-  await page.click('#addbtn');
+  if (!(await page.$eval('#addbtn', b => b.disabled))) throw new Error('Put away should be blocked with no date');
   await page.waitForTimeout(80);
   expectEqual('fridge after refused add', (await readInventory(page)).length, 0);
-  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 28));
-  await page.click('#entryAdd');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 28));
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   const inv = await readInventory(page);
   console.log('inventory:', JSON.stringify(inv));
@@ -1326,8 +1332,8 @@ async function receiptNewItemsScenario(browser) {
   const fixturePath = path.join(require('os').tmpdir(), 'perishable-receipt-fixture-2.jpg');
   fs.writeFileSync(fixturePath, FIXTURE_JPEG);
   await page.setInputFiles('#receiptFile', fixturePath);
-  await page.waitForSelector('#receiptPreview .receipt-row');
-  const rows = await readReview(page, '#receiptPreview');
+  await page.waitForSelector('#receiptLines .receipt-row');
+  const rows = await readReview(page, '#receiptLines');
   rows.forEach(r => console.log(' ', r.name, '|', r.flag || 'ok', '|', r.match));
   expectEqual('flags', rows.map(r => r.flag), ['', '', '', 'needs date', 'no match / choice', '', '']);
   expectEqual('scanned names, cleaned', rows.map(r => r.name),
@@ -1335,13 +1341,13 @@ async function receiptNewItemsScenario(browser) {
   if (!rows[0].match.includes('FOODS, FoodKeeper #481')) throw new Error('strawberries should match FOODS (#481)');
   if (!rows[2].match.includes('Not ripe yet')) throw new Error('avocados should offer the ripeness choice');
   if (!rows[5].match.includes('FOODS, FoodKeeper #266') || !rows[5].match.includes('Not ripe yet')) throw new Error('plums should match FOODS (#266) and offer the ripeness choice');
-  if (!(await page.$eval('#receiptConfirm', b => b.disabled))) throw new Error('confirm should be blocked');
+  if (!(await page.$eval('#addbtn', b => b.disabled))) throw new Error('confirm should be blocked');
 
-  await page.check('#receiptPreview .entry-ripe[data-idx="2"][value="unripe"]');
-  await page.fill('#receiptPreview .entry-date[data-idx="3"]', await isoIn(page, 21));
-  await page.selectOption('#receiptPreview .entry-pick[data-idx="4"]', 'flourtortilla');
-  await page.fill('#receiptPreview .entry-date[data-idx="4"]', await isoIn(page, 30));
-  await page.click('#receiptConfirm');
+  await page.check('#receiptLines .entry-ripe[data-idx="2"][value="unripe"]');
+  await page.fill('#receiptLines .entry-date[data-idx="3"]', await isoIn(page, 21));
+  await page.selectOption('#receiptLines .entry-pick[data-idx="4"]', 'flourtortilla');
+  await page.fill('#receiptLines .entry-date[data-idx="4"]', await isoIn(page, 30));
+  await page.click('#addbtn');
   await page.waitForTimeout(150);
   fs.unlinkSync(fixturePath);
 
@@ -1366,11 +1372,11 @@ async function receiptNewItemsScenario(browser) {
 
   await page.click('[data-restock="sourcream"]');
   await page.waitForTimeout(100);
-  const heading = await page.textContent('#entryPreview > div:first-child');
-  console.log('restock sour cream:', heading.trim());
-  if (!/needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the date');
-  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 25));
-  await page.click('#entryAdd');
+  const heading = await page.textContent('#receiptLines .receipt-row:last-child');
+  console.log('restock sour cream:', heading.replace(/\s+/g, ' ').trim());
+  if (!/date\?/.test(heading) || !/needs the date/.test(heading)) throw new Error('restocking sour cream should ask for the date on its receipt line');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 25));
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   const after = await readInventory(page);
   expectEqual('sour cream rows after restock', after.filter(r => r.name === 'Sour cream').length, 1);
@@ -1387,6 +1393,7 @@ async function restockNoWasteScenario(browser) {
   console.log('\n--- RESTOCK: a past-date item is not counted as waste ---');
   await typeEntry(page, 'yogurt 20d');
   await page.click('[data-restock="yogurt"]');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   const inv = await readInventory(page);
   console.log('inventory:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)), '· waste:', await page.textContent('#wasteG'));
@@ -1978,11 +1985,13 @@ async function ripenessScenario(browser) {
   console.log('\n--- RIPENESS: Ripe / Not ripe yet / It\'s ripe ---');
   await typeEntry(page, 'bananas, pineapple');
   if (!(await previewOpen(page))) throw new Error('bananas should open the preview for the ripeness choice');
-  expectEqual('first-time default', await page.$eval('#entryPreview .entry-ripe:checked', r => r.value), 'ripe');
-  expectEqual('pineapple asks nothing', await page.$$eval('#entryPreview .entry-ripe[data-idx="1"]', r => r.length), 0);
-  if (await page.$eval('#entryAdd', b => b.disabled)) throw new Error('a ripeness choice has a default; Add should be enabled');
-  await page.check('#entryPreview .entry-ripe[data-idx="0"][value="unripe"]');
-  await page.click('#entryAdd');
+  // first time: the line asks, nothing chosen yet; Put away would count it ripe
+  expectEqual('first time, the line asks', await page.evaluate(() => [document.querySelectorAll('#receiptLines .entry-ripe:checked').length,
+    document.querySelector('#receiptLines .receipt-row .rl-days').textContent]), [0, 'ripe?']);
+  expectEqual('pineapple asks nothing', await page.$$eval('#receiptLines .entry-ripe[data-idx="1"]', r => r.length), 0);
+  if (await page.$eval('#addbtn', b => b.disabled)) throw new Error('a ripeness choice has a default; Add should be enabled');
+  await page.check('#receiptLines .entry-ripe[data-idx="0"][value="unripe"]');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   let inv = await readInventory(page);
   console.log('after adding:', JSON.stringify(inv.map(r => r.name + ' ' + r.left)));
@@ -1992,9 +2001,10 @@ async function ripenessScenario(browser) {
   expectEqual('ten days on, still no countdown or decay', later, [3, 0]);
 
   await typeEntry(page, 'bananas');
-  expectEqual('remembered default', await page.$eval('#entryPreview .entry-ripe:checked', r => r.value), 'unripe');
-  await page.click('#entryDiscard');
+  expectEqual('remembered default', await page.$eval('#receiptLines .entry-ripe:checked', r => r.value), 'unripe');
+  await takeOffReceipt(page);
   await page.click('[data-restock="banana"]');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   expectEqual('restock uses the remembered choice', await page.evaluate(() => fridge.find(i => i.key === 'banana').ripening), true);
 
@@ -2027,24 +2037,26 @@ async function drinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- DRINKS: beer, wine, vodka; guava ---');
   await typeEntry(page, 'beer, wine, vodka, guava');
-  let rows = await readReview(page, '#entryPreview');
+  let rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match, r.options])));
   expectEqual('beer needs the printed date', rows[0].flag, 'needs date');
   expectEqual('wine asks which', rows[1].options, ['Red wine (FOODS)', 'White wine (FOODS)']);
   if (!rows[2].match.includes('FoodKeeper #539')) throw new Error('vodka should match FOODS, FoodKeeper #539: ' + rows[2].match);
   if (!rows[3].match.includes('FoodKeeper #262') || !rows[3].match.includes('Not ripe yet')) throw new Error('guava should be #262 and ask ripeness: ' + rows[3].match);
-  await page.fill('#entryPreview .entry-date[data-idx="0"]', await isoIn(page, 120));
-  await page.dispatchEvent('#entryPreview .entry-date[data-idx="0"]', 'change');
-  await page.selectOption('#entryPreview .entry-pick[data-idx="1"]', 'redwine');
+  await page.fill('#receiptLines .entry-date[data-idx="0"]', await isoIn(page, 120));
+  await page.dispatchEvent('#receiptLines .entry-date[data-idx="0"]', 'change');
+  await page.selectOption('#receiptLines .entry-pick[data-idx="1"]', 'redwine');
   await page.waitForTimeout(80);
-  rows = await readReview(page, '#entryPreview');
+  rows = await readReview(page, '#receiptLines');
   if (!rows[1].match.includes('opened or unopened?')) throw new Error('red wine should ask opened or unopened: ' + rows[1].match);
-  expectEqual('unopened by default', await page.$eval('#entryPreview .entry-open[data-idx="1"]:checked', r => r.value), 'unopened');
-  await page.click('#entryAdd');
+  // first time: asked, unanswered; Put away counts it unopened
+  expectEqual('opened? asked, nothing chosen', await page.evaluate(() => [document.querySelectorAll('#receiptLines .entry-open[data-idx="1"]:checked').length,
+    document.querySelectorAll('#receiptLines .rl-days')[1].textContent]), [0, 'opened?']);
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   await typeEntry(page, 'white wine');
-  await page.check('#entryPreview .entry-open[data-idx="0"][value="opened"]');
-  await page.click('#entryAdd');
+  await page.check('#receiptLines .entry-open[data-idx="0"][value="opened"]');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
 
   let inv = await readInventory(page);
@@ -2101,14 +2113,14 @@ async function drinksScenario(browser) {
 
   // The rest of the drinks: what each name matches, and what it asks.
   await typeEntry(page, 'whisky, bourbon, scotch, rum, gin, tequila, mezcal, brandy, cognac, baijiu, liquor, spirits, cream liqueur, canned beer, hard cider, hard seltzer');
-  rows = await readReview(page, '#entryPreview');
+  rows = await readReview(page, '#receiptLines');
   const got = rows.map(r => [r.name, r.flag, (r.match.match(/FoodKeeper #\d+/) || ['none'])[0]]);
   console.log(JSON.stringify(got));
   const keepsNames = ['Whiskey', 'Bourbon', 'Scotch', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Baijiu', 'Liquor', 'Liquor'];
   expectEqual('spirits: #539, nothing asked', got.slice(0, 12), keepsNames.map(n => [n, '', 'FoodKeeper #539']));
   expectEqual('cream liqueur: #540, nothing asked', got[12], ['Cream liqueur', '', 'FoodKeeper #540']);
   expectEqual('cans and cider: the printed date', got.slice(13).map(r => r[1]), ['needs date', 'needs date', 'needs date']);
-  const asks = await page.$$eval('#entryPreview .entry-open', r => r.length);
+  const asks = await page.$$eval('#receiptLines .entry-open', r => r.length);
   expectEqual('no opened question for any of these', asks, 0);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
@@ -2122,7 +2134,7 @@ async function moreDrinksScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- MORE DRINKS: sparkling, rosé, vermouth, sake, soju ---');
   await typeEntry(page, 'champagne, prosecco, cava, rosé, rose wine, sweet vermouth, sake, soju');
-  let rows = await readReview(page, '#entryPreview');
+  let rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
   expectEqual('names', rows.map(r => r.name), ['Sparkling wine', 'Sparkling wine', 'Sparkling wine', 'Rosé', 'Rosé', 'Vermouth', 'Sake', 'Soju']);
   rows.forEach(r => { if (r.flag !== 'needs date') throw new Error(r.name + ' unopened should need the printed date: ' + JSON.stringify(r)); });
@@ -2134,17 +2146,17 @@ async function moreDrinksScenario(browser) {
   });
   // Opened: the date field goes away and the line can go in.
   for (const i of [0, 3, 5]) {
-    await page.check(`#entryPreview .entry-open[data-idx="${i}"][value="opened"]`);
+    await page.check(`#receiptLines .entry-open[data-idx="${i}"][value="opened"]`);
     await page.waitForTimeout(60);
   }
-  rows = await readReview(page, '#entryPreview');
+  rows = await readReview(page, '#receiptLines');
   expectEqual('opened lines need nothing', [0, 3, 5].map(i => rows[i].flag), ['', '', '']);
   for (const i of [1, 2, 4, 6, 7]) {
-    await page.fill(`#entryPreview .entry-date[data-idx="${i}"]`, await isoIn(page, 200));
-    await page.dispatchEvent(`#entryPreview .entry-date[data-idx="${i}"]`, 'change');
+    await page.fill(`#receiptLines .entry-date[data-idx="${i}"]`, await isoIn(page, 200));
+    await page.dispatchEvent(`#receiptLines .entry-date[data-idx="${i}"]`, 'change');
     await page.waitForTimeout(40);
   }
-  await page.click('#entryAdd');
+  await page.click('#addbtn');
   await page.waitForTimeout(150);
   const recs = await page.evaluate(() => fridge.map(i => [i.key, !!i.opened, Math.round(left(i)), fridgeShapeOf(i)]));
   console.log(JSON.stringify(recs));
@@ -2584,10 +2596,10 @@ async function cantFreezeScenario(browser) {
   // Typed "frozen cucumber" stops at the preview and says why it goes in
   // the fridge.
   await typeEntry(page, 'frozen cucumber');
-  const rows = await readReview(page, '#entryPreview');
+  const rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows));
   if (!rows[0].match.includes('freezing not recommended') || rows[0].match.includes('Frozen')) throw new Error('frozen cucumber: ' + rows[0].match);
-  await page.click('#entryAdd');
+  await page.click('#addbtn');
   await page.waitForTimeout(100);
   expectEqual('cucumber went in the fridge', await page.evaluate(() => fridge.filter(i => i.key === 'cucumber').map(i => !!i.frozen)), [false, false]);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
@@ -2607,18 +2619,18 @@ async function frozenEntryScenario(browser) {
   let st = await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen, shelfOf(i)]));
   expectEqual('shrimp frozen, 540 days', st, [['shrimp', true, 540]]);
   await typeEntry(page, 'salmon, chicken nuggets, frozen peas, frozen edamame');
-  let rows = await readReview(page, '#entryPreview');
+  let rows = await readReview(page, '#receiptLines');
   console.log(JSON.stringify(rows.map(r => [r.name, r.flag, r.match])));
-  const checked = await page.$$eval('#entryPreview .entry-frozen', bs => bs.map(b => b.checked));
+  const checked = await page.$$eval('#receiptLines .entry-frozen', bs => bs.map(b => b.checked));
   expectEqual('Frozen toggles: salmon off, nuggets, peas and edamame on', checked, [false, true, true, true]);
   expectEqual('only the peas need a date', rows.map(r => r.flag), ['', '', 'no match / choice', '']);
   if (!rows[3].match.includes('FoodKeeper #641')) throw new Error('frozen edamame should be #641: ' + rows[3].match);
-  await page.check('#entryPreview .entry-frozen[data-idx="0"]');
+  await page.check('#receiptLines .entry-frozen[data-idx="0"]');
   await page.waitForTimeout(60);
-  await page.fill('#entryPreview .entry-date[data-idx="2"]', await isoIn(page, 120));
-  await page.dispatchEvent('#entryPreview .entry-date[data-idx="2"]', 'change');
+  await page.fill('#receiptLines .entry-date[data-idx="2"]', await isoIn(page, 120));
+  await page.dispatchEvent('#receiptLines .entry-date[data-idx="2"]', 'change');
   await page.waitForTimeout(60);
-  await page.click('#entryAdd');
+  await page.click('#addbtn');
   await page.waitForTimeout(150);
   st = await page.evaluate(() => fridge.map(i => [food(i).en, !!i.frozen, shelfOf(i)]));
   console.log(JSON.stringify(st));
@@ -2651,12 +2663,12 @@ async function frozenReceiptScenario(browser) {
   const fixturePath = path.join(require('os').tmpdir(), 'perishable-receipt-fixture-frozen.jpg');
   fs.writeFileSync(fixturePath, FIXTURE_JPEG);
   await page.setInputFiles('#receiptFile', fixturePath);
-  await page.waitForSelector('#receiptPreview .receipt-row');
-  const checked = await page.$$eval('#receiptPreview .receipt-row', rs => rs.map(r => { const c = r.querySelector('.entry-frozen'); return c ? c.checked : null; }));
+  await page.waitForSelector('#receiptLines .receipt-row');
+  const checked = await page.$$eval('#receiptLines .receipt-row', rs => rs.map(r => { const c = r.querySelector('.entry-frozen'); return c ? c.checked : null; }));
   expectEqual('Frozen: shrimp and broccoli ticked, beef not, romaine none', checked, [true, true, false, null]);
-  await page.check('#receiptPreview .entry-frozen[data-idx="2"]');
+  await page.check('#receiptLines .entry-frozen[data-idx="2"]');
   await page.waitForTimeout(60);
-  await page.click('#receiptConfirm');
+  await page.click('#addbtn');
   await page.waitForTimeout(200);
   const st = await page.evaluate(() => fridge.map(i => [i.key, !!i.frozen, shelfOf(i)]));
   console.log(JSON.stringify(st));
@@ -3165,6 +3177,7 @@ async function panelsScenario(browser) {
   const geo = () => {
     const r = el => (typeof el === 'string' ? document.querySelector(el) : el).getBoundingClientRect();
     const u = r('#rfUnit'), door = r('#rfDoor'), add = r('#addFood'), stage = r('#rf .rf-stage'), panel = r('#panelFridge');
+    const bag = r('#addFood .bag-body');
     return {
       fridge: [Math.round(u.top), Math.round(u.bottom), Math.round(Math.max(u.right, door.right))],
       inWindow: u.top >= 0 && u.bottom <= innerHeight,
@@ -3173,6 +3186,8 @@ async function panelsScenario(browser) {
       // a phone keeps its 16px peek of the other panel
       panelIsArea: Math.round(panel.width) === document.getElementById('roomsTrack').clientWidth - (innerWidth <= 720 ? 16 : 0),
       add: [Math.round(add.top), Math.round(add.left), Math.round(add.bottom)],
+      bag: [Math.round(bag.top), Math.round(bag.left), Math.round(bag.bottom)],
+      bagShare: +(add.width / panel.width).toFixed(2),
       stageTop: Math.round(stage.top),
       tonight: (t => [Math.round(t.top), Math.round(t.bottom)])(r('#tonightLine')),
     };
@@ -3194,19 +3209,21 @@ async function panelsScenario(browser) {
     expectEqual(`${tag}: the fridge keeps its aspect ratio`, g.ratio, +(360 / 640).toFixed(3));
     if (!phone) {
       expectEqual(`${tag}: the whole fridge is inside the window`, g.inWindow, true);
-      if (g.fridge[1] - g.fridge[0] > vp.height * 0.8 + 1) throw new Error(`${tag}: the fridge is taller than 80% of the window`);
-      if (g.rfShare < 0.55 || g.rfShare > 0.65) throw new Error(`${tag}: the fridge column should be about 60%, got ${g.rfShare}`);
-      if (g.add[1] < g.fridge[2]) throw new Error(`${tag}: the Add column should sit beside the fridge, right of its door`);
-      if (Math.abs(g.add[0] - g.stageTop) > 8) throw new Error(`${tag}: the columns should be top-aligned: ${g.add[0]} vs ${g.stageTop}`);
-      if (g.tonight[0] < g.add[2]) throw new Error(`${tag}: the Tonight line should be at the foot of the Add column`);
+      const tall = (g.fridge[1] - g.fridge[0]) / vp.height;
+      if (tall > 0.9 + 1 / vp.height) throw new Error(`${tag}: the fridge is taller than 90% of the window`);
+      if (tall < 0.8) throw new Error(`${tag}: the fridge should be well over 80% of the window, got ${tall.toFixed(2)}`);
+      if (g.bagShare > 0.36) throw new Error(`${tag}: the bag column should be narrower than the old Add column (about 37%), got ${g.bagShare}`);
+      if (g.bag[1] < g.fridge[2]) throw new Error(`${tag}: the bag should stand beside the fridge, right of its door`);
+      if (Math.abs(g.bag[2] - g.fridge[1]) > 2) throw new Error(`${tag}: the bag should stand on the fridge's floor line: ${g.bag[2]} vs ${g.fridge[1]}`);
+      if (g.tonight[0] < g.bag[2]) throw new Error(`${tag}: the Tonight line should be under the bag`);
     } else {
-      if (g.add[0] < g.fridge[1]) throw new Error(`${tag}: the Add column should be under the fridge`);
-      if (!(g.tonight[0] >= g.fridge[1] && g.tonight[1] <= g.add[0])) throw new Error(`${tag}: the Tonight line should sit under the fridge, above Add: ${JSON.stringify(g)}`);
+      if (g.add[0] < g.fridge[1]) throw new Error(`${tag}: the bag should be under the fridge`);
+      if (g.tonight[0] < g.bag[2]) throw new Error(`${tag}: the Tonight line should sit under the bag: ${JSON.stringify(g)}`);
     }
 
     // Usuals: six, then "+N more" with the real count.
     const usuals = () => page.evaluate(() => {
-      const box = document.getElementById('restock'), col = document.getElementById('addFood').getBoundingClientRect();
+      const box = document.getElementById('addFood'), col = box.getBoundingClientRect(), heap = document.getElementById('restockMore');
       const chips = [...box.querySelectorAll('[data-restock]')];
       const more = document.getElementById('usualsMore');
       return {
@@ -3214,7 +3231,7 @@ async function panelsScenario(browser) {
         more: more && more.textContent, expanded: more && more.getAttribute('aria-expanded'),
         edit: !document.getElementById('restockEdit').hidden,
         inside: chips.every(c => { const r = c.getBoundingClientRect(); return r.left >= col.left && r.right <= col.right; }),
-        sideways: box.scrollWidth > box.clientWidth,
+        sideways: heap.scrollWidth > heap.clientWidth,
         rows: new Set(chips.map(c => Math.round(c.getBoundingClientRect().top))).size,
       };
     });
@@ -3224,7 +3241,7 @@ async function panelsScenario(browser) {
     u = await usuals();
     console.log(`${tag}: usuals open`, JSON.stringify(u));
     expectEqual(`${tag}: expanded, Edit inside it`, [u.chips, u.more, u.expanded, u.edit], [u.total, 'Show fewer', 'true', true]);
-    expectEqual(`${tag}: wraps inside the column, never sideways`, [u.inside, u.sideways, u.rows > 1], [true, false, true]);
+    expectEqual(`${tag}: the rest open as drawings inside the column, never sideways`, [u.inside, u.sideways, u.rows > 1], [true, false, true]);
     if (!phone) await page.screenshot({ path: path.join(OUT, `panels-${vp.width}-usuals-open.png`) });
     await page.reload();
     await page.waitForSelector('#headline');
@@ -3290,7 +3307,7 @@ async function panelsScenario(browser) {
 // swipe area. Food names keep their
 // own capitals in labels: "Chinese broccoli", never "chinese broccoli".
 async function pageStructureScenario(browser) {
-  console.log('\n--- PAGE: three parts in order, Add food in the Fridge panel, no voice entry, titles in Caslonian, food names capitalized ---');
+  console.log('\n--- PAGE: three parts in order, the bag in the Fridge panel, no voice entry, titles in Caslonian, food names capitalized ---');
   const items = [...KITCHEN_20, ['gailan', 2]];
   for (const [tag, vp] of [['desktop', { width: 1280, height: 1000 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport: vp });
@@ -3306,39 +3323,38 @@ async function pageStructureScenario(browser) {
       const track = document.getElementById('roomsTrack');
       return {
         titles: parts.map(p => titleOf(p).textContent.trim()),
-        fonts: [...parts.map(titleOf), document.getElementById('addTitle')].map(t => { const cs = getComputedStyle(t); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
-        addTitle: document.getElementById('addTitle').textContent,
+        fonts: parts.map(titleOf).map(t => { const cs = getComputedStyle(t); return [cs.fontFamily.split(',')[0].replace(/['"]/g, ''), cs.fontSize, cs.textTransform]; }),
+        addTitle: !!document.getElementById('addTitle') || !!document.querySelector('#addFood h2, #addFood h3') || /Add food/.test(document.getElementById('addFood').textContent),
         addInFridge: !!document.querySelector('#panelFridge #addFood'),
         outside: ['headline', 'chart', 'wasteG', 'allItems'].map(id => track.contains(document.getElementById(id))),
         gaps: parts.slice(1).map((p, i) => Math.round(p.getBoundingClientRect().top - parts[i].getBoundingClientRect().bottom)),
-        addTint: getComputedStyle(document.getElementById('addFood')).backgroundColor,
-        usuals: document.querySelector('#addFood .sub-title').textContent,
+        scanTop: (r => r.firstElementChild.firstElementChild.id)(document.getElementById('receipt')),
         entryInAdd: !!document.querySelector('#addFood #entry') && !!document.querySelector('#addFood #restock'),
         chart: document.getElementById('chart').textContent,
         speak: !!document.getElementById('voicebtn') || [...document.querySelectorAll('button')].some(b => /speak/i.test(b.textContent)),
         hint: !!document.querySelector('#addFood .hint') || /Type a list|joins your usuals/.test(document.getElementById('addFood').textContent),
         placeholder: document.getElementById('entry').placeholder,
-        buttons: [...document.querySelectorAll('#addFood .add > button')].map(b => b.textContent.trim()),
+        buttons: [document.getElementById('scanReceiptBtn'), document.getElementById('addbtn')].map(b => b.textContent.trim()),
+        topAdd: document.getElementById('addJumpBtn').textContent.trim(),
       };
     });
     console.log(`${tag}:`, JSON.stringify({ ...st, chart: undefined }));
     expectEqual(`${tag}: three parts`, st.titles.map(t => t.replace(/ · \d+$/, '')), ['Fridge', "What's turning", 'So far']);
-    expectEqual(`${tag}: Add food in the Fridge panel`, [st.addTitle, st.addInFridge], ['Add food', true]);
+    expectEqual(`${tag}: the bag in the Fridge panel, no "Add food" heading`, [st.addTitle, st.addInFridge], [false, true]);
     expectEqual(`${tag}: What's turning, So far and All items outside the swipe area`, st.outside, [false, false, false, false]);
     expectEqual(`${tag}: no Speak button`, st.speak, false);
     expectEqual(`${tag}: no hint under the entry field`, st.hint, false);
     expectEqual(`${tag}: placeholder`, st.placeholder, 'what did you buy?');
-    expectEqual(`${tag}: entry buttons`, st.buttons, ['Add', 'Scan receipt']);
+    expectEqual(`${tag}: Scan receipt and Put away; the top bar keeps Add`, [st.buttons, st.topAdd], [['Scan receipt', 'Put away'], 'Add']);
+    expectEqual(`${tag}: Scan receipt is the receipt's top line`, st.scanTop, 'scanReceiptBtn');
     for (const [fam, size, tt] of st.fonts) {
       if (fam !== 'caslonian-std-l' || tt !== 'none' || parseFloat(size) < 19) throw new Error(`${tag}: a part title is ${fam} ${size} ${tt}`);
     }
     if (st.gaps.some(g => g < 50)) throw new Error(`${tag}: parts should sit well apart, got ${st.gaps}`);
-    if (st.addTint === 'rgba(0, 0, 0, 0)') throw new Error(`${tag}: Add food should have its tinted panel`);
-    expectEqual(`${tag}: Your usuals`, st.usuals, 'Your usuals');
-    expectEqual(`${tag}: chips and entry in one section`, st.entryInAdd, true);
+    expectEqual(`${tag}: usuals and the receipt in the bag`, st.entryInAdd, true);
     // (a phone shortens a crowded day to "+N", so the full names are checked on desktop)
     if (tag === 'desktop' && !/Chinese broccoli/.test(st.chart) || /chinese broccoli/.test(st.chart)) throw new Error(`${tag}: decay line should say "Chinese broccoli": ${st.chart}`);
-    // The top bar's Add still lands on Add food, cursor in the field.
+    // The top bar's Add still lands on the bag, cursor on the receipt.
     await page.click('#addJumpBtn');
     await page.waitForTimeout(900);
     const jump = await page.evaluate(() => ({
@@ -3346,12 +3362,12 @@ async function pageStructureScenario(browser) {
       top: Math.round(document.getElementById('addFood').getBoundingClientRect().top),
     }));
     expectEqual(`${tag}: top bar Add focuses the entry field`, jump.focused, 'entry');
-    if (jump.top < 0 || jump.top > 120) throw new Error(`${tag}: top bar Add should scroll Add food to the top, got ${jump.top}`);
+    if (jump.top < 0 || jump.top > 120) throw new Error(`${tag}: top bar Add should scroll the bag to the top, got ${jump.top}`);
     // "2d" after an item still dates it two days back.
     await page.fill('#entry', 'spinach 2d');
     await page.click('#addbtn');
     await page.waitForTimeout(200);
-    if (await page.$('#entryPreview .receipt-row')) await page.click('#entryAdd');
+    if (await page.$('#receiptLines .receipt-row')) await page.click('#addbtn');
     await page.waitForTimeout(200);
     const ages = await page.evaluate(() => fridge.filter(it => it.key === 'spinach').map(it => today() - it.bought));
     if (!ages.includes(2)) throw new Error(`${tag}: "spinach 2d" should be bought two days ago, got ages ${ages}`);
@@ -3359,6 +3375,196 @@ async function pageStructureScenario(browser) {
     if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
     await ctx.close();
   }
+}
+
+
+/* ---------- the grocery bag: entry through the receipt, usuals, Put away ---------- */
+
+// Where a record landed: the freezer, the fridge (shelves, crisper or door
+// bins), or the kitchen's bowl -- read from the drawings, not the data.
+function placeOf(id) {
+  const el = document.querySelector(`#rfUnit [data-rf-item="${id}"], #kcUnit [data-rf-item="${id}"]`);
+  if (!el) return 'nowhere';
+  if (el.closest('#rfFzShelf')) return 'freezer';
+  if (el.closest('#kcBowlItems, #kcBowlBack')) return 'bowl';
+  if (el.closest('#kcCounterBack')) return 'counter';
+  if (el.closest('#rfUnit')) return 'fridge';
+  return 'elsewhere';
+}
+const receiptRows = page => page.$$eval('#receiptLines .receipt-row', els => els.map(el => ({
+  name: el.querySelector('.receipt-name').value,
+  days: el.querySelector('.rl-days').textContent.trim(),
+  void: el.classList.contains('void'),
+})));
+
+// Typed names print as receipt lines (Enter), a usual tapped in the bag
+// prints too, and nothing reaches the fridge until Put away. Each line
+// says on the right what it keeps, or the question it needs answered;
+// Put away waits for a date. Then every item lands where it belongs --
+// fridge, freezer, kitchen bowl -- flying from the bag one after another,
+// and one Undo takes the whole batch back, lines onto the receipt.
+async function putAwayScenario(browser) {
+  console.log('\n--- PUT AWAY: the receipt, a usual, every item to its place, one Undo ---');
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await seedMixed18(page, KITCHEN_20);
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(1300);
+  const snap = () => page.evaluate(() => JSON.stringify({fridge, standing}));
+  const before = await snap();
+  const n0 = await page.evaluate(() => fridge.length);
+
+  // typed: Enter prints, the field empties, nothing is put away yet
+  await page.fill('#entry', 'spinach, milk');
+  await page.press('#entry', 'Enter');
+  await page.waitForTimeout(80);
+  let rows = await receiptRows(page);
+  console.log('after Enter:', JSON.stringify(rows));
+  expectEqual('two lines printed', rows.map(r => r.name), ['Spinach', 'Milk']);
+  expectEqual('the field is the next line, empty', await page.inputValue('#entry'), '');
+  if (!/^\d+ days?$/.test(rows[0].days)) throw new Error('spinach should say the days it keeps: ' + rows[0].days);
+  expectEqual('milk asks for its date', rows[1].days, 'date?');
+  expectEqual('nothing in the fridge yet', await page.evaluate(() => fridge.length), n0);
+  expectEqual('Put away waits for the date', await page.$eval('#addbtn', b => [b.disabled, b.textContent]), [true, 'Put away']);
+  if (!/needs a date/.test(await page.textContent('#putAwayNote'))) throw new Error('the bag should say what Put away waits for');
+  await page.screenshot({ path: path.join(OUT, 'putaway-receipt-asks.png') });
+
+  // a usual: its drawing in the bag, tapped, prints a line
+  const usual = await page.$eval('#restock [data-restock]', b => ({key: b.dataset.restock, label: b.querySelector('.usual-name').textContent, svg: !!b.querySelector('svg path')}));
+  if (!usual.svg) throw new Error('a usual should be its food drawing');
+  await page.click(`#restock [data-restock="${usual.key}"]`);
+  await page.waitForTimeout(80);
+  rows = await receiptRows(page);
+  expectEqual('the usual prints on the receipt', rows[2].name, usual.label);
+  expectEqual('still nothing in the fridge', await page.evaluate(() => fridge.length), n0);
+
+  // more typed into the field, Put away: printed, but milk still waits
+  await page.fill('#entry', 'frozen shrimp, potatoes');
+  await page.click('#addbtn');
+  await page.waitForTimeout(80);
+  rows = await receiptRows(page);
+  expectEqual('Put away prints the field first', rows.map(r => r.name).slice(3), ['Shrimp', 'Potato']);
+  expectEqual('nothing put away while milk asks', await page.evaluate(() => fridge.length), n0);
+  if (!/^frozen · \d+ days$/.test(rows[3].days)) throw new Error('frozen shrimp should say its freezer days: ' + rows[3].days);
+  const iso = await isoIn(page, 6);
+  await page.fill('#receiptLines .entry-date[data-idx="1"]', iso);
+  await page.dispatchEvent('#receiptLines .entry-date[data-idx="1"]', 'change');
+  await page.waitForTimeout(50);
+  rows = await receiptRows(page);
+  expectEqual('milk keeps to its printed date', rows[1].days, '6 days');
+  await page.screenshot({ path: path.join(OUT, 'putaway-receipt-five.png') });
+
+  // Put away: every record in at once, each flying in turn
+  const ids0 = await page.evaluate(() => fridge.map(it => it.id));
+  await page.click('#addbtn');
+  await page.waitForTimeout(260);
+  const mid = await page.evaluate(() => ({
+    flying: document.querySelectorAll('.bag-flying').length,
+    hidden: [...document.querySelectorAll('#rfUnit .rf-foodshape')].filter(s => s.style.visibility === 'hidden').length,
+  }));
+  await page.screenshot({ path: path.join(OUT, 'putaway-mid-flight.png') });
+  console.log('mid-flight:', JSON.stringify(mid));
+  if (!mid.flying || !mid.hidden) throw new Error('mid-flight, items should be in the air and their places still empty: ' + JSON.stringify(mid));
+  // placeOf runs in the page
+  const where = await page.evaluate(`(() => { ${placeOf.toString()}; const ids0 = ${JSON.stringify(ids0)};
+    return fridge.filter(it => !ids0.includes(it.id) || it.bought === today() && it.key === ${JSON.stringify(usual.key)})
+      .map(it => [food(it).en, placeOf(it.id), !!it.frozen]); })()`);
+  console.log('landed:', JSON.stringify(where));
+  const placeFor = name => (where.find(w => w[0] === name) || [])[1];
+  expectEqual('spinach and milk in the fridge', [placeFor('Spinach'), placeFor('Milk')], ['fridge', 'fridge']);
+  expectEqual('frozen shrimp in the freezer', [placeFor('Shrimp'), (where.find(w => w[0] === 'Shrimp') || [])[2]], ['freezer', true]);
+  expectEqual('potatoes in the kitchen bowl', placeFor('Potato'), 'bowl');
+  if (!where.some(w => w[0] === usual.label)) throw new Error('the usual should be put away too');
+  expectEqual('the receipt is empty', (await receiptRows(page)).length, 0);
+  expectEqual('the freezer opened for the shrimp', await page.$eval('#rfUnit', u => u.classList.contains('fz-open')), true);
+  const t = await page.textContent('#toast');
+  if (!/^\d+ put away/.test(t) || !/Undo/.test(t)) throw new Error('one toast with Undo for the batch: ' + t);
+  await page.waitForTimeout(2200);
+  const after = await page.evaluate(() => ({
+    flying: document.querySelectorAll('.bag-flying').length,
+    hidden: [...document.querySelectorAll('.rf-foodshape')].filter(s => s.style.visibility === 'hidden').length,
+  }));
+  expectEqual('every flight has landed', after, {flying: 0, hidden: 0});
+
+  // one Undo: the whole batch out, the usual's record as it was, the
+  // lines back on the receipt
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(100);
+  expectEqual('Undo takes the whole batch back', await snap(), before);
+  expectEqual('Undo puts the lines back on the receipt', (await receiptRows(page)).map(r => r.name),
+    ['Spinach', 'Milk', usual.label, 'Shrimp', 'Potato']);
+  // and they can go again
+  await page.click('#addbtn');
+  await page.waitForTimeout(100);
+  expectEqual('put away again', await page.evaluate(n => fridge.length - n, n0), 4);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// Reduced motion: Put away puts everything in place with no flight.
+async function putAwayReducedMotionScenario(browser) {
+  console.log('\n--- PUT AWAY: reduced motion skips the flight ---');
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await seedMixed18(page, KITCHEN_20);
+  await page.waitForSelector('#headline');
+  const n0 = await page.evaluate(() => fridge.length);
+  await page.fill('#entry', 'spinach, carrots, frozen shrimp');
+  await page.click('#addbtn');
+  const seen = await page.evaluate(() => new Promise(res => {
+    let flying = 0, hidden = 0, n = 0;
+    const tick = () => {
+      flying = Math.max(flying, document.querySelectorAll('.bag-flying').length);
+      hidden = Math.max(hidden, [...document.querySelectorAll('.rf-foodshape')].filter(s => s.style.visibility === 'hidden').length);
+      if (++n < 30) requestAnimationFrame(tick); else res({flying, hidden});
+    };
+    tick();
+  }));
+  expectEqual('no flight, nothing hidden', seen, {flying: 0, hidden: 0});
+  expectEqual('all three put away, the receipt empty', await page.evaluate(n => [fridge.length - n, pendingItems.length], n0), [3, 0]);
+  await ctx.close();
+}
+
+// Phone: the bag stands under the fridge, the receipt rises out of it;
+// usuals, the receipt's field, its × and Put away are 44px tap targets.
+async function bagPhoneScenario(browser) {
+  console.log('\n--- PUT AWAY: the bag on a phone ---');
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await seedMixed18(page, KITCHEN_20);
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(1300);
+  await page.fill('#entry', 'spinach, milk, salmon');
+  await page.press('#entry', 'Enter');
+  await page.waitForTimeout(80);
+  const g = await page.evaluate(() => {
+    const r = el => el.getBoundingClientRect();
+    const size = el => { const b = r(el); return [Math.round(b.width), Math.round(b.height)]; };
+    return {
+      fridgeBottom: r(document.getElementById('rfUnit')).bottom, receiptTop: r(document.getElementById('receipt')).top,
+      bagTop: r(document.querySelector('#addFood .bag-body')).top, receiptBottom: r(document.getElementById('receipt')).bottom,
+      usuals: [...document.querySelectorAll('#restock .usual')].map(size),
+      field: size(document.getElementById('entry')), voids: [...document.querySelectorAll('.rl-void')].map(size),
+      putAway: size(document.getElementById('addbtn')), scan: size(document.getElementById('scanReceiptBtn')),
+      more: (m => m ? size(m) : null)(document.getElementById('usualsMore')),
+      inside: [...document.querySelectorAll('#addFood *')].every(el => { const b = r(el); return !b.width || b.right <= innerWidth - 16 + 1; }),
+    };
+  });
+  console.log('phone bag:', JSON.stringify(g));
+  if (g.receiptTop < g.fridgeBottom) throw new Error('the bag and its receipt should sit under the fridge');
+  if (g.receiptBottom <= g.bagTop) throw new Error('the receipt should rise out of the bag');
+  expectEqual('six usuals', g.usuals.length, 6);
+  const small = [...g.usuals, g.field, ...g.voids, g.putAway, g.scan, ...(g.more ? [g.more] : [])].filter(([w, h]) => w < 44 || h < 44);
+  if (small.length) throw new Error('every bag control should be a 44px tap target: ' + JSON.stringify(small));
+  expectEqual('nothing hangs out of the panel', g.inside, true);
+  await page.$eval('#addFood', el => el.scrollIntoView({block: 'center'}));
+  await page.screenshot({ path: path.join(OUT, 'putaway-phone.png') });
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
 }
 
 (async () => {
@@ -3439,6 +3645,9 @@ async function pageStructureScenario(browser) {
     () => dragTouchGesturesScenario(browser),
     () => dragPhoneShotScenario(browser),
     () => dragReducedMotionScenario(browser),
+    () => putAwayScenario(browser),
+    () => putAwayReducedMotionScenario(browser),
+    () => bagPhoneScenario(browser),
   ];
   let passed = 0;
   const failed = [];
