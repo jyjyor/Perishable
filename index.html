@@ -2449,6 +2449,8 @@ const FK_FREEZE = {
 };
 // FoodKeeper id -> refrigerator days after opening (or cutting)
 const FK_OPEN = {3:28,9:7,11:7,17:3,25:2,28:2,79:7,87:5,98:7,107:14,108:14,109:90,111:4,112:4,142:4,143:4,147:2,155:5,179:4,181:7,192:5,195:21,196:90,197:10,198:7,201:3,202:2,203:360,204:420,205:4,206:2,207:7,208:7,209:4,210:4,211:5,218:365,219:120,222:365,223:240,224:21,227:120,228:240,231:90,257:240,264:4,272:5,338:180,339:180,340:120,341:60,344:2,346:120,347:360,348:180,349:180,350:60,351:365,352:14,353:90,354:3,356:90,357:30,359:4,360:30,363:3,364:3,365:2,366:2,368:1,369:2,370:10,372:4,373:7,376:180,377:120,379:180,383:5,386:180,397:180,398:180,400:120,404:12,405:12,407:3,408:10,415:2,416:21,421:10,427:10,428:10,429:10,431:7,433:180,434:180,435:180,436:7,447:60,448:60,455:10,462:3,463:3,477:14,485:4,486:4,487:4,488:120,489:120,490:7,498:7,499:3,501:5,514:5,515:5,516:5,517:5,541:30,543:7,545:7,558:2,560:5,561:120,565:14,569:5,599:5,601:4,602:4,609:240,616:28,617:4,619:2,620:28,623:28,625:28,626:28,632:30,633:60,644:7,656:7,659:10,660:2,663:120,669:540,671:14,673:4};
+// FoodKeeper id -> [the FoodKeeper id for it cut, refrigerator days once cut]
+const FK_CUT = {248:[179,4],249:[179,4],250:[179,4],251:[179,4],252:[179,4],253:[179,4],254:[179,4],255:[179,4],256:[179,4],258:[179,4],259:[179,4],260:[179,4],261:[179,4],262:[179,4],263:[179,4],265:[179,4],266:[179,4],267:[179,4],268:[179,4],269:[179,4],414:[179,4],478:[179,4],479:[179,4],480:[179,4],481:[179,4],482:[179,4],483:[179,4],495:[179,4],496:[179,4],497:[179,4],596:[597,5]};
 /* END FOODKEEPER */
 
 const HORIZON = 21;
@@ -2677,13 +2679,22 @@ const food = it => { const f = foodWhole(it); return it.part != null ? {...f, g:
 const shelfOf = it => it.shelf != null ? it.shelf
   : it.frozen ? freezerDays(it)
   : it.thawed ? thawDays(it)
-  : it.opened && opensOf(it) != null ? opensOf(it) : food(it).shelf;
-// FoodKeeper's after-opening (or after-cutting: it has no column of its
-// own) refrigerator days for an item, or null.
+  : it.opened && opensOf(it) != null ? opensOf(it)
+  : it.cut && cutOf(it) ? cutOf(it).days : food(it).shelf;
+// FoodKeeper's after-opening refrigerator days for an item's own entry
+// (a melon's is its after-cutting figure), or null.
 function opensOf(it){
   const f = foodWhole(it);
   if (f.opens != null) return f.opens;
   return f.fk != null && FK_OPEN[f.fk] != null ? FK_OPEN[f.fk] : null;
+}
+// With none of its own, the FoodKeeper entry for it cut (FK_CUT,
+// generated beside FK_OPEN): every fresh fruit #179 "Fruit, cut", 4 days;
+// whole spaghetti squash its cut entry, #597, 5 days. {fk, days} or null.
+function cutOf(it){
+  const f = foodWhole(it);
+  const c = f.fk != null && FK_CUT[f.fk];
+  return c ? {fk: c[0], days: c[1]} : null;
 }
 // A food FoodKeeper gives no spoilage limit (vodka: FOODS[key].keeps)
 // keeps: no countdown and no decay, and it is left out of the headline,
@@ -7820,8 +7831,20 @@ function useSome(id){
   it.part = (it.part != null ? it.part : 1) / 2;
   it.crossed = false;
   const open = opensOf(it);
+  // whole food with no after-opening figure of its own: FoodKeeper's
+  // entry for it cut, from today -- never later than the date it had
+  // whole (cutting doesn't make anything keep longer)
+  const cut = open == null && !usedSomeOpens(it) && !(USED_PIECES[fridgeShapeOf(it)] || [])[1]?.startsWith('c') ? cutOf(it) : null;
   let note = '';
-  if (!it.opened && !it.frozen && open != null){
+  if (!it.opened && !it.cut && !it.frozen && open == null && cut && (it.ripening || today() + cut.days < expiryOf(it))){
+    const decay = rawDecay(it, today());
+    if (decay > 0) it.decayFrom = decay; else delete it.decayFrom;
+    it.cut = true;
+    it.clockFrom = today();
+    delete it.shelf; delete it.shelfFrom; delete it.ripening; delete it.ripeOn;
+    note = ' · ' + dayCount(cut.days) + ' now that it\'s cut';
+  }
+  if (!it.opened && !it.cut && !it.frozen && open != null){
     // the rot it has now carries on from there, as after a thaw: opening
     // restarts the clock, not the food
     const decay = rawDecay(it, today());
@@ -8157,6 +8180,8 @@ function shelfSourceOf(it){
       ? how + ': FoodKeeper #' + f.fk + ', ' + dayCount(opensOf(it)) + ' after opening'
       : how + ': estimated, ' + dayCount(opensOf(it)) + ' after opening — ' + f.note;
   }
+  if (it.cut && it.shelf == null && !it.opened && cutOf(it))
+    return 'cut ' + fmtDate(it.clockFrom) + ': FoodKeeper #' + cutOf(it).fk + ' “' + foodOf('_fk_' + cutOf(it).fk).en + '”, ' + dayCount(cutOf(it).days);
   // a condiment counted by its pantry figure says so: FoodKeeper gives
   // none for the refrigerator (unopened, where it asks)
   if (f.pantryFig && it.shelf == null && !it.opened && !it.frozen && !it.thawed)

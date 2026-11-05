@@ -3979,6 +3979,88 @@ async function bagPhoneScenario(browser) {
   await ctx.close();
 }
 
+// ---------- Cut produce ----------
+// A clean page; dupSeed(page, list) puts records in as if bought `age` days ago
+// and makes each key a usual. Returns {page, errors, ctx}.
+async function dupPage(browser, vp = { width: 1280, height: 800 }, opts = {}) {
+  const ctx = await browser.newContext({ viewport: vp, ...opts });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => localStorage.setItem('perishable.key', 'test-key'));
+  await page.reload();
+  await page.waitForSelector('#headline');
+  return { ctx, page, errors };
+}
+const dupSeed = (page, list) => page.evaluate(list => {
+  const t = today(), ids = [];
+  list.forEach(([key, age, o]) => {
+    const it = {id: ++uid, key, bought: t - age, custom: null, ...(o || {})};
+    fridge.push(it); ids.push(it.id);
+    if (!standing[key]) standing[key] = {count: 0, lastBought: t - age, custom: null};
+    standing[key].count++;
+  });
+  render();
+  return ids;
+}, list);
+// Used some on fruit and vegetables with no after-opening figure of their
+// own: FoodKeeper's entry for them cut (FK_CUT), counted from the day it's
+// cut -- fruit #179 "Fruit, cut", 4 days; whole spaghetti squash #597, 5.
+// Never past the date it had whole. Onion and tomato have no cut entry:
+// their dates stay. A melon keeps its own #264 after-opening figure;
+// berries and grapes lose pieces, they aren't cut.
+async function cutFruitScenario(browser) {
+  console.log('\n--- CUT FRUIT: FoodKeeper #179 "Fruit, cut", and #597 for spaghetti squash ---');
+  const { ctx, page, errors } = await dupPage(browser, { width: 1440, height: 900 });
+  const keys = await page.evaluate(() => ({squash: fkKey(596), melon: fkKey(264)}));
+  const list = [['apple', 3], ['cantaloupe', 1], ['lemon', 2], ['pineapple', 0], [keys.squash, 2, {name: 'Spaghetti squash'}],
+    ['strawberry', 2], ['onion', 5], ['tomato', 1], ['blueberry', 1], ['grapes', 1], [keys.melon, 1, {name: 'Melon'}], ['avocado', 0, {ripening: true}]];
+  const ids = await dupSeed(page, list);
+  await page.waitForTimeout(300);
+  const out = {};
+  for (let i = 0; i < list.length; i++) {
+    const id = ids[i];
+    const exp0 = await page.evaluate(id => expiryOf(fridge.find(x => x.id === id)) - today(), id);
+    await page.$eval(`[data-rf-item="${id}"]`, el => el.click());
+    await page.click('#rfPopover .rf-pop-some');
+    await page.waitForTimeout(120);
+    const toast = await page.textContent('#toast');
+    const r = await page.evaluate(id => { const it = fridge.find(x => x.id === id); return {exp: expiryOf(it) - today(), cut: !!it.cut, src: shelfSourceOf(it)}; }, id);
+    out[list[i][0]] = {exp0, ...r, note: (toast.match(/· (\d+ days?) now that it's cut/) || [])[1] || ''};
+  }
+  console.log(JSON.stringify(out, null, 1));
+  const want = {
+    apple: [4, true, '4 days', /^cut .*FoodKeeper #179 “Fruit, cut”, 4 days$/],
+    // 4 days whole (its pantry figure): 3 left, cutting doesn't give it more
+    cantaloupe: [3, false, '', /#496/], lemon: [4, true, '4 days', /#179/], pineapple: [4, true, '4 days', /#179/],
+    [keys.squash]: [5, true, '5 days', /^cut .*FoodKeeper #597 “Spaghetti squash \(cut\)”, 5 days$/],
+    // 1 day left whole: cutting doesn't give it more
+    strawberry: [1, false, '', /#481/],
+    onion: [out.onion.exp0, false, '', /#294/], tomato: [out.tomato.exp0, false, '', /estimated/],
+    blueberry: [out.blueberry.exp0, false, '', /#254/], grapes: [out.grapes.exp0, false, '', /#261/],
+    // its own entry has an after-opening figure: that, not #179
+    [keys.melon]: [4, false, '4 days', /#264, 4 days after opening/],
+    // not ripe yet: cut now, its clock starts on #179
+    avocado: [4, true, '4 days', /#179/]
+  };
+  for (const [k, [exp, cut, note, src]] of Object.entries(want)) {
+    expectEqual(`${k}: days, cut, toast`, [out[k].exp, out[k].cut, out[k].note], [exp, cut, note]);
+    if (!src.test(out[k].src)) throw new Error(`${k} source: ${out[k].src}`);
+  }
+  // a second Used some leaves the cut clock alone; a reload keeps it
+  await page.$eval(`[data-rf-item="${ids[0]}"]`, el => el.click());
+  await page.click('#rfPopover .rf-pop-some');
+  await page.waitForTimeout(120);
+  expectEqual('apple, cut again: date unchanged', await page.evaluate(id => expiryOf(fridge.find(x => x.id === id)) - today(), ids[0]), 4);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  expectEqual('reload keeps the cut clock', await page.evaluate(id => { const it = fridge.find(x => x.id === id); return [it.cut, expiryOf(it) - today()]; }, ids[0]), [true, 4]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -4065,6 +4147,7 @@ async function bagPhoneScenario(browser) {
     () => putAwayScenario(browser),
     () => putAwayReducedMotionScenario(browser),
     () => bagPhoneScenario(browser),
+    () => cutFruitScenario(browser),
   ];
   let passed = 0;
   const failed = [];

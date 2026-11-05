@@ -31,6 +31,17 @@
 // app reads it only for "Used some" (an item opened or cut restarts its
 // clock on it) and for the bottles and condiments that ask "Opened?".
 //
+// And FK_CUT: for a whole food with no after-opening value of its own,
+// the FoodKeeper entry for it cut, and that entry's refrigerator days.
+// Every fresh fruit (Produce/Fresh Fruits) goes to #179 "Fruit, cut",
+// 4 days (its Refrigerate_After_Opening; its refrigerator column is the
+// package date). A vegetable goes to its own "cut" entry where FoodKeeper
+// has one beside a "whole" one of the same name -- only Spaghetti squash,
+// #596 whole -> #597 cut, 5 days. Nothing else in FoodKeeper is cut
+// produce: no cut onion, avocado, tomato or pepper. The app reads it only
+// for "Used some" on whole food (not a package, not a cluster of berries
+// or grapes, which lose pieces instead of being cut).
+//
 // Run: node tools/import-foodkeeper.js
 
 const fs = require('fs');
@@ -223,6 +234,26 @@ function main() {
 
   const freezeRows = products.map(r => [r.ID, freezeOf(r)]).filter(([, v]) => v).sort((a, b) => a[0] - b[0]);
   const openRows = products.map(r => [r.ID, range(r, 'Refrigerate_After_Opening')]).filter(([, v]) => v != null).sort((a, b) => a[0] - b[0]);
+  const hasOpen = new Set(openRows.map(([id]) => id));
+  const cutDays = r => range(r, 'Refrigerate_After_Opening') ?? range(r, 'DOP_Refrigerate') ?? range(r, 'Refrigerate');
+  const FRUIT_CUT = products.find(r => r.ID === 179 && /^fruit, cut$/i.test(r.Name.trim()));
+  if (!FRUIT_CUT) throw new Error('FoodKeeper #179 "Fruit, cut" not found');
+  const freshFruit = [...cats].find(([, n]) => n === 'Produce / Fresh Fruits')?.[0];
+  if (freshFruit == null) throw new Error('FoodKeeper category "Produce / Fresh Fruits" not found');
+  const cutRows = [];
+  for (const r of products) {
+    if (hasOpen.has(r.ID)) continue;
+    if (r.Category_ID === freshFruit) {
+      // a fruit bought whole, not a prepared one (homemade applesauce)
+      if (/homemade/i.test(r.Name_subtitle || '')) continue;
+      cutRows.push([r.ID, [179, cutDays(FRUIT_CUT)]]);
+      continue;
+    }
+    if (!/^whole\b/i.test(String(r.Name_subtitle || '').trim())) continue;
+    const cut = products.find(c => c.Name.trim() === r.Name.trim() && /^cut$/i.test(String(c.Name_subtitle || '').trim()));
+    if (cut && cutDays(cut) != null) cutRows.push([r.ID, [cut.ID, cutDays(cut)]]);
+  }
+  cutRows.sort((a, b) => a[0] - b[0]);
   const body =
     `// [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,\n` +
     `//  storage column (R refrigerator, P pantry, ripe refrigerator counted from\n` +
@@ -233,7 +264,9 @@ function main() {
     `//  (indefinitely), refrigerator days after thawing | null]\n` +
     `const FK_FREEZE = {\n` + freezeRows.map(([id, v]) => `${id}:${JSON.stringify(v)}`).join(',\n') + `\n};\n` +
     `// FoodKeeper id -> refrigerator days after opening (or cutting)\n` +
-    `const FK_OPEN = {` + openRows.map(([id, v]) => `${id}:${v}`).join(',') + `};`;
+    `const FK_OPEN = {` + openRows.map(([id, v]) => `${id}:${v}`).join(',') + `};\n` +
+    `// FoodKeeper id -> [the FoodKeeper id for it cut, refrigerator days once cut]\n` +
+    `const FK_CUT = {` + cutRows.map(([id, v]) => `${id}:${JSON.stringify(v)}`).join(',') + `};`;
   const block = `${BEGIN}\n${body}\n${END}`;
 
   const html = fs.readFileSync(HTML, 'utf8');
@@ -249,6 +282,7 @@ function main() {
     `${freezeRows.length} with freezer guidance (${freezeRows.filter(([, v]) => v[0] === 'no').length} not recommended, ` +
     `${freezeRows.filter(([, v]) => v[1] != null).length} with an after-thawing value); ` +
     `${openRows.length} with an after-opening value; ` +
+    `${cutRows.length} with a cut entry (${cutRows.filter(([, v]) => v[0] !== 179).map(([id, v]) => '#' + id + ' -> #' + v[0]).join(', ')} besides #179); ` +
     `table ${(Buffer.byteLength(block) / 1024).toFixed(1)} KB.`);
 }
 
