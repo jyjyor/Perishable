@@ -932,9 +932,15 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .tonight-line:hover{background:none;border-bottom-color:var(--ink)}
 .tonight-line[hidden]{display:none}
 .tonight-line .mono{color:var(--ink-2);margin-right:6px}
-/* The fridge items tonight's dish uses: a thin ink line traced around
-   each one's own outline (a filter, not a box), no urgency colour. */
-.rf-fooditem.rf-tonight{filter:url(#rfTonightRing)}
+/* The fridge items tonight's dish uses (.rf-tonight): nothing by
+   default. Only while the Tonight line is hovered or focused (the unit's
+   .tonight-show), a thin dashed ink line around each one's own outline,
+   drawn into its drawing (rfTonightDash), not a filter or a box; no
+   urgency colour. A phone has no outline. */
+.rf-tn{display:none}
+@media (min-width:721px){
+  .rf-unit.tonight-show .rf-tonight .rf-tn{display:inline}
+}
 
 /* 3 */
 .part-sofar .ledger{margin-top:0;border-top:none;padding-top:0}
@@ -5727,16 +5733,6 @@ function rfDrawCabinet(){
         <feTurbulence type="fractalNoise" baseFrequency="0.027" numOctaves="2" seed="11"/>
         <feDisplacementMap in="SourceGraphic" scale="2.8" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
-      <!-- Tonight's dish: a thin line traced around the food's own
-           outline, a little off it (the ring between two dilations). -->
-      <filter id="rfTonightRing" x="-12%" y="-12%" width="124%" height="124%">
-        <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="outer"/>
-        <feMorphology in="SourceAlpha" operator="dilate" radius="2.7" result="inner"/>
-        <feComposite in="outer" in2="inner" operator="out" result="ring"/>
-        <feFlood flood-color="#5C6664"/>
-        <feComposite in2="ring" operator="in" result="line"/>
-        <feMerge><feMergeNode in="line"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
       <clipPath id="rfBodyClip"><path d="${bodyD}"/></clipPath>
     </defs>
     <g filter="url(#rfWobble)">
@@ -6040,6 +6036,32 @@ function rfFillRow(el, fit, day, opts = {}){
   el.innerHTML = fit.items.map((p, i) => rfBuildFoodItem(p.it, day, p.u, opts.z ? opts.z(i, fit.items.length) : null)).join('');
 }
 
+// The dashed line Tonight shows around an item: its own outline (the
+// drawing's first path, as for the frost), stroked wide and dashed, then
+// masked to a thin band a little outside the body, so it stands clear of
+// the outline on any body, clear or opaque. Hidden until the Tonight line
+// is hovered or focused (.rf-tn).
+// A food drawn in its package (the egg carton, a tray) is outlined around
+// the package too: each of these shapes is traced as well, and the line
+// runs around all of them together.
+const TN_PACKAGE = {
+  eggs: [[[0.07, 0.56], [0.93, 0.56], [0.87, 0.10], [0.13, 0.10]], [[0.05, 0.58], [0.92, 0.58], [0.92, 0.87], [0.08, 0.87]]],
+  chicken: [[[0.03, 0.58], [0.97, 0.58], [0.92, 0.86], [0.08, 0.86]]],
+  tofu: [[[0.06, 0.50], [0.94, 0.50], [0.90, 0.86], [0.10, 0.86]], [[0.04, 0.58], [0.96, 0.58], [0.90, 0.86], [0.10, 0.86]]],
+  protein: [[[0.05, 0.62], [0.95, 0.62], [0.91, 0.86], [0.09, 0.86]]]
+};
+function rfTonightDash(svg, shape){
+  const m = svg.match(/^<svg width="([\d.]+)"[^]*?<path d="([^"]+)"/);
+  if (!m) return svg;
+  const s = +m[1], id = 'tn' + (fridgeShapeCounter++);
+  const ds = [m[2]].concat((TN_PACKAGE[shape] || []).map(q => polyD(scalePts(s, q))));
+  const gap = Math.max(2, s * 0.03), line = Math.max(1, s * 0.012), dash = Math.max(3, s * 0.045);
+  const box = `x="${f1(-s * 0.3)}" y="${f1(-s * 0.3)}" width="${f1(s * 1.6)}" height="${f1(s * 1.6)}"`;
+  return svg.replace(/<\/svg>\s*$/, `<g class="rf-tn"><defs><mask id="${id}" maskUnits="userSpaceOnUse" ${box}>
+      <rect ${box} fill="#fff"/>
+      ${ds.map(d => `<path d="${d}" fill="#000" stroke="#000" stroke-width="${f1(gap * 2)}" stroke-linejoin="round"/>`).join('')}</mask></defs>
+    ${ds.map(d => `<path d="${d}" fill="none" stroke="${INK_HEX}" stroke-width="${f1((gap + line) * 2)}" stroke-linejoin="round" stroke-dasharray="${f1(dash)} ${f1(dash * 0.8)}" mask="url(#${id})"/>`).join('')}</g></svg>`);
+}
 function rfBuildFoodItem(it, day, u, z){
   const f = food(it);
   const cat = fridgeCatOf(it);
@@ -6050,6 +6072,7 @@ function rfBuildFoodItem(it, day, u, z){
   const color = foodBodyColor(it, frac);
   let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id, f.en);
   if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
+  svg = rfTonightDash(svg, fridgeShapeOf(it));
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
   // No tags under items: the fridge tells urgency by position, size and
   // decay; the line-art row below names every item, and the popover has
@@ -6219,8 +6242,13 @@ function rfMarkTonight(unit){
 function renderTonightLine(){
   const line = document.getElementById('tonightLine');
   line.hidden = !tonightDish;
-  if (!tonightDish) return;
+  if (!tonightDish){ document.getElementById('rfUnit').classList.remove('tonight-show'); return; }
   line.innerHTML = `<span class="mono">Tonight</span>${esc(tonightDish)} →`;
+  // while it's hovered or focused, the fridge outlines what the dish uses
+  const unit = document.getElementById('rfUnit');
+  const show = on => unit.classList.toggle('tonight-show', on);
+  line.onmouseenter = () => show(true); line.onmouseleave = () => show(line === document.activeElement);
+  line.onfocus = () => show(true); line.onblur = () => show(line.matches(':hover'));
   line.setAttribute('aria-label', `Tonight: ${tonightDish}. Show the kitchen`);
   line.onclick = () => {
     showRoom(1);

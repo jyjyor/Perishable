@@ -2394,7 +2394,9 @@ async function moreDrinksScenario(browser) {
 // (shelf 0) once gave decayFraction 0/0 = NaN, so the label fill read
 // "#NaNNaNNaN" and SVG painted it black. Every drink in FOODS, each form,
 // at shelf 0 and at 0/50/100% of a 10-day date, drawn in the real fridge:
-// no NaN anywhere in the markup, no black fill.
+// no NaN anywhere in the markup, no black fill. A mask or clipPath is
+// never painted (the Tonight outline's mask cuts out in black), so not
+// counted.
 async function drinkLabelScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- DRINK LABELS: never black ---');
@@ -2409,7 +2411,7 @@ async function drinkLabelScenario(browser) {
         render();
         const html = document.getElementById('rfUnit').innerHTML + document.getElementById('panelKitchen').innerHTML;
         const black = [...document.querySelectorAll('#rfUnit svg :is(rect, path, ellipse, circle, polygon), #panelKitchen svg :is(rect, path, ellipse, circle, polygon)')]
-          .filter(e => e.closest('[data-rf-item]') && getComputedStyle(e).fill === 'rgb(0, 0, 0)' && !e.closest('clipPath')).length;
+          .filter(e => e.closest('[data-rf-item]') && getComputedStyle(e).fill === 'rgb(0, 0, 0)' && !e.closest('clipPath, mask')).length;
         if (html.includes('NaN') || black) out.push([k, shelf, ago, opened, html.includes('NaN'), black]);
       }
     }));
@@ -3485,13 +3487,13 @@ async function panelsScenario(browser) {
       dish: document.querySelector('#tonight h2').textContent.trim(),
       outlined: [...document.querySelectorAll('#rfUnit .rf-tonight')].map(b => +b.dataset.rfItem).sort(),
       uses: boardItems.filter(it => document.querySelector(`#rfUnit [data-rf-item="${it.id}"]`)).map(it => it.id).sort(),
-      filter: (b => b && getComputedStyle(b).filter)(document.querySelector('#rfUnit .rf-tonight')),
+      shown: [...document.querySelectorAll('#rfUnit .rf-tn')].filter(g => getComputedStyle(g).display !== 'none').length,
     }));
     console.log(`${tag}: tonight`, JSON.stringify(t));
     expectEqual(`${tag}: Tonight line`, t.line, `Tonight${t.dish} →`);
     if (!t.uses.length) throw new Error(`${tag}: the fixture's dish should use something in the fridge`);
-    expectEqual(`${tag}: the fridge items the dish uses are outlined`, t.outlined, t.uses);
-    if (!/rfTonightRing/.test(t.filter)) throw new Error(`${tag}: outline should be the traced ring, got ${t.filter}`);
+    expectEqual(`${tag}: the fridge items the dish uses are marked`, t.outlined, t.uses);
+    expectEqual(`${tag}: no outline shown by default`, t.shown, 0);
     await page.click('#tonightLine');
     await page.waitForTimeout(900);
     const k = await page.evaluate(() => [[...document.querySelectorAll('#roomTabs [role=tab]')].map(x => x.getAttribute('aria-selected')), document.getElementById('roomsTrack').scrollLeft > 50]);
@@ -3519,6 +3521,58 @@ async function panelsScenario(browser) {
   const none = await page.evaluate(() => [tonightDish, document.getElementById('tonightLine').hidden, document.querySelectorAll('.rf-tonight').length]);
   expectEqual('no dish, no Tonight line, nothing outlined', none, [null, true, 0]);
   await page.context().close();
+}
+
+// Tonight's outline: nothing by default. While the Tonight line is
+// hovered or focused, a dashed ink line around exactly the fridge items
+// the dish uses -- wherever they stand, door bins included (the egg
+// carton in a bin once had no outline: the old traced-ring filter didn't
+// paint on the door's turned face) -- and around the whole carton, not
+// just the eggs. Off again when it leaves; no outline on a phone.
+async function tonightOutlineScenario(browser) {
+  console.log('\n--- TONIGHT OUTLINE: dashed, only while the line is hovered or focused ---');
+  for (const vp of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    const phone = vp.width < 720;
+    const ctx = await browser.newContext({ viewport: vp });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(`http://localhost:${PORT}/index.html`);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('#headline');
+    await page.evaluate(() => {
+      const t = today(), add = (key, age) => fridge.push({id: ++uid, key, bought: t - age, custom: null});
+      add('ketchup', 0); add('milk', 0); add('tomato', 5); add('egg', 30); add('scallion', 5); add('spinach', 1); add('carrot', 2);
+      render();
+    });
+    await page.waitForTimeout(500);
+    const shown = () => page.evaluate(() => [...document.querySelectorAll('#rfUnit .rf-tn')]
+      .filter(g => getComputedStyle(g).display !== 'none').map(g => fridge.find(i => i.id === +g.closest('[data-rf-item]').dataset.rfItem).key).sort());
+    const st = await page.evaluate(() => ({dish: tonightDish, uses: boardItems.map(i => i.key).sort(),
+      eggWhere: (e => e.closest('[id^="rfDoorBin"], #rfShelfEye, #rfShelfUpper').id)(document.querySelector(`[data-rf-item="${fridge.find(i => i.key === 'egg').id}"]`)),
+      dashed: (g => g && g.querySelector('path[stroke-dasharray]') && g.querySelectorAll('path[stroke-dasharray]').length)(document.querySelector(`[data-rf-item="${fridge.find(i => i.key === 'egg').id}"] .rf-tn`))}));
+    console.log(JSON.stringify(st));
+    expectEqual('tonight', [st.dish, st.uses], ['Tomato egg stir-fry', ['egg', 'scallion', 'tomato']]);
+    if (!phone) expectEqual('the eggs are in a door bin', /^rfDoorBin/.test(st.eggWhere), true);
+    expectEqual('the eggs are traced with their carton (eggs, lid, cups)', st.dashed, 3);
+    expectEqual('nothing outlined by default', await shown(), []);
+    await page.hover('#tonightLine');
+    await page.waitForTimeout(80);
+    expectEqual(`hovered (${phone ? 'phone' : 'desktop'})`, await shown(), phone ? [] : ['egg', 'scallion', 'tomato']);
+    if (!phone) await page.screenshot({ path: path.join(OUT, 'tonight-hover.png') });
+    await page.mouse.move(2, 2);
+    await page.waitForTimeout(80);
+    expectEqual('off when the pointer leaves', await shown(), []);
+    await page.focus('#tonightLine');
+    await page.waitForTimeout(80);
+    expectEqual('focused', await shown(), phone ? [] : ['egg', 'scallion', 'tomato']);
+    await page.evaluate(() => document.activeElement.blur());
+    await page.waitForTimeout(80);
+    expectEqual('off when focus leaves', await shown(), []);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await ctx.close();
+  }
 }
 
 // The page in three parts -- Fridge / Kitchen (Add food inside the Fridge
@@ -3847,6 +3901,7 @@ async function bagPhoneScenario(browser) {
     () => kitchenScenario(browser),
     () => lastDayScenario(browser),
     () => panelsScenario(browser),
+    () => tonightOutlineScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),

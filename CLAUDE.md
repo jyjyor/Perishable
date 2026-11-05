@@ -439,10 +439,14 @@ it when there are many). Top to bottom:
 The top bar's Add switches to the Fridge panel first, then scrolls to the
 bag and focuses the receipt's field. Tonight stays reachable from the
 Fridge panel: under the bag, one line "Tonight <dish> →" that switches
-to the Kitchen panel, and in the fridge the items tonight's dish uses get
-a thin ink line traced around their own outline (rfTonightRing, an SVG
-filter, not a box; no urgency colour). With no dish (tonightDish null),
-no line and no outline. On a phone the usuals, the receipt's field, its
+to the Kitchen panel. The fridge items tonight's dish uses (.rf-tonight,
+from boardItems, door bins included) show no outline by default; only
+while that line is hovered or focused (#rfUnit.tonight-show) does each get
+a thin dashed ink line around its own outline, drawn into its SVG
+(rfTonightDash: the first path, plus the carton or tray for eggs,
+chicken, tofu and protein so the whole package is traced; no box, no
+halo, no urgency colour). No outline on a phone. With no dish
+(tonightDish null), no line and no outline. On a phone the usuals, the receipt's field, its
 × and questions, Scan receipt, "+N more" and Put away are 44px tap
 targets, and the receipt grows as long as it needs.
 
