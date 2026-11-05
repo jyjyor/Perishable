@@ -3523,6 +3523,142 @@ async function panelsScenario(browser) {
   await page.context().close();
 }
 
+// Used some: a popover action beside Used and Tossed. The item stays,
+// half its weight to the used ledger and half its price off it; drawn cut
+// and wrapped (whole food) or opened (packages), and a cut counter food
+// (onion, melon) moves into the fridge. FoodKeeper's after-opening figure,
+// where there is one, restarts its clock today (hard cheese #3, 28 days;
+// jam #347, 360); otherwise the date stays (onion, milk's printed date).
+// Undo puts the record and the ledger back; a second Used some halves
+// again; a toss loses only what was left. Persists across a reload.
+async function usedSomeScenario(browser) {
+  console.log('\n--- USED SOME: half to the ledger, drawn cut and wrapped or opened, FoodKeeper after-opening clock, Undo ---');
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#headline');
+  const ids = await page.evaluate(() => {
+    const t = today(), out = {};
+    const add = (key, age, o = {}) => { const it = {id: ++uid, key, bought: t - age, custom: null, ...o}; fridge.push(it); out[key] = it.id; };
+    add('onion', 5); add('avocado', 1); add('milk', 2, {shelf: 9, shelfFrom: 'date'}); add('jam', 20);
+    add('hardcheese', 30); add('watermelon', 1); add('ketchup', 10, {opened: true});
+    render();
+    return out;
+  });
+  await page.waitForTimeout(400);
+  const rec = key => page.evaluate(id => { const it = fridge.find(i => i.id === id); return it && {...it, g: food(it).g, usd: food(it).usd, exp: expiryOf(it),
+    counter: onCounter(it), inFridge: !!document.querySelector(`#rfUnit [data-rf-item="${id}"]`),
+    film: !!document.querySelector(`[data-rf-item="${id}"] .rf-film`), svg: (document.querySelector(`[data-rf-item="${id}"] svg`) || {}).outerHTML || ''}; }, ids[key]);
+  const ledger = () => page.evaluate(() => ({...ledger}));
+  const useSomeOf = async key => {
+    await page.$eval(`[data-rf-item="${ids[key]}"]`, el => el.click());
+    const acts = await page.$$eval('#rfPopover .rf-pop-acts button', bs => bs.map(b => b.textContent.trim()));
+    expectEqual(`${key}: Used some sits between Used and Tossed`, acts.slice(0, 3), ['Used', 'Used some', 'Tossed']);
+    await page.click('#rfPopover .rf-pop-some');
+    await page.waitForTimeout(150);
+    return page.textContent('#toast');
+  };
+  const t = await page.evaluate(() => today());
+
+  // Onion: no after-cutting figure, so its date stays; out of the bowl
+  // into the fridge, cut and wrapped.
+  const on0 = await rec('onion'), l0 = await ledger();
+  expectEqual('a whole onion is in the bowl', [on0.counter, on0.inFridge], [true, false]);
+  let toast = await useSomeOf('onion');
+  const on1 = await rec('onion'), l1 = await ledger();
+  console.log(JSON.stringify({toast, part: on1.part, g: on1.g, usd: on1.usd, savedG: l1.savedG - l0.savedG}));
+  if (!/^Used some Onion · about 75 g/.test(toast) || /now that/.test(toast) || !/Undo/.test(toast)) throw new Error('onion toast: ' + toast);
+  expectEqual('onion: half left, half its weight used', [on1.part, on1.g, Math.round(on1.usd * 100), l1.savedG - l0.savedG, l1.wasteG], [0.5, 75, 40, 75, 0]);
+  expectEqual('onion: date unchanged, not opened', [on1.exp, !!on1.opened, on1.clockFrom], [on0.exp, false, undefined]);
+  expectEqual('onion: into the fridge, wrapped', [on1.counter, on1.inFridge, on1.film], [false, true, true]);
+
+  // Hard cheese: FoodKeeper #3 gives 28 days after opening; restarts today,
+  // and its rot carries on (decayFrom), it doesn't go back to fresh.
+  const ch0 = await rec('hardcheese');
+  toast = await useSomeOf('hardcheese');
+  const ch1 = await rec('hardcheese');
+  const src = await page.evaluate(id => shelfSourceOf(fridge.find(i => i.id === id)), ids.hardcheese);
+  console.log(JSON.stringify({toast, exp: ch1.exp - t, src, decayFrom: ch1.decayFrom}));
+  if (!/28 days now that it's cut/.test(toast)) throw new Error('cheese toast: ' + toast);
+  expectEqual('cheese: 28 days from today, cut and wrapped', [ch1.exp - t, ch1.opened, ch1.clockFrom === t, ch1.film], [28, true, true, true]);
+  if (!/^cut .*FoodKeeper #3, 28 days after opening/.test(src)) throw new Error('cheese source: ' + src);
+  if (!(ch1.decayFrom > 0)) throw new Error('cheese should keep the decay it had');
+
+  // Milk: a package, so opened (the carton's spout), never wrapped; no
+  // after-opening figure for #27, so the printed date stands.
+  const mk0 = await rec('milk');
+  toast = await useSomeOf('milk');
+  const mk1 = await rec('milk');
+  expectEqual('milk: printed date kept, half left, opened not wrapped', [mk1.exp, mk1.shelf, mk1.part, mk1.film, /now that/.test(toast)], [mk0.exp, 9, 0.5, false, false]);
+
+  // Jam, unopened (pantry figure): opened now, 360 days from today, its
+  // lid ajar; then Undo puts it all back.
+  const jm0 = await rec('jam'), lj = await ledger();
+  toast = await useSomeOf('jam');
+  const jm1 = await rec('jam');
+  if (!/360 days now that it's open/.test(toast)) throw new Error('jam toast: ' + toast);
+  expectEqual('jam: opened, 360 days, drawn open, no wrap', [jm1.opened, jm1.exp - t, /rotate\(-16/.test(jm1.svg), jm1.film], [true, 360, true, false]);
+  await page.click('#toast .toast-undo');
+  await page.waitForTimeout(150);
+  const jm2 = await rec('jam');
+  expectEqual('Undo: the jam as it was', [jm2.opened, jm2.part, jm2.exp, jm2.clockFrom], [jm0.opened, jm0.part, jm0.exp, jm0.clockFrom]);
+  expectEqual('Undo: the ledger as it was', await ledger(), lj);
+
+  // Watermelon from the bowl: a wedge, in the fridge.
+  await useSomeOf('watermelon');
+  const wm = await rec('watermelon');
+  expectEqual('watermelon: into the fridge, wrapped', [wm.counter, wm.inFridge, wm.film], [false, true, true]);
+  // Avocado, ripe in the fridge: cut, pit showing, wrapped; date stays.
+  const av0 = await rec('avocado');
+  await useSomeOf('avocado');
+  const av1 = await rec('avocado');
+  expectEqual('avocado: date unchanged, wrapped', [av1.exp, av1.film], [av0.exp, true]);
+  // Ketchup already open: its clock doesn't move again.
+  const kt0 = await rec('ketchup');
+  toast = await useSomeOf('ketchup');
+  const kt1 = await rec('ketchup');
+  expectEqual('ketchup, already open: date unchanged', [kt1.exp, /now that/.test(toast)], [kt0.exp, false]);
+  await page.screenshot({ path: path.join(OUT, 'used-some-fridge.png') });
+
+  // Onion again: a quarter left; then Tossed loses only that quarter.
+  const l2 = await ledger();
+  await useSomeOf('onion');
+  const on2 = await rec('onion'), l3 = await ledger();
+  expectEqual('onion again: a quarter left', [on2.part, on2.g, l3.savedG - l2.savedG], [0.25, 37.5, 37.5]);
+  await page.$eval(`[data-rf-item="${ids.onion}"]`, el => el.click());
+  await page.click('#rfPopover .rf-pop-tossed');
+  await page.waitForTimeout(150);
+  const l4 = await ledger();
+  expectEqual('Tossed: only the quarter left is waste', [l4.wasteG - l3.wasteG, Math.round((l4.wasteUSD - l3.wasteUSD) * 100)], [37.5, 20]);
+
+  // Saved: a reload keeps what's left and how it's drawn.
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(400);
+  const after = await rec('hardcheese');
+  expectEqual('reload keeps it', [after.part, after.exp - t, after.film], [0.5, 28, true]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+
+  // Phone: the action is a 44px tap target like its neighbours.
+  const pctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const pp = await pctx.newPage();
+  await pp.goto(`http://localhost:${PORT}/index.html`);
+  await pp.evaluate(() => localStorage.clear());
+  await pp.reload();
+  await pp.waitForSelector('#headline');
+  const pid = await pp.evaluate(() => { const it = {id: ++uid, key: 'avocado', bought: today(), custom: null}; fridge.push(it); render(); return it.id; });
+  await pp.waitForTimeout(300);
+  await pp.$eval(`[data-rf-item="${pid}"]`, el => el.click());
+  const hgt = await pp.$eval('#rfPopover .rf-pop-some', b => b.getBoundingClientRect().height);
+  if (hgt < 44) throw new Error('Used some on a phone is ' + hgt + 'px tall');
+  await pctx.close();
+}
+
 // Tonight's outline: nothing by default. While the Tonight line is
 // hovered or focused, a dashed ink line around exactly the fridge items
 // the dish uses -- wherever they stand, door bins included (the egg
@@ -3902,6 +4038,7 @@ async function bagPhoneScenario(browser) {
     () => lastDayScenario(browser),
     () => panelsScenario(browser),
     () => tonightOutlineScenario(browser),
+    () => usedSomeScenario(browser),
     () => pageStructureScenario(browser),
     () => drinksScenario(browser),
     () => moreDrinksScenario(browser),

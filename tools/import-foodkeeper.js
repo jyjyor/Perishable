@@ -25,6 +25,12 @@
 // or null). The app reads the after-thawing value only for Thaw -- the
 // one exception to the rule's "never the after-thawing values".
 //
+// And FK_OPEN, for every product with a refrigerator value after opening
+// (Refrigerate_After_Opening, upper end). FoodKeeper has no separate
+// after-cutting column: a cut melon is under its after-opening value. The
+// app reads it only for "Used some" (an item opened or cut restarts its
+// clock on it) and for the bottles and condiments that ask "Opened?".
+//
 // Run: node tools/import-foodkeeper.js
 
 const fs = require('fs');
@@ -216,6 +222,7 @@ function main() {
   }).sort((a, b) => a[0] - b[0]);
 
   const freezeRows = products.map(r => [r.ID, freezeOf(r)]).filter(([, v]) => v).sort((a, b) => a[0] - b[0]);
+  const openRows = products.map(r => [r.ID, range(r, 'Refrigerate_After_Opening')]).filter(([, v]) => v != null).sort((a, b) => a[0] - b[0]);
   const body =
     `// [FoodKeeper id, name, aliases (|-separated, normalised, from its keywords), days or null,\n` +
     `//  storage column (R refrigerator, P pantry, ripe refrigerator counted from\n` +
@@ -224,7 +231,9 @@ function main() {
     `const FK_TABLE = [\n` + rows.map(r => JSON.stringify(r)).join(',\n') + `\n];\n` +
     `// FoodKeeper id -> [freezer days | 'no' (not recommended) | 'keeps'\n` +
     `//  (indefinitely), refrigerator days after thawing | null]\n` +
-    `const FK_FREEZE = {\n` + freezeRows.map(([id, v]) => `${id}:${JSON.stringify(v)}`).join(',\n') + `\n};`;
+    `const FK_FREEZE = {\n` + freezeRows.map(([id, v]) => `${id}:${JSON.stringify(v)}`).join(',\n') + `\n};\n` +
+    `// FoodKeeper id -> refrigerator days after opening (or cutting)\n` +
+    `const FK_OPEN = {` + openRows.map(([id, v]) => `${id}:${v}`).join(',') + `};`;
   const block = `${BEGIN}\n${body}\n${END}`;
 
   const html = fs.readFileSync(HTML, 'utf8');
@@ -239,6 +248,7 @@ function main() {
     `${[...HAND_ALIASES.values()].flat().length} hand-kept aliases; ` +
     `${freezeRows.length} with freezer guidance (${freezeRows.filter(([, v]) => v[0] === 'no').length} not recommended, ` +
     `${freezeRows.filter(([, v]) => v[1] != null).length} with an after-thawing value); ` +
+    `${openRows.length} with an after-opening value; ` +
     `table ${(Buffer.byteLength(block) / 1024).toFixed(1)} KB.`);
 }
 

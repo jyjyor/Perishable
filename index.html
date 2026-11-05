@@ -2447,6 +2447,8 @@ const FK_FREEZE = {
 683:[28,null],
 684:[730,null]
 };
+// FoodKeeper id -> refrigerator days after opening (or cutting)
+const FK_OPEN = {3:28,9:7,11:7,17:3,25:2,28:2,79:7,87:5,98:7,107:14,108:14,109:90,111:4,112:4,142:4,143:4,147:2,155:5,179:4,181:7,192:5,195:21,196:90,197:10,198:7,201:3,202:2,203:360,204:420,205:4,206:2,207:7,208:7,209:4,210:4,211:5,218:365,219:120,222:365,223:240,224:21,227:120,228:240,231:90,257:240,264:4,272:5,338:180,339:180,340:120,341:60,344:2,346:120,347:360,348:180,349:180,350:60,351:365,352:14,353:90,354:3,356:90,357:30,359:4,360:30,363:3,364:3,365:2,366:2,368:1,369:2,370:10,372:4,373:7,376:180,377:120,379:180,383:5,386:180,397:180,398:180,400:120,404:12,405:12,407:3,408:10,415:2,416:21,421:10,427:10,428:10,429:10,431:7,433:180,434:180,435:180,436:7,447:60,448:60,455:10,462:3,463:3,477:14,485:4,486:4,487:4,488:120,489:120,490:7,498:7,499:3,501:5,514:5,515:5,516:5,517:5,541:30,543:7,545:7,558:2,560:5,561:120,565:14,569:5,599:5,601:4,602:4,609:240,616:28,617:4,619:2,620:28,623:28,625:28,626:28,632:30,633:60,644:7,656:7,659:10,660:2,663:120,669:540,671:14,673:4};
 /* END FOODKEEPER */
 
 const HORIZON = 21;
@@ -2659,17 +2661,30 @@ function boot(){
 
 // A FoodKeeper fallback item shows the name it was typed or scanned as
 // (it.name, cleaned); FoodKeeper's own title is only its source.
-const food = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : foodOf(it.key));
+// What's left of an item after "Used some" (it.part, a share: 0.5, then
+// 0.25...) is all that weighs and costs anything: the rest went to the
+// used ledger.
+const foodWhole = it => it.custom || (it.name ? {...foodOf(it.key), en: it.name} : foodOf(it.key));
+const food = it => { const f = foodWhole(it); return it.part != null ? {...f, g: f.g * it.part, usd: f.usd * it.part} : f; };
 // A record can carry its own shelf (days from purchase): a printed package
 // date, or a value pinned by a migration. Otherwise the food's own.
 // An opened bottle of wine counts by FoodKeeper's after-opening figure
-// (FOODS[key].opens), the one place that column is read.
+// (FOODS[key].opens), and so does an item opened or cut by "Used some"
+// (opensOf: FOODS' own figure, else FK_OPEN, generated from
+// Refrigerate_After_Opening), counted from the day it was opened.
 // In the freezer (it.frozen) it counts by FoodKeeper's freezer value; once
 // thawed (it.thawed), by its refrigerator value after thawing.
 const shelfOf = it => it.shelf != null ? it.shelf
   : it.frozen ? freezerDays(it)
   : it.thawed ? thawDays(it)
-  : it.opened && food(it).opens != null ? food(it).opens : food(it).shelf;
+  : it.opened && opensOf(it) != null ? opensOf(it) : food(it).shelf;
+// FoodKeeper's after-opening (or after-cutting: it has no column of its
+// own) refrigerator days for an item, or null.
+function opensOf(it){
+  const f = foodWhole(it);
+  if (f.opens != null) return f.opens;
+  return f.fk != null && FK_OPEN[f.fk] != null ? FK_OPEN[f.fk] : null;
+}
 // A food FoodKeeper gives no spoilage limit (vodka: FOODS[key].keeps)
 // keeps: no countdown and no decay, and it is left out of the headline,
 // the decay line and every at-risk count (counted()). A Use by the person
@@ -2728,11 +2743,15 @@ function burnFraction(it, day){
 }
 
 // The clock starts at purchase, or on the day a ripening item was marked
-// ripe (ripeOn), or on the day it was frozen or thawed (clockFrom). A
+// ripe (ripeOn), or on the day it was frozen, thawed, or opened or cut by
+// Used some (clockFrom). A
 // ripening item has no countdown and no decay: it stays at its full shelf
 // life until then. A frozen one has no countdown either: its freezer
 // time shows as freezer burn (burnFraction), not as urgency.
 const clockStart = it => it.clockFrom != null ? it.clockFrom : it.ripeOn != null ? it.ripeOn : it.bought;
+// What restarted the clock on clockFrom: frozen, thawed, or opened or cut
+// by Used some.
+const clockEvent = it => it.frozen ? 'frozen' : it.thawed ? 'thawed' : usedSomeOpens(it) ? 'opened' : 'cut';
 const leftAt = (it, day) => keeps(it) || it.frozen ? Infinity : it.ripening ? shelfOf(it) : shelfOf(it) - (day - clockStart(it));
 // The day an item goes, as an epoch day, and as YYYY-MM-DD for a date
 // input; null for one that keeps. A frozen item's is its freezer-quality
@@ -2758,7 +2777,7 @@ function setUseBy(id, iso){
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
   if (day < it.bought){ toast('Use by can\'t be before the day it was bought'); render(); return; }
-  if (it.clockFrom != null && day < it.clockFrom){ toast('Use by can\'t be before the day it was ' + (it.frozen ? 'frozen' : 'thawed')); render(); return; }
+  if (it.clockFrom != null && day < it.clockFrom){ toast('Use by can\'t be before the day it was ' + clockEvent(it)); render(); return; }
   if (it.ripening){ delete it.ripening; it.ripeOn = today(); }
   it.shelf = day - clockStart(it);
   it.shelfFrom = 'date';
@@ -2775,7 +2794,7 @@ function setBought(id, iso){
   const day = parseReceiptDate(iso);
   if (!it || day == null) return;
   if (day > today()){ toast('Bought can\'t be in the future'); render(); return; }
-  if (it.clockFrom != null && day > it.clockFrom){ toast('Bought can\'t be after it was ' + (it.frozen ? 'frozen' : 'thawed')); render(); return; }
+  if (it.clockFrom != null && day > it.clockFrom){ toast('Bought can\'t be after it was ' + clockEvent(it)); render(); return; }
   const fixed = it.shelfFrom === 'date' && !it.ripening;
   const useBy = fixed ? expiryOf(it) : null;
   if (fixed && day > useBy){ toast('Bought can\'t be after use by'); render(); return; }
@@ -5143,7 +5162,11 @@ function bottleOutline(prof, s){
   const left = right.slice().reverse().map(([x, y]) => [1 - x, y]);
   return [...right, ...left].map(([x, y]) => [x * s, y * s]);
 }
-function bottleMarkupLine(shape, color, fraction, size, seed){
+// some (Used some): the drink or the jar used down by that share, and the
+// closure off -- cork or stopper out and lying beside the bottle, the
+// screw cap or crown off beside it, the can's tab up, the flip-top open,
+// the jar's lid set ajar on its rim.
+function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
   const b = BOTTLES[shape], prof = BOTTLE_PROFILES[b.p], s = size;
   if (b.glass) color = b.glass;
   const pts = bottleOutline(prof, s);
@@ -5158,11 +5181,13 @@ function bottleMarkupLine(shape, color, fraction, size, seed){
   const hline = (y, half, op) => `<line x1="${X(0.5 - half)}" y1="${X(y)}" x2="${X(0.5 + half)}" y2="${X(y)}" stroke="${INK_HEX}" stroke-opacity="${op}" stroke-width="${thin}" clip-path="url(#${uid}-clip)"/>`;
   // the drink, through the glass (none through brown, opaque or a can)
   let drink = '';
+  // used some: the level drops toward the base by the share used
+  const level = some != null && b.level != null ? b.level + (baseY - 0.05 - b.level) * (1 - some) : b.level;
   if (b.liquid){
-    const c = b.open ? natureColor(b.liquid, fraction) : b.liquid;
-    drink = `<rect x="0" y="${X(b.level)}" width="${s}" height="${X(1 - b.level)}" fill="${c}" fill-opacity="${b.solid ? '.92' : b.clear ? '.75' : '.62'}" clip-path="url(#${uid}-clip)"/>` + hline(b.level, b.solid ? 0.3 : 0.16, 0.35);
+    const c = b.open || some != null ? natureColor(b.liquid, fraction) : b.liquid;
+    drink = `<rect x="0" y="${X(level)}" width="${s}" height="${X(1 - level)}" fill="${c}" fill-opacity="${b.solid ? '.92' : b.clear ? '.75' : '.62'}" clip-path="url(#${uid}-clip)"/>` + hline(level, b.solid ? 0.3 : 0.16, 0.35);
   } else if (b.clear){
-    drink = hline(b.level, 0.06, 0.3);
+    drink = hline(level, 0.06, 0.3);
   }
   // a clear bottle's thick glass base
   if (b.clear) drink += `<line x1="${X(0.5 - bh + 0.012)}" y1="${X(baseY - 0.03)}" x2="${X(0.5 + bh - 0.012)}" y2="${X(baseY - 0.03)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
@@ -5217,17 +5242,67 @@ function bottleMarkupLine(shape, color, fraction, size, seed){
     const w = lh * 1.06, y0 = ly - 0.06;
     cap = rect(0.5 - w, y0, 0.5 + w, ly + 0.012, CAP_HEX)
       + Array.from({length: 9}, (_, k) => 0.5 - w + 2 * w * (k + 1) / 10).map(x => `<line x1="${X(x)}" y1="${X(y0 + 0.012)}" x2="${X(x)}" y2="${X(ly)}" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"/>`).join('');
+    // ajar: tipped up on its left edge, the mouth showing under it
+    if (some != null) cap = `<ellipse cx="${X(0.5)}" cy="${X(ly + 0.006)}" rx="${X(lh * 0.92)}" ry="${X(0.016)}" fill="${hexLerp(b.liquid || color, INK_HEX, 0.45)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
+      + `<g transform="rotate(-16 ${X(0.5 - w)} ${X(ly)}) translate(0 ${X(-0.012)})">${cap}</g>`;
   } else if (prof.cap === 'tab'){
     // the lid seen a little from above, and its pull tab
     const w = prof.rows[0][1];
     cap = `<ellipse cx="${X(0.5)}" cy="${X(ly)}" rx="${X(w)}" ry="${X(0.022)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
       + `<ellipse cx="${X(0.5 + w * 0.15)}" cy="${X(ly)}" rx="${X(w * 0.35)}" ry="${X(0.009)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}" stroke-opacity=".6"/>`;
   }
+  if (some != null && prof.cap !== 'lid') cap = bottleOpened(prof, b, cap, color, s, thin, baseY, bh);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <path d="${d}" fill="${color}" fill-opacity="${b.clear ? '.55' : '1'}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
     <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
     ${drink}${label}${shine}${lip}${cap}
   </svg>`;
+}
+// The closure off an opened bottle (Used some): the open mouth, and the
+// cork, stopper, cap or crown lying on its side at the bottle's foot,
+// right of it; a can's tab lifted; a flip-top swung open on its hinge.
+function bottleOpened(prof, b, cap, color, s, thin, baseY, bh){
+  const X = u => f1(u * s), [ly, lh] = [prof.rows[0][0], prof.rows[0][1]];
+  const mouth = `<ellipse cx="${X(0.5)}" cy="${X(ly)}" rx="${X(lh * 0.78)}" ry="${X(0.008)}" fill="${hexLerp(b.glass || color, INK_HEX, 0.6)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+  const fx = 0.5 + bh + 0.025, rect = (x0, y0, x1, y1, fill) =>
+    `<rect x="${X(x0)}" y="${X(y0)}" width="${X(x1 - x0)}" height="${X(y1 - y0)}" rx="${X(0.004)}" fill="${fill}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+  switch (prof.cap){
+    case 'cork': case 'foil': {
+      // the cork on its side; a sparkling one keeps its mushroom head
+      const l = prof.cap === 'foil' ? 0.07 : 0.075, r = prof.cap === 'foil' ? 0.032 : 0.026;
+      const torn = prof.cap === 'foil' ? cap.replace(/<line[^>]*>/g, '') : '';
+      return torn + mouth + rect(fx, baseY - 2 * r, fx + l, baseY, CORK_HEX)
+        + (prof.cap === 'foil' ? rect(fx + l, baseY - 2 * r - 0.012, fx + l + 0.028, baseY, CORK_HEX) : '')
+        + `<line x1="${X(fx + l * 0.3)}" y1="${X(baseY - 2 * r + 0.008)}" x2="${X(fx + l * 0.3)}" y2="${X(baseY - 0.008)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+    }
+    case 'bar': {
+      return mouth + rect(fx, baseY - 0.045, fx + 0.045, baseY, WOOD_HEX) + rect(fx + 0.045, baseY - 0.03, fx + 0.075, baseY - 0.012, CORK_HEX);
+    }
+    case 'screw': {
+      // the cap standing beside the bottle, the neck's threads bare
+      const w = lh * 1.08, h = 0.06;
+      return mouth + [0.012, 0.03].map(t => `<line x1="${X(0.5 - lh)}" y1="${X(ly + t + 0.006)}" x2="${X(0.5 + lh)}" y2="${X(ly + t)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`).join('')
+        + rect(fx, baseY - h, fx + 2 * w, baseY, CAP_HEX);
+    }
+    case 'crown': {
+      const w = lh * 1.12;
+      return mouth + `<path d="M ${X(fx)} ${X(baseY)} L ${X(fx + 0.01)} ${X(baseY - 0.022)} L ${X(fx + 2 * w - 0.01)} ${X(baseY - 0.022)} L ${X(fx + 2 * w)} ${X(baseY)} Z" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`;
+    }
+    case 'tab': {
+      // the opening pressed in, the tab standing up
+      const w = prof.rows[0][1];
+      return cap + `<ellipse cx="${X(0.5 - w * 0.25)}" cy="${X(ly)}" rx="${X(w * 0.28)}" ry="${X(0.008)}" fill="${INK_HEX}" fill-opacity=".7"/>`
+        + `<path d="M ${X(0.5 + w * 0.05)} ${X(ly)} L ${X(0.5 + w * 0.2)} ${X(ly - 0.05)} L ${X(0.5 + w * 0.4)} ${X(ly - 0.045)} L ${X(0.5 + w * 0.3)} ${X(ly)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`;
+    }
+    case 'flip': {
+      // the lid's top swung back on its hinge, the spout open
+      const w = lh * 1.02, y0 = ly - 0.075, hy = y0 + 0.03;
+      return rect(0.5 - w, hy, 0.5 + w, ly + 0.012, CAP_HEX)
+        + `<ellipse cx="${X(0.5)}" cy="${X(hy)}" rx="${X(w * 0.3)}" ry="${X(0.008)}" fill="${hexLerp(b.liquid || color, INK_HEX, 0.4)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
+        + `<g transform="rotate(-62 ${X(0.5 - w)} ${X(hy)})">${rect(0.5 - w, hy - 0.03, 0.5 + w, hy, CAP_HEX)}</g>`;
+    }
+  }
+  return cap;
 }
 
 // ---- Vessels: the butter block, the frozen packages and the leftovers
@@ -5265,8 +5340,11 @@ const VESSELS = {
   // A block of butter in its paper wrap, seen from a little above: front,
   // top and end faces, the wrap's folded end. As it goes, a grease stain
   // spreads through the paper and the exposed edge yellows.
-  butter: (color, fraction, size, seed) => {
-    const P = pts => scalePts(size, pts), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  // Used some (some): shorter by what was cut off, the cut end bare and
+  // the paper folded back off it.
+  butter: (color, fraction, size, seed, name, shape, some = null) => {
+    const cutX = some != null ? 0.58 * (1 - (0.35 + 0.65 * some)) : 0;
+    const P = pts => scalePts(size, pts.map(([x, y]) => [x >= 0.72 ? x - cutX : x, y])), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
     const hull = P([[0.14, 0.50], [0.30, 0.39], [0.88, 0.39], [0.88, 0.69], [0.72, 0.80], [0.14, 0.80]]);
     const top = P([[0.14, 0.50], [0.30, 0.39], [0.88, 0.39], [0.72, 0.50]]);
     const end = P([[0.72, 0.50], [0.88, 0.39], [0.88, 0.69], [0.72, 0.80]]);
@@ -5276,21 +5354,27 @@ const VESSELS = {
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${polyD(hull)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
       <path d="${polyD(top)}" fill="${hexLerp(color, '#ffffff', 0.35)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
-      <path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      ${some == null ? `<path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
       <path d="${lineD(fold)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".55" stroke-width="${thin}"/>
-      <path d="${lineD(fold2)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${thin}"/>
-      <path d="M ${f1(size * 0.14)} ${f1(size * 0.80)} L ${f1(size * 0.72)} ${f1(size * 0.80)}" stroke="${natureColor(BUTTER_HEX, fraction)}" stroke-width="${f1(size * 0.014)}"/>
+      <path d="${lineD(fold2)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${thin}"/>`
+      : `<path d="${polyD(end)}" fill="${natureColor(BUTTER_HEX, fraction)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${polyD(P([[0.88, 0.39], [0.97, 0.33], [0.99, 0.62], [0.88, 0.69]]))}" fill="${hexLerp(color, '#ffffff', 0.2)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${lineD(P([[0.92, 0.38], [0.94, 0.6]]))}" fill="none" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"/>`}
+      <path d="M ${f1(size * 0.14)} ${f1(size * 0.80)} L ${f1(size * (0.72 - cutX))} ${f1(size * 0.80)}" stroke="${natureColor(BUTTER_HEX, fraction)}" stroke-width="${f1(size * 0.014)}"/>
       ${stain}
-      ${vesselSigns(fraction, size, seed, P([[0.24, 0.57], [0.62, 0.57], [0.62, 0.72], [0.24, 0.72]]), P([[0.14, 0.50], [0.72, 0.50]]))}
+      ${vesselSigns(fraction, size, seed, scalePts(size, [[0.24, 0.57], [Math.min(0.62, 0.68 - cutX), 0.57], [Math.min(0.62, 0.68 - cutX), 0.72], [0.24, 0.72]]), P([[0.14, 0.50], [0.72, 0.50]]))}
     </svg>`;
   },
   // A round ice cream tub, a little from above: the lid's top and rim,
   // the body tapering to its base.
-  icecream: (color, fraction, size, seed) => {
+  // Used some: the lid set ajar, the ice cream inside showing.
+  icecream: (color, fraction, size, seed, name, shape, some = null) => {
     const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
     const top = 0.40, rim = 0.47, base = 0.86, rx = 0.32, rb = 0.27, ry = 0.06;
     const hull = `M ${X(0.5 - rx)} ${X(top)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 + rx)} ${X(top)} L ${X(0.5 + rx)} ${X(rim)} L ${X(0.5 + rb)} ${X(base)} A ${X(rb)} ${X(ry * 0.8)} 0 0 1 ${X(0.5 - rb)} ${X(base)} L ${X(0.5 - rx)} ${X(rim)} Z`;
-    const lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top)}" rx="${X(rx)}" ry="${X(ry)}" fill="${hexLerp(color, '#ffffff', 0.3)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+    let lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top)}" rx="${X(rx)}" ry="${X(ry)}" fill="${hexLerp(color, '#ffffff', 0.3)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+    if (some != null) lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top + 0.02)}" rx="${X(rx - 0.01)}" ry="${X(ry * 0.9)}" fill="${natureColor('#efe3c8', fraction)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
+      + `<g transform="rotate(-13 ${X(0.5 - rx)} ${X(top)}) translate(0 ${X(-0.04)})">${lidTop}<path d="M ${X(0.5 - rx)} ${X(top)} L ${X(0.5 - rx)} ${X(top + 0.035)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(top + 0.035)} L ${X(0.5 + rx)} ${X(top)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${thin}"/></g>`;
     const rimLine = `<path d="M ${X(0.5 - rx)} ${X(rim)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(rim)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
     const lbl = [[0.5 - rx + 0.05, 0.58], [0.5 + rx - 0.06, 0.58], [0.5 + rb - 0.03, 0.77], [0.5 - rb + 0.03, 0.77]];
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
@@ -5301,7 +5385,9 @@ const VESSELS = {
   },
   // A flat freezer bag, zip along the top, the pieces in it showing
   // through the clear plastic.
-  bag: (color, fraction, size, seed, name, shape) => {
+  // Used some: the zip open and fewer pieces left in it.
+  bag: (color, fraction, size, seed, name, shape, some = null) => {
+    const left = n => some != null ? Math.max(2, Math.round(n * some)) : n;
     const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
     const out = scalePts(size, [[0.20, 0.30], [0.80, 0.30], [0.82, 0.46], [0.83, 0.70], [0.80, 0.86], [0.50, 0.88], [0.20, 0.86], [0.17, 0.70], [0.18, 0.46]]);
     const d = smoothClosedPath(out), uid = 'bag' + (fridgeShapeCounter++);
@@ -5309,13 +5395,13 @@ const VESSELS = {
     let pieces = '';
     if (shape === 'dumplingbag'){
       // half-moons, each with its pleats
-      for (let i = 0; i < 9; i++){
+      for (let i = 0; i < left(9); i++){
         const x = 0.30 + (i % 3) * 0.2 + (R() - 0.5) * 0.04, y = 0.54 + Math.floor(i / 3) * 0.11 + (R() - 0.5) * 0.03, w = 0.085, h = 0.055;
         pieces += `<path d="M ${X(x - w)} ${X(y + h * 0.4)} Q ${X(x)} ${X(y - h * 1.6)} ${X(x + w)} ${X(y + h * 0.4)} Z" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".55" stroke-width="${thin}" stroke-linejoin="round"/>`
           + [-0.4, 0, 0.4].map(k => `<line x1="${X(x + k * w * 0.8)}" y1="${X(y - h * 0.55)}" x2="${X(x + k * w * 0.6)}" y2="${X(y - h * 0.1)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`).join('');
       }
-    } else for (let i = 0; i < 26; i++){
-      const x = 0.24 + R() * 0.52, y = 0.47 + R() * 0.37, r = 0.035 + R() * 0.025;
+    } else for (let i = 0; i < left(26); i++){
+      const x = 0.24 + R() * 0.52, y = some != null ? 0.84 - R() * 0.37 * (0.4 + 0.6 * some) : 0.47 + R() * 0.37, r = 0.035 + R() * 0.025;
       pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`;
     }
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
@@ -5327,11 +5413,13 @@ const VESSELS = {
         <line x1="0" y1="${X(0.385)}" x2="${size}" y2="${X(0.385)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>
       </g>
       <line x1="${X(0.27)}" y1="${X(0.42)}" x2="${X(0.27)}" y2="${X(0.8)}" stroke="#ffffff" stroke-opacity=".7" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>
+      ${some != null ? `<path d="M ${X(0.26)} ${X(0.31)} Q ${X(0.5)} ${X(0.25)} ${X(0.74)} ${X(0.31)} Q ${X(0.5)} ${X(0.355)} ${X(0.26)} ${X(0.31)} Z" fill="${hexLerp(color, INK_HEX, 0.5)}" fill-opacity=".7" stroke="${INK_HEX}" stroke-width="${thin}"/>` : ''}
       ${vesselSigns(fraction, size, seed, scalePts(size, [[0.50, 0.42], [0.74, 0.42], [0.74, 0.56], [0.50, 0.56]]), null)}
     </svg>`;
   },
   // A flat box, lying down, a little from above: its top and front.
-  box: (color, fraction, size, seed, name, shape) => {
+  // Used some: the end flap open, the box dark inside.
+  box: (color, fraction, size, seed, name, shape, some = null) => {
     const deep = shape === 'popbox';
     const y0 = deep ? 0.46 : 0.56, y1 = deep ? 0.62 : 0.68, y2 = 0.84;
     const P = pts => scalePts(size, pts), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
@@ -5342,7 +5430,8 @@ const VESSELS = {
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${polyD(hull)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
       <path d="${polyD(top)}" fill="${hexLerp(color, '#ffffff', 0.25)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
-      <path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      <path d="${polyD(end)}" fill="${hexLerp(color, INK_HEX, some != null ? 0.55 : 0.12)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
+      ${some != null ? `<path d="${polyD(P([[0.74, y1], [0.92, y0], [0.99, y0 - 0.1], [0.81, y1 - 0.1]]))}" fill="${hexLerp(color, INK_HEX, 0.06)}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>` : ''}
       <line x1="${f1(size * 0.10)}" y1="${f1(size * (y1 + y2) / 2)}" x2="${f1(size * 0.72)}" y2="${f1(size * (y1 + y2) / 2)}" stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"/>
       ${vesselSigns(fraction, size, seed, lbl, null)}
     </svg>`;
@@ -5350,17 +5439,19 @@ const VESSELS = {
   // A clear food container with a snap lid, the food in it, and a strip
   // of tape on the front with the dish's name. The food browns as it
   // goes; mold starts on its surface; past half-gone the lid domes.
-  leftovers: (color, fraction, size, seed, name) => {
+  // Used some: less food in it, the lid lifted at one side.
+  leftovers: (color, fraction, size, seed, name, shape, some = null) => {
     const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
     const bulge = packageBulge(fraction, size) / size;
     const body = [[0.15, 0.47], [0.85, 0.47], [0.81, 0.85], [0.19, 0.85]];
     const d = polyD(scalePts(size, body)), uid = 'lo' + (fridgeShapeCounter++);
     const R = seededRand(seed + 83), food = natureColor('#b48a58', fraction);
     const surf = [];
-    for (let k = 0; k <= 10; k++) surf.push([0.12 + k * 0.076, 0.58 + (R() - 0.5) * 0.05]);
+    const sink = some != null ? 0.16 * (1 - some) : 0;
+    for (let k = 0; k <= 10; k++) surf.push([0.12 + k * 0.076, 0.58 + sink + (R() - 0.5) * 0.05]);
     const foodD = 'M ' + surf.map(([x, y]) => X(x) + ' ' + X(y)).join(' L ') + ` L ${X(0.9)} ${X(0.9)} L ${X(0.1)} ${X(0.9)} Z`;
     let bits = '';
-    for (let i = 0; i < 7; i++) bits += `<circle cx="${X(0.24 + R() * 0.52)}" cy="${X(0.64 + R() * 0.16)}" r="${X(0.02 + R() * 0.02)}" fill="${natureColor(['#5f9a48', '#c9652f', '#e3d7b0'][i % 3], fraction)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
+    for (let i = 0; i < 7; i++) bits += `<circle cx="${X(0.24 + R() * 0.52)}" cy="${X(0.64 + sink + R() * (0.16 - sink))}" r="${X(0.02 + R() * 0.02)}" fill="${natureColor(['#5f9a48', '#c9652f', '#e3d7b0'][i % 3], fraction)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
     let mold = '';
     if (fraction > MOLD_START){
       const g = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
@@ -5386,9 +5477,10 @@ const VESSELS = {
       <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
       <g clip-path="url(#${uid}-clip)"><path d="${foodD}" fill="${food}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>${bits}${mold}</g>
       <line x1="${X(0.21)}" y1="${X(0.52)}" x2="${X(0.235)}" y2="${X(0.8)}" stroke="#ffffff" stroke-opacity=".75" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>
+      <g${some != null ? ` transform="rotate(-9 ${X(0.11)} ${X(0.47)}) translate(0 ${X(-0.012)})"` : ''}>
       <path d="${lid}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>
       <rect x="${X(0.09)}" y="${X(0.43)}" width="${X(0.03)}" height="${X(0.05)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/>
-      <rect x="${X(0.88)}" y="${X(0.43)}" width="${X(0.03)}" height="${X(0.05)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/>
+      <rect x="${X(0.88)}" y="${X(0.43)}" width="${X(0.03)}" height="${X(0.05)}" fill="${CAP_HEX}" stroke="${INK_HEX}" stroke-width="${thin}"/></g>
       ${tape}
     </svg>`;
   }
@@ -5397,11 +5489,15 @@ const VESSELS = {
 const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'box', popbox: 'box', leftovers: 'leftovers'};
 Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 
-function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name){
-  if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed);
-  if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape);
-  if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed);
-  const deformed = deformPoints(catOutlinePoints(shape, size), fraction, sagW, wrinkleW, seed, size);
+// some: what's left after "Used some" (usedSomeOf; null for a whole
+// item) and key, the FOODS key, which picks a cut face before the shape.
+function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some = null, key = null){
+  if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed, some);
+  if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape, some);
+  if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed, some);
+  let raw = catOutlinePoints(shape, size);
+  if (some != null && shape === 'eggs') raw = eggsTaken(raw, some, size);
+  const deformed = deformPoints(raw, fraction, sagW, wrinkleW, seed, size);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
   const uid = 'fline' + (fridgeShapeCounter++);
   const strokeW = Math.max(1, size * 0.008).toFixed(2);
@@ -5418,16 +5514,330 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   const mold = moldInner ? `<g clip-path="url(#${uid}-clip)">${moldInner}</g>` : '';
   const under = UNDERLAYS[shape]
     ? `<g stroke="${INK_HEX}" stroke-width="${strokeW}" stroke-linejoin="round">${UNDERLAYS[shape](deformed, size, seed, fraction)}</g>` : '';
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
-    ${under}
+  const body = `${under}
     <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
     ${FRUIT_WASH[shape] ? FRUIT_WASH[shape](deformed, size, seed, fraction, `url(#${uid}-clip)`) : ''}
     <g>${spots}</g>
     ${under ? mold : ''}
     <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${strokes}</g>
-    ${under ? '' : mold}
+    ${under ? '' : mold}`;
+  if (some == null) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
+    ${body}
   </svg>`;
+  // used some: a tray's film peeled back, the eggs fewer -- packages,
+  // opened, not wrapped
+  if (UNDERLAYS[shape]) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>
+    ${body}${TRAY_CORNER[shape] ? peeledFilm(shape, size) : ''}
+  </svg>`;
+  // whole food: cut, its face to us, and wrapped. The film's outline is
+  // the drawing's first path, so frost and Tonight's dash trace the film.
+  const cut = cutShape(shape, key, raw, deformed, color, fraction, size, seed, some);
+  const film = clingFilmMarkup(cut.film, size, seed);
+  const outline = cut.outline ? `<path d="${cut.outline}" fill="none" stroke="${INK_HEX}" stroke-width="${strokeW}"/>` : '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath><clipPath id="${uid}-clip"><path d="${path}"/></clipPath><clipPath id="${uid}-cut"><path d="${cut.clip}"/></clipPath></defs>
+    <g clip-path="url(#${uid}-cut)">${body}</g>
+    ${outline}${cut.face}
+    ${film.markup}
+  </svg>`;
+}
+
+// ---- Used some (it.part below 1: usedSomeOf). The item stays in the
+// fridge, drawn as what's left of it. Whole food is cut, from its own
+// drawing: clipped where the knife went and its cut face turned to us
+// (CUT_FACES: the flesh's own colour, decaying with the body, and one
+// cue -- an onion's rings, an avocado's pit, a lemon's segments), a
+// melon a wedge, a cluster (berries, grapes, cherries) fewer pieces, a
+// kiwi or guava only its cut half; then wrapped in cling film
+// (clingFilmMarkup). Packages (cartons, tubs, jars, bottles, trays, bags,
+// boxes) are never wrapped: they are drawn opened -- cap off, lid ajar,
+// cork out, a carton's spout pulled open, a packet torn at the corner,
+// the film peeled back off a tray -- and what can be seen inside is used
+// down (a bottle's level, a bag's pieces, the eggs in the carton).
+const usedSomeOf = it => it.part != null && it.part < 1 ? it.part : null;
+// Drawn opened (a package) rather than cut and wrapped.
+const opensWhenUsed = shape => !!(BOTTLES[shape] || VESSEL_OF[shape] || PACKAGED_SHAPES[shape] || UNDERLAYS[shape]);
+function usedSomeOpens(it){ return opensWhenUsed(fridgeShapeOf(it)); }
+
+// The flesh under the skin, by FOODS key, then by shape. pat is the cut
+// face's one cue; x its second tone (pit, seeds, core); rind a melon's
+// pale inner rind. A food with none gets a paler version of its own body
+// colour and a few fibres. Colours lean away from the urgency palette,
+// as the bodies do.
+const CUT_FACES = {
+  onion: {flesh: '#f1ead2', pat: 'rings'}, garlic: {flesh: '#f3ecd6', pat: 'cloves'},
+  scallion: {flesh: '#e8efcf', pat: 'rings'}, leek: {flesh: '#e8efcf', pat: 'rings'}, garlicchives: {flesh: '#e8efcf', pat: 'rings'},
+  avocado: {flesh: '#d6da7c', rim: '#86ab44', pat: 'pit', x: '#8a5a34'},
+  peach: {flesh: '#f2b25a', pat: 'pit', x: '#8a3f22'}, plum: {flesh: '#eab84c', pat: 'pit', x: '#7a4a2a'},
+  lychee: {flesh: '#f5f1e4', pat: 'pit', x: '#5a3a22'}, mango: {flesh: '#f2b434', pat: 'seedflat', x: '#efe2b0'},
+  apple: {flesh: '#f3ebc4', pat: 'core', x: '#4a3020'}, pear: {flesh: '#f1ecc9', pat: 'core', x: '#4a3020'},
+  asianpear: {flesh: '#f3efd2', pat: 'core', x: '#4a3020'},
+  tomato: {flesh: '#e5502e', pat: 'chambers', x: '#f0c060'}, cherrytomato: {flesh: '#e5502e', pat: 'chambers', x: '#f0c060'},
+  lemon: {flesh: '#f2e27a', pat: 'segments'}, lime: {flesh: '#c4dc6a', pat: 'segments'},
+  orange: {flesh: '#f3a33a', pat: 'segments'}, mandarin: {flesh: '#f3a13a', pat: 'segments'},
+  grapefruit: {flesh: '#f2906a', pat: 'segments'},
+  watermelon: {flesh: '#e8573f', pat: 'seeds', x: '#2a2320', rind: '#eef0d0', wedge: true},
+  cantaloupe: {flesh: '#f2a55c', pat: 'seedbed', x: '#efdca0', rind: '#d9dca8', wedge: true},
+  honeydew: {flesh: '#cfe39a', pat: 'seedbed', x: '#f0ead0', rind: '#eef0d6', wedge: true},
+  wintermelon: {flesh: '#eef0dc', pat: 'seedring', x: '#f6f6ea'},
+  papaya: {flesh: '#f2864a', pat: 'seedcenter', x: '#2a2320'}, dragonfruit: {flesh: '#f4f1ea', pat: 'speckle', x: '#2a2320'},
+  fig: {flesh: '#dc6c4a', pat: 'radial', x: '#f0d8a8'}, persimmon: {flesh: '#f09040', pat: 'star'},
+  pomegranate: {flesh: '#f1ddc6', pat: 'arils', x: '#c8362a'}, coconut: {flesh: '#f8f6ee', pat: 'hollow', x: '#e9e4d2'},
+  pineapple: {flesh: '#f3d65a', pat: 'corering', x: '#efe2a0'}, banana: {flesh: '#f4eac0', pat: 'plain'},
+  strawberry: {flesh: '#ec6a4a', pat: 'corering', x: '#f6c9b0'},
+  potato: {flesh: '#f1e2a6', pat: 'plain'}, carrot: {flesh: '#f08a2a', pat: 'corering', x: '#f5b25a'},
+  babycarrot: {flesh: '#f08a2a', pat: 'corering', x: '#f5b25a'},
+  mushroom: {flesh: '#efe6d6', pat: 'fibres'}, shiitake: {flesh: '#efe6d6', pat: 'fibres'},
+  hardcheese: {pat: 'holes'},
+  cucumber: {flesh: '#dfe9b8', pat: 'seedring', x: '#eef2d4'}, zucchini: {flesh: '#efeccb', pat: 'seedring', x: '#f6f2dc'},
+  pepper: {pat: 'hollow', x: '#f2ead0'}, chineseeggplant: {flesh: '#efe6c4', pat: 'speckle', x: '#a89a6a'},
+  daikon: {flesh: '#f6f4ea', pat: 'plain'}, ginger: {flesh: '#ecd88a', pat: 'fibres'}
+};
+// Clusters lose pieces instead of being cut: the rounds that stay, in
+// the order they were drawn (back first), and how they're joined.
+const USED_PIECES = {
+  blueberry: [BLUEBERRY_ROUNDS, 'c'], grapes: [GRAPE_ROUNDS, 'c'], cherries: [CHERRY_ROUNDS, 'c'],
+  // the whole fruit behind goes; the cut half in front stays
+  kiwi: [[KIWI_PARTS[1]], 'e'], guava: [[GUAVA_PARTS[1]], 'e']
+};
+
+const SOME_INK = (op, w) => `stroke="${INK_HEX}" stroke-opacity="${op}" stroke-width="${w}"`;
+function polyBox(pts){
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  return {x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)};
+}
+// Where a closed outline crosses x = X (or y = Y, axis 1): the lowest and
+// highest crossing.
+function spanAt(pts, v, axis = 0){
+  const o = 1 - axis, hits = [];
+  for (let i = 0; i < pts.length; i++){
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    if ((a[axis] - v) * (b[axis] - v) <= 0 && a[axis] !== b[axis]) hits.push(a[o] + (b[o] - a[o]) * (v - a[axis]) / (b[axis] - a[axis]));
+  }
+  return hits.length < 2 ? null : [Math.min(...hits), Math.max(...hits)];
+}
+function convexHull(pts){
+  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], hi = [];
+  for (const q of p){ while (lo.length > 1 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.slice().reverse()){ while (hi.length > 1 && cross(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop(); hi.push(q); }
+  return lo.slice(0, -1).concat(hi.slice(0, -1));
+}
+// count seeded points inside a polygon
+function scatterIn(poly, count, rand){
+  const b = polyBox(poly), out = [];
+  for (let k = 0; k < count * 40 && out.length < count; k++){
+    const q = [b.x0 + rand() * (b.x1 - b.x0), b.y0 + rand() * (b.y1 - b.y0)];
+    if (inPoly(poly, q)) out.push(q);
+  }
+  return out;
+}
+const ellipsePts = (cx, cy, rx, ry, n = 28) => ellipseRing(n, rx, ry, cx, cy);
+
+// The cut face's cue, inside the face polygon F (its fill already down).
+function cutFaceCue(spec, F, flesh, size, seed, fraction){
+  const c = centroidOf(F), b = polyBox(F), rx = (b.x1 - b.x0) / 2, ry = (b.y1 - b.y0) / 2;
+  const R = seededRand(seed + 313), thin = Math.max(0.6, size * 0.005).toFixed(2);
+  const x = spec.x ? natureColor(spec.x, fraction) : hexLerp(flesh, INK_HEX, 0.25);
+  const at = (u, v) => [c[0] + u * rx, c[1] + v * ry];
+  const ring = (k, to = c) => insetPts(F, to, 1 - k);
+  const ringD = (k, to) => smoothClosedPath(ring(k, to));
+  const dot = (p, r, fill, op = 1) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="${f1(r)}" fill="${fill}" fill-opacity="${op}" ${SOME_INK(0.3, thin)}/>`;
+  const radial = (n, k0, k1, stroke, w, op) => Array.from({length: n}, (_, i) => {
+    const a = (i / n) * Math.PI * 2 + 0.3, p0 = at(Math.cos(a) * k0, Math.sin(a) * k0), p1 = at(Math.cos(a) * k1, Math.sin(a) * k1);
+    return `<path d="${lineD([p0, p1])}" stroke="${stroke}" stroke-opacity="${op}" stroke-width="${w}" stroke-linecap="round"/>`;
+  }).join('');
+  const W = s => f1(Math.max(0.6, size * s));
+  switch (spec.pat){
+    case 'rings': return [0.8, 0.62, 0.45, 0.28, 0.12].map(k => `<path d="${ringD(k)}" fill="none" ${SOME_INK(0.32, thin)}/>`).join('');
+    case 'cloves': return `<path d="${ringD(0.86)}" fill="none" ${SOME_INK(0.25, thin)}/>` + radial(6, 0.1, 0.84, INK_HEX, thin, 0.32);
+    case 'pit': {
+      const pit = ellipsePts(...at(0, 0.1), rx * 0.42, ry * 0.36);
+      return (spec.rim ? `<path d="${ringD(0.9)}" fill="none" stroke="${natureColor(spec.rim, fraction)}" stroke-width="${W(0.022)}" stroke-opacity=".8"/>` : '')
+        + `<path d="${smoothClosedPath(pit)}" fill="${x}" ${SOME_INK(0.6, thin)}/>`
+        + `<path d="${smoothOpenPath(insetPts(pit.slice(17, 23), centroidOf(pit), 0.3))}" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="${W(0.01)}" stroke-linecap="round"/>`;
+    }
+    case 'seedflat': return `<path d="${smoothClosedPath(ellipsePts(...at(0.05, 0.05), rx * 0.3, ry * 0.62))}" fill="${x}" ${SOME_INK(0.4, thin)}/>`;
+    case 'core': {
+      const seeds = [[-0.12, -0.02], [0.12, 0.02], [0, 0.18]].map(([u, v]) => {
+        const p = at(u, v);
+        return `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(size * 0.016)}" ry="${f1(size * 0.026)}" fill="${x}" ${SOME_INK(0.4, thin)}/>`;
+      }).join('');
+      return `<path d="${smoothClosedPath(ellipsePts(...at(0, 0.05), rx * 0.3, ry * 0.38))}" fill="none" ${SOME_INK(0.3, thin)}/>${seeds}`;
+    }
+    case 'segments': {
+      const pith = '#f8f4e2';
+      return `<path d="${ringD(0.88)}" fill="none" stroke="${pith}" stroke-width="${W(0.02)}"/>` + radial(9, 0.08, 0.84, pith, W(0.011), 0.95)
+        + dot(c, size * 0.014, pith);
+    }
+    case 'chambers': return [0, 2.1, 4.2].map(a => {
+      const p = at(Math.cos(a + 0.4) * 0.42, Math.sin(a + 0.4) * 0.42);
+      const e = ellipsePts(p[0], p[1], rx * 0.3, ry * 0.25, 16);
+      return `<path d="${smoothClosedPath(e)}" fill="${x}" fill-opacity=".9" ${SOME_INK(0.3, thin)}/>`
+        + scatterIn(insetPts(e, p, 0.3), 3, R).map(q => dot(q, size * 0.008, hexLerp(x, '#ffffff', 0.4))).join('');
+    }).join('');
+    case 'seedcenter': {
+      const e = ellipsePts(...at(0, 0), rx * 0.38, ry * 0.42, 18);
+      return `<path d="${smoothClosedPath(e)}" fill="${hexLerp(flesh, '#ffffff', 0.25)}" ${SOME_INK(0.25, thin)}/>`
+        + scatterIn(insetPts(e, c, 0.12), 16, R).map(q => dot(q, size * 0.011, x)).join('');
+    }
+    case 'seedring': return `<path d="${ringD(0.86)}" fill="none" ${SOME_INK(0.2, thin)}/>`
+      + `<path d="${ringD(0.36)}" fill="${x}" ${SOME_INK(0.2, thin)}/>`
+      + Array.from({length: 7}, (_, i) => { const a = i / 7 * Math.PI * 2; return dot(at(Math.cos(a) * 0.42, Math.sin(a) * 0.42), size * 0.009, hexLerp(flesh, '#ffffff', 0.5)); }).join('');
+    case 'speckle': return scatterIn(ring(0.84), 34, R).map(q => dot(q, size * 0.006, x)).join('');
+    case 'radial': return radial(16, 0.12, 0.8, x, W(0.008), 0.85) + scatterIn(ring(0.7), 14, R).map(q => dot(q, size * 0.006, x)).join('');
+    case 'star': return radial(8, 0.05, 0.42, INK_HEX, thin, 0.22) + dot(c, size * 0.01, hexLerp(flesh, INK_HEX, 0.3));
+    case 'arils': return scatterIn(ring(0.84), 24, R).map(q => dot(q, size * 0.022, x, 0.95)).join('')
+      + `<path d="${lineD([at(-0.7, -0.1), at(0.1, 0.05), at(0.7, -0.2)])}" fill="none" stroke="#f6ead8" stroke-width="${W(0.012)}"/>`;
+    case 'hollow': return `<path d="${ringD(0.64)}" fill="${x}" ${SOME_INK(0.35, thin)}/>`;
+    case 'corering': return `<path d="${ringD(0.48)}" fill="${x}" ${SOME_INK(0.22, thin)}/>`;
+    case 'holes': return [[-0.3, -0.2], [0.25, 0.25], [0.05, -0.4]].map(([u, v], i) => {
+      const p = at(u + (R() - 0.5) * 0.1, v + (R() - 0.5) * 0.1), r = size * (0.016 + 0.008 * i);
+      return `<ellipse cx="${f1(p[0])}" cy="${f1(p[1])}" rx="${f1(r * 0.7)}" ry="${f1(r)}" fill="#3B2E22" fill-opacity="0.18"/>`;
+    }).join('');
+    case 'layers': return [0.8, 0.6, 0.4, 0.22].map(k => `<path d="${ringD(k, at(0, 0.55))}" fill="none" ${SOME_INK(0.26, thin)}/>`).join('');
+    case 'seeds': return scatterIn(ring(0.7, at(0, -0.4)), 9, R).map(q =>
+      `<ellipse cx="${f1(q[0])}" cy="${f1(q[1])}" rx="${f1(size * 0.009)}" ry="${f1(size * 0.015)}" fill="${x}" stroke="none"/>`).join('');
+    case 'seedbed': {
+      const e = ellipsePts(...at(0, -0.55), rx * 0.32, ry * 0.2, 16);
+      return `<path d="${smoothClosedPath(e)}" fill="${x}" ${SOME_INK(0.3, thin)}/>`
+        + scatterIn(e, 6, R).map(q => dot(q, size * 0.008, hexLerp(x, '#ffffff', 0.4))).join('');
+    }
+    case 'fibres': return Array.from({length: 5}, (_, i) => {
+      const u = -0.5 + i * 0.25;
+      return `<path d="${lineD([at(u, -0.45 + R() * 0.15), at(u * 1.1, 0.4 - R() * 0.15)])}" fill="none" ${SOME_INK(0.2, thin)}/>`;
+    }).join('');
+    default: return scatterIn(ring(0.8), 7, R).map(q => dot(q, size * 0.006, hexLerp(flesh, INK_HEX, 0.35), 0.5)).join('');
+  }
+}
+
+// Cling film, stretched over what's left: the convex hull of it, a little
+// out from its edge, a pale translucent sheen with a highlight along the
+// top, a twisted gather at one corner (the top left, away from the cut)
+// and creases running in from it.
+function clingFilmMarkup(pts, size, seed){
+  const hull = convexHull(pts), c = centroidOf(hull), R = seededRand(seed + 271);
+  const film = hull.map(([x, y]) => { const d = Math.hypot(x - c[0], y - c[1]) || 1, k = size * 0.022 / d; return [x + (x - c[0]) * k, y + (y - c[1]) * k]; });
+  const d = straightClosedPath(film), thin = Math.max(0.6, size * 0.005).toFixed(2);
+  // the gather: the hull's top-left-most corner
+  let gi = 0;
+  film.forEach((p, i) => { if (p[0] + p[1] < film[gi][0] + film[gi][1]) gi = i; });
+  const P = film[gi], len = Math.hypot(P[0] - c[0], P[1] - c[1]) || 1, o = [(P[0] - c[0]) / len, (P[1] - c[1]) / len], n = [-o[1], o[0]];
+  const off = (p, a, b) => [p[0] + o[0] * a + n[0] * b, p[1] + o[1] * a + n[1] * b];
+  const Q = off(P, size * 0.035, 0), T = off(P, size * 0.085, 0);
+  const A = off(P, -size * 0.02, size * 0.05), B = off(P, -size * 0.02, -size * 0.05);
+  const gather = `<path d="M ${f1(A[0])} ${f1(A[1])} Q ${f1(off(P, size * 0.01, size * 0.02)[0])} ${f1(off(P, size * 0.01, size * 0.02)[1])} ${f1(Q[0])} ${f1(Q[1])} Q ${f1(off(P, size * 0.01, -size * 0.02)[0])} ${f1(off(P, size * 0.01, -size * 0.02)[1])} ${f1(B[0])} ${f1(B[1])} Z" fill="#ffffff" fill-opacity=".4" ${SOME_INK(0.35, thin)} stroke-linejoin="round"/>`;
+  const T1 = off(T, 0, size * 0.032), T2 = off(T, size * 0.01, -size * 0.026);
+  const tuft = `<path d="M ${f1(Q[0])} ${f1(Q[1])} L ${f1(T1[0])} ${f1(T1[1])} Q ${f1(off(T, size * 0.012, 0)[0])} ${f1(off(T, size * 0.012, 0)[1])} ${f1(T2[0])} ${f1(T2[1])} Z" fill="#ffffff" fill-opacity=".45" ${SOME_INK(0.35, thin)} stroke-linejoin="round"/>`
+    // the twist: a few short turns across the neck
+    + [0.25, 0.6, 0.95].map(t => { const m = rfLerp(P, Q, t), a = off(m, -size * 0.007, size * 0.016), e = off(m, size * 0.007, -size * 0.016); return `<path d="${lineD([a, e])}" fill="none" ${SOME_INK(0.45, thin)}/>`; }).join('');
+  // creases fanning in from the gather
+  const creases = [-0.35, 0, 0.32].map((fan, k) => {
+    const to = [c[0] + n[0] * len * fan, c[1] + n[1] * len * fan], t = 0.35 + R() * 0.2;
+    const a = rfLerp(P, to, 0.08), e = rfLerp(P, to, t), m = rfLerp(a, e, 0.5);
+    const bend = [m[0] + n[0] * size * 0.012 * (k - 1), m[1] + n[1] * size * 0.012 * (k - 1)];
+    const path = `M ${f1(a[0])} ${f1(a[1])} Q ${f1(bend[0])} ${f1(bend[1])} ${f1(e[0])} ${f1(e[1])}`;
+    return `<path d="${path}" fill="none" ${SOME_INK(0.22, thin)}/><path d="${path}" transform="translate(${f1(size * 0.006)} ${f1(size * 0.006)})" fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="${thin}"/>`;
+  }).join('');
+  // a highlight along the top, away from the gather
+  const top = film.filter(([x, y]) => y < c[1] && x > P[0] + (c[0] - P[0]) * 0.6).sort((a, b) => a[0] - b[0]);
+  const glint = top.length > 1 ? `<path d="${smoothOpenPath(insetPts(top, c, 0.14))}" fill="none" stroke="#ffffff" stroke-opacity=".75" stroke-width="${f1(Math.max(1, size * 0.014))}" stroke-linecap="round"/>` : '';
+  return {d, markup: `<g class="rf-film"><path d="${d}" fill="#ffffff" fill-opacity=".2" ${SOME_INK(0.3, thin)} stroke-linejoin="round"/>${creases}${glint}${gather}${tuft}</g>`};
+}
+
+// What's left of a whole food, cut: the clip that keeps it, the cut face
+// over it, and the points the film is stretched over.
+function cutShape(shape, key, raw, deformed, color, fraction, size, seed, some){
+  const spec = CUT_FACES[key] || CUT_FACES[shape] || {};
+  const flesh = natureColor(spec.flesh || hexLerp(color, '#f4f0dc', 0.55), fraction);
+  const thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const b = polyBox(deformed), w = b.x1 - b.x0, h = b.y1 - b.y0, c = centroidOf(deformed);
+  const face = (F, skin = true) => {
+    const fd = smoothClosedPath(F), id = 'cutf' + (fridgeShapeCounter++);
+    const band = skin ? `<path d="${fd}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}"/>` : '';
+    const inner = skin ? insetPts(F, centroidOf(F), 0.07) : F;
+    const innerD = smoothClosedPath(inner);
+    return `<defs><clipPath id="${id}"><path d="${innerD}"/></clipPath></defs>${band}
+      <path d="${innerD}" fill="${flesh}" ${skin ? SOME_INK(0.35, thin) : `stroke="${INK_HEX}" stroke-width="${sw}"`}/>
+      <g clip-path="url(#${id})">${cutFaceCue(spec, inner, flesh, size, seed, fraction)}</g>`;
+  };
+  // a cluster: fewer pieces (half of them, then a quarter, at least one)
+  if (USED_PIECES[shape]){
+    const [rounds, kind] = USED_PIECES[shape];
+    const keep = rounds.length > 1 ? rounds.slice(0, Math.max(1, Math.round(rounds.length * some))) : rounds;
+    const rider = fruitRider(shape, deformed, size);
+    const kept = (kind === 'c' ? circleUnion(size, keep) : ellipseUnion(size, keep, 44)).map(p => ridePt(rider.raw, deformed, p));
+    return {clip: smoothClosedPath(kept), outline: smoothClosedPath(kept), face: '', film: kept};
+  }
+  // spinach, a loose bunch: fewer leaves -- the rightmost go, cut away at
+  // the stems where they gather (leaf tips 3, 9, 15, 21; stems 25, 26)
+  if (shape === 'spinach'){
+    const base = rfLerp(deformed[25], deformed[26], 0.5), ang = p => Math.atan2(p[1] - base[1], p[0] - base[0]);
+    const tips = [3, 9, 15, 21].map(i => deformed[i]).sort((p, q) => p[0] - q[0]);
+    const k = Math.max(1, Math.round(tips.length * some));
+    const cut = (ang(tips[k - 1]) + ang(tips[k])) / 2, far = size * 2, fan = [base];
+    for (let a = cut; a > -1.5 * Math.PI - 0.3; a -= 0.2) fan.push([base[0] + Math.cos(a) * far, base[1] + Math.sin(a) * far]);
+    const keep = deformed.filter(p => inPoly(fan, p));
+    return {clip: straightClosedPath(fan), face: '', film: keep.length > 2 ? keep : deformed};
+  }
+  // a melon: a wedge from its centre down to the rind, the cut face to us
+  if (spec.wedge){
+    const sec = deformed.filter(([x, y]) => { const a = Math.atan2(y - c[1], x - c[0]); return a > 0.2 * Math.PI && a < 0.8 * Math.PI; })
+      .sort((p, q) => Math.atan2(q[1] - c[1], q[0] - c[0]) - Math.atan2(p[1] - c[1], p[0] - c[0]));
+    const apex = [c[0], c[1] - h * 0.04], piece = [apex, ...sec];
+    const fleshPts = [rfLerp(apex, c, 0.5), ...insetPts(sec, apex, 0.14)];
+    const fd = straightClosedPath(fleshPts), id = 'cutw' + (fridgeShapeCounter++);
+    const rind = spec.rind ? `<path d="${smoothOpenPath(insetPts(sec, apex, 0.1))}" fill="none" stroke="${natureColor(spec.rind, fraction)}" stroke-width="${f1(size * 0.02)}"/>` : '';
+    return {clip: straightClosedPath(piece), outline: straightClosedPath(piece),
+      face: `${rind}<defs><clipPath id="${id}"><path d="${fd}"/></clipPath></defs><path d="${fd}" fill="${flesh}" ${SOME_INK(0.4, thin)} stroke-linejoin="round"/>
+        <g clip-path="url(#${id})">${cutFaceCue(spec, fleshPts, flesh, size, seed, fraction)}</g>
+        <path d="${lineD([sec[0], apex, sec[sec.length - 1]])}" fill="none" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>`,
+      film: piece};
+  }
+  // long and lying down: cut across, the round end toward us
+  if (w > h * 1.45){
+    const X = b.x0 + w * 0.6, sp = spanAt(deformed, X) || [c[1] - h * 0.2, c[1] + h * 0.2];
+    const ry = (sp[1] - sp[0]) / 2, F = ellipsePts(X, (sp[0] + sp[1]) / 2, Math.max(ry * 0.5, size * 0.02), ry);
+    const keep = [[-size, -size], [X, -size], [X, size * 2], [-size, size * 2]];
+    return {clip: straightClosedPath(keep), face: face(F), film: [...deformed.filter(p => p[0] <= X), ...F]};
+  }
+  // tall: cut across low down, the face seen from a little above
+  if (h > w * 1.45){
+    const Y = b.y0 + h * 0.45, sp = spanAt(deformed, Y, 1) || [c[0] - w * 0.2, c[0] + w * 0.2];
+    const rx = (sp[1] - sp[0]) / 2, F = ellipsePts((sp[0] + sp[1]) / 2, Y, rx, Math.max(rx * 0.4, size * 0.02));
+    const keep = [[-size, Y], [size * 2, Y], [size * 2, size * 2], [-size, size * 2]];
+    return {clip: straightClosedPath(keep), face: face(F), film: [...deformed.filter(p => p[1] >= Y), ...F]};
+  }
+  // round: halved through the middle, the face its own outline turned
+  // toward us -- an onion's neck, a pear's shoulders, an avocado's
+  // narrow top
+  const X = (b.x0 + b.x1) / 2;
+  const F = deformed.map(([x, y]) => [X + (x - X) * 0.5, y]);
+  const keep = [[-size, -size], [X, -size], [X, size * 2], [-size, size * 2]];
+  return {clip: straightClosedPath(keep), face: face(F, shape !== 'wedge'), film: [...deformed.filter(p => p[0] <= X), ...F]};
+}
+
+// Eggs taken from the carton: the left one, then the right one too; the
+// cup stands empty.
+function eggsTaken(pts, some, size){
+  const out = pts.slice(), low = 0.6 * size;
+  const take = idx => idx.forEach(i => { out[i] = [out[i][0], low]; });
+  take([3, 4, 5, 6]);
+  if (some <= 0.25) take([10, 11, 12, 13]);
+  return out;
+}
+// A tray's film peeled back off its right-hand corner.
+const TRAY_CORNER = {chicken: [0.95, 0.58], tofu: [0.93, 0.50], protein: [0.93, 0.62]};
+function peeledFilm(shape, size){
+  const [kx, ky] = TRAY_CORNER[shape], s = size, thin = Math.max(0.6, size * 0.005).toFixed(2);
+  const K = [kx * s, ky * s], L = [(kx - 0.3) * s, ky * s], U = [(kx + 0.01) * s, (ky - 0.27) * s];
+  const flap = `M ${f1(L[0])} ${f1(L[1])} L ${f1(K[0])} ${f1(K[1])} Q ${f1((kx + 0.05) * s)} ${f1((ky - 0.15) * s)} ${f1(U[0])} ${f1(U[1])} Q ${f1((kx - 0.16) * s)} ${f1((ky - 0.1) * s)} ${f1(L[0])} ${f1(L[1])} Z`;
+  return `<g class="rf-film"><path d="${flap}" fill="#ffffff" fill-opacity=".6" ${SOME_INK(0.55, thin)} stroke-linejoin="round"/>
+    <path d="M ${f1(U[0])} ${f1(U[1])} q ${f1(s * 0.03)} ${f1(-s * 0.01)} ${f1(s * 0.025)} ${f1(s * 0.03)}" fill="none" ${SOME_INK(0.45, thin)}/>
+    <path d="${lineD([rfLerp(L, U, 0.3), rfLerp(K, U, 0.45)])}" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="${f1(Math.max(1, s * 0.01))}"/></g>`;
 }
 
 // Freezer burn, over any drawing (food, package or bottle): frozen food
@@ -5464,19 +5874,61 @@ function freezerBurnMarkup(svg, burn, seed){
 }
 
 // A package: rigid outline (bulged only), its own colour, its identity
-// cue, then the label and the seam mold on top.
-function packagedMarkupLine(shape, color, fraction, size, seed){
+// cue, then the label and the seam mold on top. some (Used some): opened
+// -- packageOpened.
+function packagedMarkupLine(shape, color, fraction, size, seed, some = null){
   const pts = catOutlinePoints(shape, size);
-  const path = straightClosedPath(bulgedOutline(shape, pts, fraction, size));
+  let outline = bulgedOutline(shape, pts, fraction, size);
   const strokeW = Math.max(1, size * 0.008).toFixed(2);
   const signs = packageSigns(shape, pts, fraction, size, seed);
-  const cue = (IDENTITY_CUES[shape] || genericIdentityLines)(pts, size, seed, fraction);
+  let cue = (IDENTITY_CUES[shape] || genericIdentityLines)(pts, size, seed, fraction);
+  let over = '';
+  if (some != null) ({outline, cue, over} = packageOpened(shape, pts, outline, cue, color, size));
+  const path = straightClosedPath(outline), uid = 'pkg' + (fridgeShapeCounter++);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <path d="${path}" fill="${color}" stroke="${INK_HEX}" stroke-width="${strokeW}"/>
+    ${some != null ? `<defs><clipPath id="${uid}-clip"><path d="${path}"/></clipPath></defs>` : ''}
     ${signs.label}
-    <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round">${cue}</g>
-    ${signs.mold}
+    <g stroke="${INK_HEX}" stroke-width="${strokeW}" fill="none" stroke-linecap="round"${some != null && shape === 'generic' ? ` clip-path="url(#${uid}-clip)"` : ''}>${cue}</g>
+    ${signs.mold}${over}
   </svg>`;
+}
+// Opened, not wrapped: the carton's spout pulled out of its gable, the
+// tub's lid set ajar on its rim with what's inside showing, the deli
+// container's lid lifted at one side, the packet torn across a corner.
+function packageOpened(shape, pts, outline, cue, color, size){
+  const s = size, thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const inside = hexLerp(color, INK_HEX, 0.4);
+  if (shape === 'carton'){
+    // the left gable opened out into a spout: its lip and the dark mouth
+    const rl = pts[6], ls = pts[7], tip = [s * 0.2, s * 0.13], mid = rfLerp(rl, ls, 0.55);
+    const i = outline.findIndex(p => p === rl);
+    outline = outline.slice(); outline.splice(i + 1, 0, tip);
+    return {outline, cue, over: `<path d="${polyD([rl, tip, mid])}" fill="${inside}" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`
+      + `<path d="${lineD([tip, rfLerp(rl, ls, 0.25)])}" fill="none" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`};
+  }
+  if (shape === 'dairy'){
+    // the body only; the lid tipped up off its left edge
+    const [lt, rt, rb, , , , , lb] = pts, body = pts.slice(3, 7);
+    const lid = `<g transform="rotate(-14 ${f1(lb[0])} ${f1(lb[1])}) translate(0 ${f1(-s * 0.02)})"><path d="${polyD([lt, rt, rb, lb])}" fill="${hexLerp(color, '#ffffff', 0.25)}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/></g>`;
+    const top = `<path d="${polyD([body[3], body[0], rfLerp(body[0], body[1], 0.08), rfLerp(body[3], body[2], 0.08)])}" fill="${inside}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
+    return {outline: body, cue: cue.replace(/<path d="[^"]*"\/>/, ''), over: top + lid};
+  }
+  if (shape === 'cooked'){
+    // containerLid's first path is the lid: lifted at the right, hinged at the left
+    const tl = pts[0];
+    return {outline, cue: cue.replace('<path d=', `<path transform="rotate(-11 ${f1(tl[0] - s * 0.04)} ${f1(tl[1])}) translate(0 ${f1(-s * 0.015)})" d=`), over: ''};
+  }
+  if (shape === 'generic'){
+    // torn across the top right corner
+    const [tl, tr, br] = pts;
+    const a = rfLerp(tl, tr, 0.62), e = rfLerp(tr, br, 0.2), tear = [];
+    for (let k = 0; k <= 6; k++){ const p = rfLerp(a, e, k / 6), j = (k % 2 ? 1 : -1) * s * 0.012; tear.push([p[0] + j, p[1] - j]); }
+    const i = outline.indexOf(tr);
+    outline = [...outline.slice(0, i), ...tear, ...outline.slice(i + 1)];
+    return {outline, cue, over: `<path d="${lineD(tear.map(([x, y]) => [x + s * 0.01, y + s * 0.012]))}" fill="none" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`};
+  }
+  return {outline, cue, over: ''};
 }
 
 // Shelves, front (soonest) first, each holding one row. An item's size is
@@ -5560,7 +6012,7 @@ function buildShelfItem(p, day){
   const shapeStyle = `width:${shownSize}px;height:${shownSize}px;filter:brightness(${brightness})`;
   const dayLabel = shortLeft(it, d);
   const itemStyle = `left:${x}px;z-index:${p.z}`;
-  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id, f.en);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, shownSize, it.id, f.en, usedSomeOf(it), it.key);
   if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   return `<div class="fridge-item" style="${itemStyle}">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
@@ -5592,7 +6044,7 @@ function buildDrawerItem(it, day){
   const color = foodBodyColor(it, frac);
   const labelColor = COLOR[state(d)]; // always 'gone' here, same lookup as everywhere else
   const shapeStyle = `width:${size}px;height:${size}px`;
-  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id, f.en);
+  const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id, f.en, usedSomeOf(it), it.key);
   return `<div class="fridge-item">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
     <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span>${fridgeActs(it, f)}</div>
@@ -5657,6 +6109,9 @@ function staggerFridgeLabels(shelf){
 // date, so Toss all stays one place.
 function onCounter(it){
   if (it.frozen || it.thawed) return false; // frozen: the freezer; thawed: the fridge
+  // cut by Used some: wrapped, it goes in the fridge (a half onion, a
+  // wedge of melon); a package opened stays where it was
+  if (usedSomeOf(it) != null && !usedSomeOpens(it)) return false;
   const f = food(it);
   if (f.cat === 'drinks') return drinkOnCounter(it);
   if (it.ripening || it.key === 'banana') return true;
@@ -6070,7 +6525,7 @@ function rfBuildFoodItem(it, day, u, z){
   const frac = gone ? 1 : decayFraction(it, day);
   const px = Math.round(u * RF.PX);
   const color = foodBodyColor(it, frac);
-  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id, f.en);
+  let svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, px, it.id, f.en, usedSomeOf(it), it.key);
   if (it.frozen) svg = freezerBurnMarkup(svg, burnFraction(it, day), it.id);
   svg = rfTonightDash(svg, fridgeShapeOf(it));
   const cq = (u * 100 / RF.W).toFixed(3) + 'cqw';
@@ -6312,6 +6767,7 @@ function rfShowPopover(id, anchorEl, opts = {}){
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${freezeBtn}${thawBtn}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
+      <button type="button" class="ghost rf-pop-some">Used some</button>
       <button type="button" class="ghost rf-pop-tossed">Tossed</button>
       <span class="spacer"></span>
       <button type="button" class="rf-pop-remove" title="Logged by mistake: take it out without counting it as waste">Remove</button>
@@ -6336,6 +6792,7 @@ function rfShowPopover(id, anchorEl, opts = {}){
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
   pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
+  pop.querySelector('.rf-pop-some').onclick = () => { rfHidePopover(); useSome(id); };
   // a correction (logged by mistake), not waste: removeFridgeItem
   pop.querySelector('.rf-pop-remove').onclick = () => { rfHidePopover(); removeFridgeItem(id); };
   const r = anchorEl.getBoundingClientRect();
@@ -7346,6 +7803,44 @@ function useItem(id, tossed){
   render();
 }
 
+// Used some: the item stays, drawn cut and wrapped (or, packaged, opened),
+// and half of what's left of it -- weight and price -- leaves with what was
+// used: the weight to the used ledger, as Used does; the price leaves the
+// item, so a later Toss loses only what was still there. Opened or cut for
+// the first time, its clock restarts today on FoodKeeper's after-opening
+// figure (opensOf) if it has one; otherwise its date doesn't move. Not in
+// the freezer: what's frozen keeps its freezer date. Undo puts back the
+// record exactly as it was and takes the weight back off the ledger.
+function useSome(id){
+  const i = fridge.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const it = fridge[i], before = structuredClone(it);
+  const f = food(it), g = f.g / 2;
+  ledger.savedG += g;
+  it.part = (it.part != null ? it.part : 1) / 2;
+  it.crossed = false;
+  const open = opensOf(it);
+  let note = '';
+  if (!it.opened && !it.frozen && open != null){
+    // the rot it has now carries on from there, as after a thaw: opening
+    // restarts the clock, not the food
+    const decay = rawDecay(it, today());
+    if (decay > 0) it.decayFrom = decay; else delete it.decayFrom;
+    it.opened = true;
+    it.clockFrom = today();
+    delete it.shelf; delete it.shelfFrom; delete it.ripening; delete it.ripeOn;
+    note = ' · ' + dayCount(open) + ' now that it\'s ' + (usedSomeOpens(it) ? 'open' : 'cut');
+  }
+  toast('Used some ' + f.en + ' · about ' + Math.round(g) + ' g' + note, () => {
+    const j = fridge.findIndex(x => x.id === id);
+    if (j < 0) return;
+    fridge[j] = before;
+    ledger.savedG -= g;
+    render();
+  });
+  render();
+}
+
 // A correction, not an event about food: never touches ledger. Unlike
 // useItem, this undoes the one standing-count increment this specific
 // entry caused when it was added -- not a reset, since the same key may
@@ -7655,9 +8150,13 @@ function shelfSourceOf(it){
     : 'frozen: FoodKeeper #' + f.fk + ', ' + dayCount(shelfOf(it)) + ' of best quality from ' + fmtDate(clockStart(it)) + ' (quality only: safe while frozen, USDA FSIS)';
   if (it.thawed && it.shelf == null) return 'thawed: ' + thawSourceOf(it) + ', ' + dayCount(shelfOf(it)) + ' in the fridge after thawing, from ' + fmtDate(clockStart(it));
   if (it.thawed && it.shelfFrom === 'date') return 'thawed: date given when thawed (no after-thawing figure)';
-  if (it.opened && it.shelf == null && f.opens != null) return f.fk != null
-    ? 'opened: FoodKeeper #' + f.fk + ', ' + dayCount(f.opens) + ' after opening'
-    : 'opened: estimated, ' + dayCount(f.opens) + ' after opening — ' + f.note;
+  if (it.opened && it.shelf == null && opensOf(it) != null){
+    // opened or cut by Used some: counted from that day
+    const how = it.clockFrom != null ? (usedSomeOpens(it) ? 'opened ' : 'cut ') + fmtDate(it.clockFrom) : 'opened';
+    return f.fk != null
+      ? how + ': FoodKeeper #' + f.fk + ', ' + dayCount(opensOf(it)) + ' after opening'
+      : how + ': estimated, ' + dayCount(opensOf(it)) + ' after opening — ' + f.note;
+  }
   // a condiment counted by its pantry figure says so: FoodKeeper gives
   // none for the refrigerator (unopened, where it asks)
   if (f.pantryFig && it.shelf == null && !it.opened && !it.frozen && !it.thawed)
@@ -7857,6 +8356,7 @@ function restock(key, shelf){
     existing.crossed = false;
     delete existing.ripeOn;
     delete existing.clockFrom; delete existing.thawed; delete existing.decayFrom; // a fresh one, not the thawed one
+    delete existing.part; // and whole, not what was left after Used some
     if (ripensKey(key) && lastRipeChoice(key) === 'unripe') existing.ripening = true; else delete existing.ripening;
     if (opensKey(key) && lastOpenChoice(key) === 'opened') existing.opened = true; else delete existing.opened;
     delete existing.shelf; // a fresh purchase takes today's value, not a pinned old one
