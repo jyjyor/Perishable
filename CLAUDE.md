@@ -121,11 +121,13 @@ consumer food app.
   page never tells the person to throw past-date food away; every
   past-date message says check: the headline's subline ("Check the
   past-date ones first"), the crisper's drawer front ("N past date —
-  check these · Toss all"), the line-art row's drawer ("Past date —
+  check these"), the line-art row's drawer ("Past date —
   check these", "3d past" under each), the Kitchen's all-past-date note.
   A past-date item's popover leads with "Still good?", which opens its
   Use by field (hidden until then) to give it a new date, with Toss
-  beside it (the popover's Tossed is not repeated below). Frozen food is
+  beside it (the popover's Tossed is not repeated below). There is no
+  Toss all: past-date items are tossed one at a time from their own
+  popover, after "Still good?", so nothing goes unchecked. Frozen food is
   never past date (rule 7) and never asks.
   6. Matches: the same food, or the same species under a generic
      FoodKeeper entry. A different species or variety is not a match.
@@ -178,8 +180,8 @@ consumer food app.
      - Frozen food never spoils. USDA FSIS "Freezing and Food Safety":
        food kept at 0 °F is always safe, freezer storage times are for
        quality only, and freezer burn doesn't make food unsafe. So a
-       frozen item never becomes past date and never goes to the crisper,
-       Toss all or the gone count. When its freezer time runs out the
+       frozen item never becomes past date and never goes to the crisper
+       or the gone count. When its freezer time runs out the
        popover reads "Best quality passed" (its date is "Best by", not
        "Use by") and the freezer burn is at its heaviest; it stays in the
        freezer until the person thaws, uses or tosses it.
@@ -611,8 +613,8 @@ fridge. More than three in the bowl (two on a phone) heap
 in two rows, drawn larger on a phone. On a phone the peek beside the
 fridge is the counter's edge: the kitchen's text is hidden (opacity)
 until its panel is active. Past
-date, they go to the crisper with everything else past date, so Toss all
-stays one place. Counter food is never out of the count: the headline,
+date, they go to the crisper with everything else past date, the one
+place past-date food waits to be checked. Counter food is never out of the count: the headline,
 the decay line and All items include everything.
 
 Two fridge views, one after the other, from the same `fridge` array.
@@ -667,9 +669,8 @@ holds only items below 0 days. An item on its last day (0 days left,
 goes front and centre on the eye-level shelf, drawn visibly short of gone
 (decayFraction reaches LAST_DAY_DECAY, 0.75, on the last day and 1 only
 once the date has passed). Past-date items sit in the crisper, whose drawer
-front reads "N past date — check these · Toss all"; Toss all asks right
-there ("Toss N past date? Toss N · Cancel") before anything counts as
-waste.
+front reads "N past date — check these" and has no button: each item is
+checked and tossed from its own popover.
 
 The popover's timeline (rfTimeline): under its rows, a slider from the
 purchase day to a little past the use-by date (30% of the shelf life,
@@ -688,7 +689,7 @@ keeps, or what is still ripening: none has a use-by date to run to.
 The line-art row follows, collapsed under an "All items (N)" toggle that
 is closed on every load (a <details>, so it opens from the keyboard).
 While it's closed, the illustrated fridge's popover is the way to act on
-an item, and the crisper's Toss all still works. Opened, it does the job
+an item, in the fridge and in the crisper. Opened, it does the job
 the list used to: every item drawn by the same food drawings (foodShapeMarkupLine,
 natureColor, fridgeCatOf/fridgeShapeOf), on shelves by urgency, with its
 name and days left in its urgency colour, and Used and Tossed as small

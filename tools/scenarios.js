@@ -1542,7 +1542,7 @@ async function mixedFridgeScenario(browser) {
     await page.mouse.click(2, 2);
     const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
     const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
-    expectEqual('drawer front', crisper, `${goneN} past date — check these · Toss all`);
+    expectEqual('drawer front', crisper, `${goneN} past date — check these`);
     const onHandle = await page.evaluate(() => {
       const a = document.getElementById('rfCrisperLabel').getBoundingClientRect();
       const b = document.querySelector('#rfCrisperFrontSvg rect.b3').getBoundingClientRect();
@@ -1676,8 +1676,8 @@ async function editBoughtScenario(browser) {
 }
 
 // The line-art row starts closed under "All items (N)" on every load and
-// opens from the keyboard; while closed, the popover acts on items and the
-// crisper's Toss all still works.
+// opens from the keyboard; while closed, the popover acts on items, in
+// the fridge and in the crisper.
 async function allItemsScenario(browser) {
   const { page, errors } = await freshPage(browser);
   console.log('\n--- ALL ITEMS: the row starts closed, opens from the keyboard ---');
@@ -1688,13 +1688,15 @@ async function allItemsScenario(browser) {
     summary: document.querySelector('#allItems summary').textContent.trim() }));
   expectEqual('closed on load', await state(), { open: false, summary: 'All items (3)' });
   if (await page.isVisible('[data-fridge-used]')) throw new Error('row buttons should be hidden while closed');
-  // acting while closed: the popover's Used, then the crisper's Toss all
+  // acting while closed: the popover's Used, then a past-date item's Toss
   const salmon = await page.evaluate(() => fridge.find(i => i.key === 'salmon').id);
   await page.$eval(`[data-rf-item="${salmon}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
   await page.click('#rfPopover .rf-pop-used');
-  await page.click('#rfTossAll'); await page.click('#rfTossYes');
+  const spin = await page.evaluate(() => fridge.find(i => i.key === 'spinach').id);
+  await page.$eval(`[data-rf-item="${spin}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+  await page.click('#rfPopover .rf-pop-toss');
   await page.waitForTimeout(100);
-  expectEqual('popover and Toss all work while closed', await page.evaluate(() => fridge.map(i => i.key)), ['chicken']);
+  expectEqual('popover Used and Toss work while closed', await page.evaluate(() => fridge.map(i => i.key)), ['chicken']);
   expectEqual('count follows', (await state()).summary, 'All items (1)');
   // keyboard: focus the toggle, Enter opens, the row is drawn
   await page.focus('#allItems summary');
@@ -1940,38 +1942,36 @@ async function popoverUseScenario(browser) {
   await list.page.context().close(); await page.context().close();
 }
 
-// A gone item: Tossed is in its popover and counts as waste; the drawer
-// front's Toss all asks right there ("Toss N past date? Toss N · Cancel").
+// A gone item is tossed from its own popover, one at a time, and counts
+// as waste. The drawer front only counts them ("N past date — check
+// these"): there is no Toss all, since tossing everything past date
+// unchecked is what "check, don't toss" is against.
 async function goneTossScenario(browser) {
   const { page, errors } = await freshPage(browser);
-  console.log('\n--- GONE: Tossed in the popover, Toss all on the drawer front ---');
+  console.log('\n--- GONE: tossed one at a time from the popover, no Toss all ---');
   await typeEntry(page, 'spinach 10d, chicken 12d, tofu');
   if (await previewOpen(page)) await answerPreview(page);
   await page.waitForTimeout(900);
-  expectEqual('drawer front', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date — check these · Toss all');
-  const spinach = await page.evaluate(() => fridge.find(i => i.key === 'spinach').id);
-  await page.$eval(`[data-rf-item="${spinach}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
-  // past date: the popover leads with Still good? and Toss beside it
-  await page.click('#rfPopover .rf-pop-toss');
-  await page.waitForTimeout(100);
+  const front = async () => (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
+  expectEqual('drawer front', await front(), '2 past date — check these');
+  expectEqual('no button on the drawer front', await page.$$eval('#rfCrisperLabel button', b => b.length), 0);
+  expectEqual('no Toss all anywhere', await page.evaluate(() => !!document.getElementById('rfTossAll') || /toss all/i.test(document.body.innerText)), false);
+  const tossOne = async key => {
+    const id = await page.evaluate(k => fridge.find(i => i.key === k).id, key);
+    await page.$eval(`[data-rf-item="${id}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
+    // past date: the popover leads with Still good? and Toss beside it
+    await page.click('#rfPopover .rf-pop-toss');
+    await page.waitForTimeout(100);
+  };
+  await tossOne('spinach');
   const s = await page.evaluate(() => ({ n: fridge.length, waste: ledger.wasteG }));
   expectEqual('spinach tossed', s.n, 2);
   if (!(s.waste > 0)) throw new Error('a toss from the popover should count as waste');
-  expectEqual('drawer front after', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '1 past date — check these · Toss all');
-  const front = async () => (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
-  // Toss all asks on the drawer front; Cancel goes back, nothing tossed.
-  await page.click('#rfTossAll');
-  expectEqual('asks first', await front(), 'Toss 1 past date? Toss 1 · Cancel');
-  expectEqual('nothing tossed while asking', await page.evaluate(() => [fridge.length, ledger.wasteG]), [2, s.waste]);
-  await page.click('#rfTossNo');
-  expectEqual('cancel', await front(), '1 past date — check these · Toss all');
-  expectEqual('nothing tossed on cancel', await page.evaluate(() => fridge.length), 2);
-  await page.click('#rfTossAll');
-  await page.click('#rfTossYes');
-  await page.waitForTimeout(100);
-  if (!(await page.evaluate(w => ledger.wasteG > w, s.waste))) throw new Error('Toss all should count as waste');
-  expectEqual('after confirming', await page.evaluate(() => fridge.map(i => i.key)), ['tofu']);
-  expectEqual('drawer front empty', (await page.textContent('#rfCrisperLabel')).trim(), 'Crisper — past date');
+  expectEqual('drawer front after', await front(), '1 past date — check these');
+  await tossOne('chicken');
+  if (!(await page.evaluate(w => ledger.wasteG > w, s.waste))) throw new Error('the second toss should count as waste');
+  expectEqual('after both', await page.evaluate(() => fridge.map(i => i.key)), ['tofu']);
+  expectEqual('drawer front empty', await front(), 'Crisper — past date');
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -2918,7 +2918,7 @@ async function frozenReceiptScenario(browser) {
 // Frozen food never spoils (USDA FSIS "Freezing and Food Safety": kept at
 // 0 °F it is always safe; storage times are for quality only). Chicken
 // breast frozen 300 days ago, past its 270 days: never past date, not in
-// the crisper or the gone drawer, not in Toss all or any count, still in
+// the crisper or the gone drawer, not in any count, still in
 // the freezer after a reload; the popover says "Best quality passed" and
 // the freezer burn is at its heaviest. Thaw still works.
 async function frozenNeverSpoilsScenario(browser) {
@@ -2950,9 +2950,9 @@ async function frozenNeverSpoilsScenario(browser) {
   expectEqual('only the milk counts', st.counted, ['milk']);
   const text = await popoverText(page, 'chicken');
   if (!text.includes('Best quality passed') || !text.includes('Frozen') || !text.includes('Thaw') || text.includes('past date')) throw new Error('popover: ' + text);
-  // Toss all takes the past-date milk only
-  const tossAll = await page.evaluate(() => fridge.filter(i => left(i) < 0).map(i => i.key));
-  expectEqual('Toss all: the milk only', tossAll, ['milk']);
+  // past date: the milk only
+  const past = await page.evaluate(() => fridge.filter(i => left(i) < 0).map(i => i.key));
+  expectEqual('past date: the milk only', past, ['milk']);
   if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
   await page.context().close();
 }
@@ -3251,7 +3251,7 @@ async function lastDayScenario(browser) {
     expectEqual(`${tag}: days left`, st.left, [0, 0, -5, -2]);
     expectEqual(`${tag}: last day on the eye-level shelf, past date in the crisper`, st.place, ['rfShelfEye', 'rfShelfEye', 'rfCrisperItems', 'rfCrisperItems']);
     expectEqual(`${tag}: the crisper holds only past date`, st.crisper, ['Mushrooms', 'Spinach']);
-    expectEqual(`${tag}: drawer front`, st.front, '2 past date — check these · Toss all');
+    expectEqual(`${tag}: drawer front`, st.front, '2 past date — check these');
     if (!/^2 things are past date/.test(st.headline)) throw new Error(`${tag}: headline should count 2 past date, got "${st.headline}"`);
     if (!['Watermelon', 'Canned beer'].includes(st.centre)) throw new Error(`${tag}: a last-day item should be front and center, got ${st.centre}`);
     expectEqual(`${tag}: last day short of gone, past date gone`, st.decay, [0.75, 0.75, 1]);
@@ -4748,7 +4748,7 @@ async function checkNotTossScenario(browser) {
   const { page, errors } = await seededPage(browser, st(T => [{id: 1, key: 'spinach', bought: T - 9, custom: null}, {id: 2, key: 'strawberry', bought: T - 1, custom: null}, {id: 3, key: 'chicken', bought: T - 9, custom: null}]));
   expectEqual('subline', await page.textContent('#subline'), '1 more goes within 72 hours. Check the past-date ones first.');
   await page.waitForTimeout(800);
-  expectEqual('crisper', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date — check these · Toss all');
+  expectEqual('crisper', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date — check these');
   await page.click('#allItems summary');
   expectEqual('drawer', await page.textContent('.fridge-drawer-label'), 'Past date — check these');
   const all = await page.evaluate(() => document.body.innerText);

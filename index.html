@@ -249,7 +249,6 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    (--rf-w) -- the line is wider than the room left of the drawer's
    handle, so it sits a little higher, clear of it. */
 .rf-crisper-label{transform:translateY(-16px)}
-.rf-crisper-label button{font-size:9px;padding:0 4px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 .rf-crisper-label{
   position:absolute;z-index:4;display:flex;align-items:center;gap:6px;
   font-family:'tonos-mono-vf',ui-monospace,monospace;
@@ -2628,7 +2627,6 @@ let swapped = {}; // dishName -> {missingKey, label}
 let skipped = new Set();
 let skippedTomorrow = new Set();
 let skippedDayAfter = new Set();
-let rfTossConfirm = false; // the crisper's "Toss all" is asking
 let editingRestock = false;
 
 function loadState(){
@@ -6509,7 +6507,7 @@ function staggerFridgeLabels(shelf){
 // exception to the pantry list: once ripe it goes in the fridge (its
 // number is FoodKeeper's refrigerator one), so only an unripe one stays
 // out. Once past date they go to the crisper with everything else past
-// date, so Toss all stays one place.
+// date, so the crisper stays the one place they wait to be checked.
 function onCounter(it){
   if (it.frozen || it.thawed) return false; // frozen: the freezer; thawed: the fridge
   // cut by Used some: wrapped, it goes in the fridge (a half onion, a
@@ -7054,21 +7052,11 @@ function renderRealFridge(){
   // surface.
   rfWireItems(unit);
   rfMarkTonight(unit);
-  // The drawer front: how many are past date, and Toss all, which opens
-  // the same confirmation as the list's "Toss N expired".
-  // The drawer front: how many are past date, and Toss all, which asks
-  // once, right there ("Toss 2 past date? Toss 2 · Cancel"), before
-  // anything counts as waste.
+  // The drawer front: how many are past date. Nothing here tosses them:
+  // each one is checked and tossed from its own popover, after "Still
+  // good?" (USDA FSIS: past date means check, not toss).
   const cl = document.getElementById('rfCrisperLabel');
-  if (!gone.length) rfTossConfirm = false;
-  cl.innerHTML = !gone.length ? 'Crisper — past date'
-    : rfTossConfirm
-      ? `<span>Toss ${gone.length} past date?</span> <button type="button" class="ghost" id="rfTossYes">Toss ${gone.length}</button> · <button type="button" class="ghost" id="rfTossNo">Cancel</button>`
-      : `<span>${gone.length} past date — check these</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`;
-  const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = e => { e.stopPropagation(); fn(); }; };
-  on('rfTossAll', () => { rfTossConfirm = true; renderRealFridge(); });
-  on('rfTossNo', () => { rfTossConfirm = false; renderRealFridge(); });
-  on('rfTossYes', () => { rfTossConfirm = false; clearGone(); });
+  cl.textContent = gone.length ? `${gone.length} past date — check these` : 'Crisper — past date';
 }
 
 // The freezer: everything frozen, on its one wire shelf, in the order it
@@ -8699,21 +8687,6 @@ function addLeftovers(){
     leftoversAsk = ask;
     render();
   });
-  render();
-}
-
-function clearGone(){
-  const gone = fridge.filter(it => left(it) < 0);
-  let usd = 0;
-  gone.forEach(it => {
-    const f = food(it);
-    ledger.wasteG += f.g;
-    ledger.wasteUSD += f.usd;
-    usd += f.usd;
-    logToss(it);
-  });
-  fridge = fridge.filter(it => left(it) >= 0);
-  toast('Tossed ' + gone.length + ' · $' + usd.toFixed(2) + ' gone');
   render();
 }
 
