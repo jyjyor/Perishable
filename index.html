@@ -334,6 +334,32 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 .rf-popover .rf-pop-close:hover{color:var(--ink)}
 .rf-popover [hidden]{display:none}
 .rf-popover .rf-pop-freeze,.rf-popover .rf-pop-thaw{margin-top:8px}
+.rf-popover{max-height:calc(100vh - 20px);overflow-x:hidden;overflow-y:auto}
+.rf-popover.has-tl{width:300px}
+.rf-pop-acts button{white-space:nowrap}
+.rf-pop-check{display:flex;gap:6px;margin:0 0 6px}
+.rf-pop-check .rf-pop-good{color:var(--ink);border-color:var(--ink)}
+/* the timeline: the item on another day, larger than on the shelf */
+.rf-tl{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.rf-tl-art{width:150px;height:150px;margin:0 auto}
+.rf-tl-art svg{display:block;width:150px;height:150px;overflow:visible}
+.rf-tl-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:11px;color:var(--ink)}
+.rf-tl-head .ghost{padding:2px 6px;font-size:11px}
+.rf-tl-track{position:relative;padding-bottom:22px;margin-top:2px}
+.rf-tl-range{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:0;background:transparent}
+.rf-tl-range::-webkit-slider-runnable-track{height:1px;background:var(--ink)}
+.rf-tl-range::-moz-range-track{height:1px;background:var(--ink)}
+.rf-tl-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-6.5px;border-radius:50%;background:var(--paper);border:1px solid var(--ink)}
+.rf-tl-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--paper);border:1px solid var(--ink)}
+.rf-tl-range:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.rf-tl-mark{position:absolute;top:13px;width:0;pointer-events:none}
+.rf-tl-mark i{position:absolute;left:-.5px;top:0;width:1px;height:6px;background:var(--ink-2)}
+.rf-tl-mark b{position:absolute;top:7px;transform:translateX(-50%);white-space:nowrap;font-weight:400;
+  font-family:'tonos-mono-vf',ui-monospace,monospace;font-size:9px;letter-spacing:.04em;color:var(--ink-2)}
+.rf-tl-mark b.l{transform:translateX(-100%)}
+.rf-tl-mark b.r{transform:none}
+.rf-tl-mark.today b{color:var(--ink)}
 
 /* The freezer: its own compartment above the fridge, its own door on the
    same right-hand hinge, closed on load. Inside, one wire shelf and frost
@@ -989,7 +1015,42 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
 }
 
 /* 3 */
-.part-sofar .ledger{margin-top:0;border-top:none;padding-top:0}
+/* The bin: a kitchen pedal bin in the fridge's line-and-wash, drawn cut
+   away so what's in it shows -- its wall sections, rim, the liner folded
+   over the rim, foot and pedal over the heap; the inside back wall and
+   the lid standing open behind it. A few flat cold tones scoped to .bin,
+   as the bag's kraft is to .bag; they never leave it. */
+.bin{
+  --bin-1:#C9D0CD;--bin-2:#B4BDB9;--bin-3:#97A19D;--bin-in:#A9B2AE;--bin-liner:#6F7975;
+  max-width:360px;
+}
+.bin-months{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.04em;color:var(--ink-2)}
+.bin-months .ghost{padding:4px 8px;font-size:13px}
+.bin-months .ghost:disabled{visibility:hidden}
+@media (max-width:720px){ .bin-months .ghost{min-width:44px;min-height:44px} .rf-pop-acts button,.rf-pop-check button,.rf-tl-head .ghost{min-height:44px} }
+.bin-month{min-width:7.5em;text-align:center;color:var(--ink)}
+.bin-day{white-space:nowrap}
+.bin-months .spacer{flex:1}
+.bin-stage{position:relative;width:100%;margin-top:8px}
+.bin-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.bin-svg.front{z-index:2}
+.bin-items{position:absolute;inset:0;z-index:1}
+.bin-item{
+  position:absolute;padding:0;border:none;background:none;cursor:pointer;
+  transform:rotate(var(--r,0deg));transform-origin:50% 80%;
+}
+.bin-item svg{display:block;width:100%;height:100%;overflow:visible}
+.bin-item:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.bin-item[aria-pressed="true"]{outline:1px dashed var(--ink);outline-offset:2px}
+.bin-empty{
+  position:absolute;left:18%;right:18%;top:52%;z-index:3;margin:0;text-align:center;
+  font-size:14px;color:var(--ink-2);
+}
+.bin-note{min-height:1.5em;margin:10px 0 0;font-size:11px;letter-spacing:.02em;color:var(--ink)}
+.bin-line{margin:6px 0 0;font-size:11px;letter-spacing:.02em;color:var(--ink-2)}
+.bin-line b{color:var(--ink);font-weight:500}
+.bin-line small,.bin-earlier{color:var(--ink-3)}
+.bin-earlier{margin:4px 0 0;font-size:10px;letter-spacing:.02em}
 
 @media (max-width:720px){
   :root{--gap-in:20px;--gap-out:60px}
@@ -1197,7 +1258,7 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
       <div class="fridge-shelf" id="fridgeShelf"></div>
     </section>
     <div class="fridge-drawer" id="fridgeDrawer" style="display:none">
-      <div class="fridge-drawer-label mono">Gone — toss to clear</div>
+      <div class="fridge-drawer-label mono">Past date — check these</div>
       <div class="fridge-drawer-items" id="fridgeDrawerItems"></div>
     </div>
   </details>
@@ -1219,30 +1280,28 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
     </div>
   </section>
 
-  <!-- 3. So far: the ledger. -->
+  <!-- 3. So far: the bin -- what was thrown away this month, each item
+       drawn as it looked when it was tossed, stacked in the order tossed;
+       one line of this month's amounts under it. -->
   <section class="part part-sofar" aria-labelledby="sofarTitle">
   <h2 class="part-title" id="sofarTitle">So far</h2>
-  <div class="ledger">
-    <div class="stat">
-      <b id="wasteG">0 g</b>
-      <span class="mono">thrown away</span>
-      <small>estimated</small>
+  <div class="bin" id="bin">
+    <div class="bin-months mono">
+      <button type="button" class="ghost bin-prev" id="binPrev" aria-label="Earlier month">‹</button>
+      <span class="bin-month" id="binMonth" aria-live="polite">This month</span>
+      <button type="button" class="ghost bin-next" id="binNext" aria-label="Later month">›</button>
+      <span class="spacer"></span>
+      <span class="bin-day"><span id="dayCount">Day 1</span> of this kitchen</span>
     </div>
-    <div class="stat">
-      <b id="wasteUSD">$0.00</b>
-      <span class="mono">wasted</span>
-      <small>estimated</small>
+    <div class="bin-stage" id="binStage">
+      <svg class="bin-svg" id="binBack" aria-hidden="true"></svg>
+      <div class="bin-items" id="binItems" role="list" aria-label="In the bin"></div>
+      <svg class="bin-svg front" id="binFront" aria-hidden="true"></svg>
+      <p class="bin-empty" id="binEmpty" hidden></p>
     </div>
-    <div class="stat saved">
-      <b id="savedG">0 g</b>
-      <span class="mono">rescued</span>
-      <small>estimated</small>
-    </div>
-    <div class="spacer"></div>
-    <div class="stat">
-      <b id="dayCount">Day 1</b>
-      <span class="mono">of this kitchen</span>
-    </div>
+    <p class="bin-note mono" id="binNote" aria-live="polite"></p>
+    <p class="bin-line mono" id="binLine"><span id="binLineLabel">This month</span>: <b class="w" id="wasteG">0 g</b> · <b class="w" id="wasteUSD">$0.00</b> thrown away · <b class="s" id="savedG">0 g</b> · <b class="s" id="savedUSD">$0.00</b> rescued <small>estimated</small></p>
+    <p class="bin-earlier mono" id="binEarlier" hidden></p>
   </div>
   </section>
 
@@ -2550,6 +2609,19 @@ let uid = 0;
 let fridge = [];
 let standing = {};  // key -> {count, lastBought, custom}
 let ledger = {wasteG:0, wasteUSD:0, savedG:0};
+// The ledger's running totals say how much, never what or when. tossLog
+// is the record behind the bin: one entry per Used or Tossed from the day
+// it started keeping them -- {n, t:'toss'|'use', day, g, usd}, and for a
+// toss the item as it was (rec, a copy of the record), its decay at that
+// moment (frac, burn) and its days left (left). Nothing is ever deleted
+// from it; a month only chooses which entries the bin shows. logStart is
+// the totals the ledger already held when the log began: tosses from
+// before it have no item, date or decay, so they stay a plain "earlier"
+// total and are never drawn.
+let tossLog = [];
+let logStart = {wasteG:0, wasteUSD:0, savedG:0};
+let binMonth = null;   // the month the bin shows (year * 12 + month); null is this month
+let binDrops = [];     // toss entries to drop into the bin on the next render
 let startedAt = null;
 let lastVisit = null;
 let swapped = {}; // dishName -> {missingKey, label}
@@ -2708,7 +2780,7 @@ function migrateSplitEntries(saved){
 
 function saveState(){
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({schema:SCHEMA, fridge, standing, ledger, uid, startedAt, lastVisit}));
+    localStorage.setItem(STORE_KEY, JSON.stringify({schema:SCHEMA, fridge, standing, ledger, tossLog, logStart, uid, startedAt, lastVisit}));
   } catch(e){ /* storage unavailable: carry on in memory only */ }
 }
 
@@ -2720,6 +2792,9 @@ function boot(){
     fridge = saved.fridge || [];
     standing = saved.standing || {};
     ledger = saved.ledger || {wasteG:0, wasteUSD:0, savedG:0};
+    // saved before the log: everything the ledger holds so far is "earlier"
+    tossLog = Array.isArray(saved.tossLog) ? saved.tossLog : [];
+    logStart = saved.tossLog ? (saved.logStart || {wasteG:0, wasteUSD:0, savedG:0}) : {...ledger};
     uid = saved.uid || 0;
     startedAt = saved.startedAt != null ? saved.startedAt : now;
     const prevVisit = saved.lastVisit != null ? saved.lastVisit : now;
@@ -3255,9 +3330,7 @@ function buildDayProjections(){
 function render(){
   document.getElementById('date').textContent = fmtDate(today());
   document.getElementById('dayCount').textContent = 'Day ' + (today() - startedAt + 1);
-  document.getElementById('wasteG').textContent = Math.round(ledger.wasteG) + ' g';
-  document.getElementById('wasteUSD').textContent = '$' + ledger.wasteUSD.toFixed(2);
-  document.getElementById('savedG').textContent = Math.round(ledger.savedG) + ' g';
+  renderBin();
 
   renderFridgeView();
   renderTonight(); // before the fridge: it outlines what tonight's dish uses
@@ -3284,9 +3357,11 @@ function renderHeadline(){
   }
   if (gone){
     h.innerHTML = `<span class="num">${gone}</span> ${gone===1?'thing is':'things are'} past date.`;
+    // Check, not toss: a date isn't a safety line (USDA FSIS, "Food
+    // Product Dating"; see CLAUDE.md).
     p.textContent = soon
-      ? `${soon} more ${soon===1?'goes':'go'} within 72 hours. Clear the dead ones out first.`
-      : 'Clear them out so the rest of the list stays honest.';
+      ? `${soon} more ${soon===1?'goes':'go'} within 72 hours. Check the past-date ones first.`
+      : 'Check the past-date ones first.';
     return;
   }
   if (soon){
@@ -3297,6 +3372,151 @@ function renderHeadline(){
     p.textContent = 'Everything in here has more than three days left. Check back tomorrow.';
   }
 }
+
+/* ---------- the bin ----------
+   What was thrown away in one month (tossLog), each item drawn as it
+   looked when it was tossed -- its own record and its decay that moment,
+   through the same drawing the fridge uses -- stacked from the floor up
+   in the order tossed. Used never goes in. Every month starts empty; the
+   arrows look back at earlier ones, and nothing leaves the log. */
+const ymOf = day => { const d = new Date(day * 86400000); return {y: d.getUTCFullYear(), m: d.getUTCMonth()}; };
+const ymKey = ym => ym.y * 12 + ym.m;
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// The drawing: a pedal bin cut away, in viewBox units (300 wide). Its
+// inside walls lean in to the floor at BIN.floor.
+const BIN = {W: 300, H: 332, floor: 304, rim: 78};
+const binInner = y => { const t = Math.max(0, (y - 76) / 230); return [54 + 12 * t, 246 - 12 * t]; };
+const binBack = () => `
+  <path d="M60 74 C60 24 240 24 240 74 Z" fill="var(--bin-2)" stroke="${INK_HEX}" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M128 40 Q150 35 172 40" fill="none" stroke="${INK_HEX}" stroke-width="1" stroke-linecap="round"/>
+  <path d="M48 76 L252 76 L240 306 L60 306 Z" fill="var(--bin-in)"/>
+  <path d="M48 76 L252 76 L250 112 L50 112 Z" fill="var(--bin-liner)" opacity=".28"/>
+  <path d="M58 262 Q150 270 242 262 L240 306 L60 306 Z" fill="var(--bin-liner)" opacity=".18"/>`;
+const binFront = () => `
+  <g stroke="${INK_HEX}" stroke-width="1.2" stroke-linejoin="round">
+    <path d="M44 78 L54 78 L66 306 L56 306 Z" fill="var(--bin-1)"/>
+    <path d="M246 78 L256 78 L244 306 L234 306 Z" fill="var(--bin-1)"/>
+    <path d="M42 81 L258 81 L257 95 Q241 100 226 94 Q203 101 178 95 Q150 102 124 95 Q99 101 76 94 Q59 100 43 95 Z" fill="var(--bin-liner)" stroke-width=".9"/>
+    <path d="M40 71 L260 71 L260 82 L40 82 Z" fill="var(--bin-1)"/>
+    <path d="M54 304 L246 304 L245 312 L55 312 Z" fill="var(--bin-1)"/>
+    <path d="M60 312 L240 312 L236 320 L64 320 Z" fill="var(--bin-2)"/>
+    <path d="M126 317 L174 317 L180 328 L120 328 Z" fill="var(--bin-3)"/>
+  </g>
+  <path d="M46 74.5 L254 74.5" stroke="#fff" stroke-opacity=".45" stroke-width="1"/>
+  <g stroke="${INK_HEX}" stroke-width=".6" stroke-opacity=".5">
+    <path d="M47 100 L53 92 M48 130 L55 121 M50 160 L56 151 M51 190 L58 181 M53 220 L59 211 M54 250 L61 241 M56 280 L62 271"/>
+    <path d="M247 100 L253 92 M246 130 L252 121 M244 160 L251 151 M243 190 L249 181 M241 220 L248 211 M240 250 L246 241 M238 280 L245 271"/>
+  </g>`;
+// Stacks n items from the floor up, left to right, each row a little
+// offset from the one under it, at the largest size that keeps the heap
+// inside the bin; past what the smallest size holds, it heaps over the
+// rim, narrowing as it climbs. Returns {s, spots: [{x, y, r}]} in viewBox
+// units, y the top of each item's square.
+function binLayout(entries){
+  const tryAt = s => {
+    const spots = [], rowH = s * 0.7;
+    let y = BIN.floor, row = 0, i = 0, cap = Infinity;
+    while (i < entries.length){
+      const [l, r] = binInner(Math.min(y - s * 0.5, BIN.floor));
+      let c = Math.max(1, Math.floor((r - l - s * 0.2) / (s * 0.78)));
+      if (y - s < BIN.rim) c = cap = Math.max(1, Math.min(cap, c) - 1);  // over the rim: a narrowing heap
+      const step = c > 1 ? (r - l - s) / (c - 1 + 0.5) : 0, off = row % 2 ? step * 0.5 : 0;
+      for (let k = 0; k < c && i < entries.length; k++, i++){
+        const rand = seededRand(entries[i].n * 7919 + 13);
+        spots.push({x: l + off + k * step + (rand() - 0.5) * s * 0.12, y: y - s + (rand() - 0.5) * s * 0.1, r: Math.round((rand() - 0.5) * 26)});
+      }
+      y -= rowH; row++;
+    }
+    return {s, spots, top: spots.length ? Math.min(...spots.map(p => p.y)) : BIN.floor};
+  };
+  for (let s = 64; s > 34; s -= 2){
+    const L = tryAt(s);
+    if (L.top >= BIN.rim - s * 0.25) return L;
+  }
+  return tryAt(34);
+}
+// What a tossed item was and when, in one line.
+function binNoteOf(e){
+  const f = food(e.rec);
+  const was = e.rec.frozen ? 'from the freezer' : e.left == null ? 'kept' : e.left < 0 ? Math.abs(e.left) + (e.left === -1 ? ' day' : ' days') + ' past date'
+    : e.left === 0 ? 'on its last day' : dayCount(e.left) + ' left';
+  return `${f.en} · tossed ${fmtDate(e.day)} · ${was} · ${Math.round(e.g)} g · $${e.usd.toFixed(2)}`;
+}
+function binMonths(){
+  const now = ymOf(today());
+  const first = [startedAt, ...tossLog.map(e => e.day)].filter(d => d != null).reduce((a, d) => Math.min(a, ymKey(ymOf(d))), ymKey(now));
+  return {first, now: ymKey(now)};
+}
+function renderBin(){
+  const {first, now} = binMonths();
+  const key = Math.max(first, Math.min(now, binMonth == null ? now : binMonth));
+  if (key === now) binMonth = null;
+  const ym = {y: Math.floor(key / 12), m: key % 12}, current = key === now;
+  const inMonth = tossLog.filter(e => ymKey(ymOf(e.day)) === key);
+  const tossed = inMonth.filter(e => e.t === 'toss').sort((a, b) => a.day - b.day || a.n - b.n);
+  const used = inMonth.filter(e => e.t === 'use');
+  const sum = (list, k) => list.reduce((a, e) => a + e[k], 0);
+  const name = MONTHS[ym.m] + (ym.y !== ymOf(today()).y ? ' ' + ym.y : '');
+  document.getElementById('binMonth').textContent = current ? 'This month' : name;
+  document.getElementById('binPrev').disabled = key <= first;
+  document.getElementById('binNext').disabled = current;
+  document.getElementById('binLineLabel').textContent = current ? 'This month' : name;
+  document.getElementById('wasteG').textContent = Math.round(sum(tossed, 'g')) + ' g';
+  document.getElementById('wasteUSD').textContent = '$' + sum(tossed, 'usd').toFixed(2);
+  document.getElementById('savedG').textContent = Math.round(sum(used, 'g')) + ' g';
+  document.getElementById('savedUSD').textContent = '$' + sum(used, 'usd').toFixed(2);
+  const earlier = document.getElementById('binEarlier');
+  earlier.hidden = !(logStart.wasteG > 0 || logStart.savedG > 0);
+  earlier.textContent = `Earlier, before the bin kept each item: ${Math.round(logStart.wasteG)} g · $${logStart.wasteUSD.toFixed(2)} thrown away · ${Math.round(logStart.savedG)} g rescued`;
+
+  const L = binLayout(tossed), top = Math.min(16, Math.floor(L.top - 8)), H = BIN.H - top;
+  const vb = `0 ${top} ${BIN.W} ${H}`;
+  const stage = document.getElementById('binStage');
+  stage.style.aspectRatio = `${BIN.W} / ${H}`;
+  const back = document.getElementById('binBack'), front = document.getElementById('binFront');
+  back.setAttribute('viewBox', vb); front.setAttribute('viewBox', vb);
+  if (!back.dataset.drawn){ back.innerHTML = binBack(); front.innerHTML = binFront(); back.dataset.drawn = '1'; }
+  const empty = document.getElementById('binEmpty');
+  empty.hidden = tossed.length > 0;
+  empty.textContent = current ? 'Nothing thrown away this month. What you toss lands here.' : `Nothing was thrown away in ${name}.`;
+  const pct = (v, of) => (v / of * 100).toFixed(3) + '%';
+  const px = Math.round(L.s * 1.3);
+  document.getElementById('binItems').innerHTML = tossed.map((e, i) => {
+    const p = L.spots[i], it = e.rec, cat = fridgeCatOf(it), f = food(it);
+    let svg = foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, e.frac), e.frac, cat.sag, cat.mold, cat.wrinkle, px, it.id, f.en, usedSomeOf(it), it.key);
+    if (it.frozen) svg = freezerBurnMarkup(svg, e.burn || 0, it.id);
+    return `<button type="button" class="bin-item" role="listitem" data-bin="${e.n}" aria-pressed="false" aria-label="${esc(binNoteOf(e))}"
+      style="left:${pct(p.x, BIN.W)};top:${pct(p.y - top, H)};width:${pct(L.s, BIN.W)};height:${pct(L.s, H)};--r:${p.r}deg;z-index:${i + 1}">${svg}</button>`;
+  }).join('');
+  const note = document.getElementById('binNote');
+  note.textContent = '';
+  document.querySelectorAll('#binItems .bin-item').forEach(b => b.onclick = () => {
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    document.querySelectorAll('#binItems .bin-item').forEach(x => x.setAttribute('aria-pressed', 'false'));
+    b.setAttribute('aria-pressed', String(on));
+    const e = tossed.find(x => x.n === +b.dataset.bin);
+    note.textContent = on && e ? binNoteOf(e) : '';
+  });
+  // A toss while the bin is on screen drops into it, one after another;
+  // reduced motion skips the fall.
+  const drops = binDrops; binDrops = [];
+  const r = stage.getBoundingClientRect();
+  if (!current || !drops.length || r.bottom <= 0 || r.top >= innerHeight || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  drops.forEach((n, k) => {
+    const b = document.querySelector(`#binItems [data-bin="${n}"]`);
+    if (!b) return;
+    const rot = b.style.getPropertyValue('--r');
+    const fall = b.offsetTop + b.offsetHeight + Math.max(40, r.top > 80 ? 80 : r.top);
+    b.animate([
+      {transform: `translateY(${-fall}px) rotate(0deg)`, offset: 0, easing: 'cubic-bezier(.45,0,.9,.6)'},
+      {transform: `translateY(0) rotate(${rot})`, offset: .82, easing: 'ease-out'},
+      {transform: `translateY(-5px) rotate(${rot})`, offset: .91, easing: 'ease-in'},
+      {transform: `translateY(0) rotate(${rot})`, offset: 1}
+    ], {duration: 620, delay: k * 160, fill: 'backwards'});
+  });
+}
+document.getElementById('binPrev').onclick = () => { const {first, now} = binMonths(); binMonth = Math.max(first, (binMonth == null ? now : binMonth) - 1); renderBin(); };
+document.getElementById('binNext').onclick = () => { const {now} = binMonths(); binMonth = Math.min(now, (binMonth == null ? now : binMonth) + 1); renderBin(); };
 
 function pos(d){ // sqrt scale: the near edge gets the room it deserves
   const c = Math.max(0, Math.min(HORIZON, d));
@@ -6230,7 +6450,7 @@ function buildDrawerItem(it, day){
   const svg = foodShapeMarkupLine(fridgeShapeOf(it), color, frac, cat.sag, cat.mold, cat.wrinkle, size, it.id, f.en, usedSomeOf(it), it.key);
   return `<div class="fridge-item">
     <button type="button" class="fridge-shape" data-fridge-item="${it.id}" aria-label="${f.en}, details" style="${shapeStyle}">${svg}</button>
-    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d gone</span>${fridgeActs(it, f)}</div>
+    <div class="fridge-label mono" style="color:${labelColor}">${f.en}<span class="fridge-days">${Math.abs(d)}d past</span>${fridgeActs(it, f)}</div>
   </div>`;
 }
 
@@ -6844,7 +7064,7 @@ function renderRealFridge(){
   cl.innerHTML = !gone.length ? 'Crisper — past date'
     : rfTossConfirm
       ? `<span>Toss ${gone.length} past date?</span> <button type="button" class="ghost" id="rfTossYes">Toss ${gone.length}</button> · <button type="button" class="ghost" id="rfTossNo">Cancel</button>`
-      : `<span>${gone.length} past date</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`;
+      : `<span>${gone.length} past date — check these</span> · <button type="button" class="ghost" id="rfTossAll">Toss all</button>`;
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = e => { e.stopPropagation(); fn(); }; };
   on('rfTossAll', () => { rfTossConfirm = true; renderRealFridge(); });
   on('rfTossNo', () => { rfTossConfirm = false; renderRealFridge(); });
@@ -6944,20 +7164,30 @@ function rfShowPopover(id, anchorEl, opts = {}){
   const thawBtn = it.frozen ? `${thawNote}
     <button type="button" class="ghost rf-pop-thaw">${takeOut ? 'Take out' : 'Thaw'}</button>${thawAsks ? `
     <label class="rf-pop-row rf-pop-thawask" hidden><span>No thawed figure — use by</span><input type="date" class="rf-pop-thawdate" min="${isoOfDay(day)}"></label>` : ''}` : '';
+  // Past date: check, not toss -- a date isn't a safety line (USDA FSIS,
+  // "Food Product Dating"; CLAUDE.md). "Still good?" leads and opens the
+  // Use by field; Toss stands beside it.
+  const check = d < 0 && !it.frozen && !keeps(it);
+  const checkRow = check ? `
+    <div class="rf-pop-check"><button type="button" class="ghost rf-pop-good">Still good?</button><button type="button" class="ghost rf-pop-toss">Toss</button></div>` : '';
+  const tl = rfTimeline(it, day);
   const pop = document.getElementById('rfPopover');
+  rfTlStop();
+  pop.classList.toggle('has-tl', !!tl);
   pop.innerHTML = `<button type="button" class="rf-pop-close" aria-label="Close">×</button>
-    <span class="rf-pop-name">${f.en}</span>
+    <span class="rf-pop-name">${f.en}</span>${checkRow}
     <label class="rf-pop-row"><span>Bought</span><input type="date" class="rf-pop-bought" value="${isoOfDay(it.bought)}" max="${isoOfDay(it.shelfFrom === 'date' && !it.ripening ? Math.min(day, expiryOf(it)) : day)}"></label>
     <div class="rf-pop-row"><span>Status</span><span class="rf-pop-status" style="color:${statusColor}">${statusName}</span></div>
     <div class="rf-pop-row"><span>Left</span><span>${leftLabel}</span></div>
     <div class="rf-pop-row"><span>Shelf life</span><span>${esc(shelfSourceOf(it))}</span></div>
     <div class="rf-pop-row"><span>Est. weight</span><span class="rf-pop-weight">${estWeightOf(it)}</span></div>
-    <label class="rf-pop-row"><span>${it.frozen ? 'Best by' : 'Use by'}</span><input type="date" class="rf-pop-date" value="${useBy == null ? '' : isoOfDay(useBy)}" min="${isoOfDay(it.clockFrom != null ? it.clockFrom : it.bought)}"></label>${it.ripening && !it.frozen ? `
+    <label class="rf-pop-row rf-pop-useby"${check ? ' hidden' : ''}><span>${it.frozen ? 'Best by' : 'Use by'}</span><input type="date" class="rf-pop-date" value="${useBy == null ? '' : isoOfDay(useBy)}" min="${isoOfDay(it.clockFrom != null ? it.clockFrom : it.bought)}"></label>${tl ? tl.html : ''}${it.ripening && !it.frozen ? `
     <button type="button" class="ghost rf-pop-ripe">It's ripe</button>` : ''}${freezeBtn}${thawBtn}
     <div class="rf-pop-acts">
       <button type="button" class="ghost rf-pop-used">Used</button>
       <button type="button" class="ghost rf-pop-some">Used some</button>
-      <button type="button" class="ghost rf-pop-tossed">Tossed</button>
+${check ? '' : `
+      <button type="button" class="ghost rf-pop-tossed">Tossed</button>`}
       <span class="spacer"></span>
       <button type="button" class="rf-pop-remove" title="Logged by mistake: take it out without counting it as waste">Remove</button>
     </div>`;
@@ -6980,7 +7210,18 @@ function rfShowPopover(id, anchorEl, opts = {}){
   if (thawAsks) pop.querySelector('.rf-pop-thawdate').onchange = e => { rfHidePopover(); thawItem(id, e.target.value, opts.undo ? rfUndoFor(id) : undefined); if (opts.undo) rfOpenDoorFor(id); };
   // the list's own Used/Tossed (useItem), not a copy
   pop.querySelector('.rf-pop-used').onclick = () => { rfHidePopover(); useItem(id, false); };
-  pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
+  if (!check) pop.querySelector('.rf-pop-tossed').onclick = () => { rfHidePopover(); useItem(id, true); };
+  if (check){
+    pop.querySelector('.rf-pop-toss').onclick = () => { rfHidePopover(); useItem(id, true); };
+    pop.querySelector('.rf-pop-good').onclick = e => {
+      e.stopPropagation();
+      const row = pop.querySelector('.rf-pop-useby'), input = row.querySelector('input');
+      row.hidden = false;
+      input.focus();
+      try { input.showPicker(); } catch (err) { /* not offered: the field is open and focused */ }
+    };
+  }
+  if (tl) tl.wire(pop);
   pop.querySelector('.rf-pop-some').onclick = () => { rfHidePopover(); useSome(id); };
   // a correction (logged by mistake), not waste: removeFridgeItem
   pop.querySelector('.rf-pop-remove').onclick = () => { rfHidePopover(); removeFridgeItem(id); };
@@ -6996,7 +7237,79 @@ function rfShowPopover(id, anchorEl, opts = {}){
   pop.style.top = Math.max(10, Math.min(top, window.innerHeight - popH - 10)) + 'px';
 }
 function rfHidePopover(){
+  rfTlStop();
   document.getElementById('rfPopover').hidden = true;
+}
+
+// The timeline in the popover: a slider from the purchase day to a little
+// past the use-by date, drawing the same item on that day, larger than on
+// the shelf, by the same decay (decayFraction) -- a preview only: it
+// never changes the item. Starts at today; Today and Use by are marked on
+// the track. Play runs it from the purchase day to the end, about half a
+// second a day (a long shelf life steps several days at a time, so a run
+// stays under about 20 s), then rests on today; under reduced motion
+// there's no Play. Nothing for frozen food, what keeps, or what's still
+// ripening: none of them has a use-by date to run toward.
+const RF_TL_PX = 150;
+let rfTlTimer = null;
+function rfTlStop(){ clearTimeout(rfTlTimer); rfTlTimer = null; }
+function rfTimeline(it, day){
+  if (it.frozen || keeps(it) || it.ripening) return null;
+  const start = it.bought, useBy = expiryOf(it);
+  if (!Number.isFinite(useBy)) return null;
+  const life = useBy - start;
+  const end = Math.max(useBy + Math.max(2, Math.min(14, Math.round(life * 0.3))), day);
+  const now = Math.max(start, Math.min(end, day));
+  const at = v => `calc(${((v - start) / (end - start)).toFixed(4)} * (100% - 14px) + 7px)`;
+  // each mark's word hangs centred under it, or off to one side near an
+  // end of the track or when the two marks are close
+  const pctOf = v => (v - start) / (end - start);
+  const close = Math.abs(day - useBy) / (end - start) < 0.3;
+  const hang = (v, other, tie) => pctOf(v) < 0.15 ? 'r' : pctOf(v) > 0.85 ? 'l' : close ? (v < other ? 'l' : v > other ? 'r' : tie) : '';
+  const art = v => {
+    const f = food(it), cat = fridgeCatOf(it), frac = decayFraction(it, v);
+    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, frac), frac, cat.sag, cat.mold, cat.wrinkle, RF_TL_PX, it.id, f.en, usedSomeOf(it), it.key);
+  };
+  const label = v => {
+    const n = v - start;
+    const base = v > useBy ? `${dayCount(v - useBy)} past date` : `Day ${n} of ${life}` + (v === useBy ? ' · use by' : n === 0 ? ' · bought' : '');
+    return base + (v === day ? ' · today' : '');
+  };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const html = `
+    <div class="rf-tl">
+      <div class="rf-tl-art" aria-hidden="true">${art(now)}</div>
+      <div class="rf-tl-head"><span class="rf-tl-label" aria-live="polite">${label(now)}</span>${reduced ? '' : '<button type="button" class="ghost rf-tl-play">Play</button>'}</div>
+      <div class="rf-tl-track">
+        <input type="range" class="rf-tl-range" min="${start}" max="${end}" step="1" value="${now}" aria-label="Preview ${esc(food(it).en)} on another day" aria-valuetext="${label(now)}">
+        <span class="rf-tl-mark" style="left:${at(useBy)}"><i></i><b class="${hang(useBy, day, 'l')}">Use by</b></span>
+        ${day <= end ? `<span class="rf-tl-mark today" style="left:${at(day)}"><i></i><b class="${hang(day, useBy, 'r')}">Today</b></span>` : ''}
+      </div>
+    </div>`;
+  const wire = pop => {
+    const range = pop.querySelector('.rf-tl-range'), lab = pop.querySelector('.rf-tl-label'), box = pop.querySelector('.rf-tl-art');
+    const play = pop.querySelector('.rf-tl-play');
+    const show = v => { range.value = v; box.innerHTML = art(v); lab.textContent = label(v); range.setAttribute('aria-valuetext', label(v)); };
+    range.oninput = () => { if (rfTlTimer){ rfTlStop(); play.textContent = 'Play'; } show(+range.value); };
+    if (!play) return;
+    const step = Math.max(1, Math.ceil((end - start) / 40));
+    const rest = () => { rfTlStop(); play.textContent = 'Play'; show(now); };
+    play.onclick = e => {
+      e.stopPropagation();
+      if (rfTlTimer){ rest(); return; }
+      play.textContent = 'Stop';
+      let v = start;
+      show(v);
+      const tick = () => {
+        if (v >= end){ rfTlTimer = setTimeout(rest, 500); return; }
+        v = Math.min(end, v + step);
+        show(v);
+        rfTlTimer = setTimeout(tick, 500);
+      };
+      rfTlTimer = setTimeout(tick, 500);
+    };
+  };
+  return {html, wire};
 }
 
 /* ---------- dragging between fridge and freezer ----------
@@ -8072,7 +8385,7 @@ function renderTonight(){
   }
   if (!fridge.some(it => left(it) >= 0)){
     renderMealEmpty(`<h2>Nothing here is still good.</h2>
-      <p class="meal-note">Everything in the fridge is already past date. Clear it out, then restock to start again.</p>`);
+      <p class="meal-note">Everything in the fridge is past date. Check what's still good and give it a new use-by date.</p>`);
     return;
   }
 
@@ -8197,6 +8510,30 @@ function renderRestock(){
 
 /* ---------- actions ---------- */
 
+// One entry in tossLog (see its declaration). A toss keeps the item as it
+// looked that moment: a copy of its record, its decay (decayFraction, 1
+// past date) and freezer burn, and its days left. Undo takes the same
+// entry back out (unlog).
+function logToss(it){
+  const day = today(), f = food(it), d = leftAt(it, day);
+  const e = {n: tossLog.reduce((m, x) => Math.max(m, x.n), 0) + 1, t: 'toss', day, g: f.g, usd: f.usd,
+    rec: structuredClone(it), frac: decayFraction(it, day), burn: it.frozen ? burnFraction(it, day) : 0,
+    left: Number.isFinite(d) ? d : null};
+  tossLog.push(e);
+  binDrops.push(e.n);
+  return e;
+}
+function logUse(g, usd){
+  const e = {n: tossLog.reduce((m, x) => Math.max(m, x.n), 0) + 1, t: 'use', day: today(), g, usd};
+  tossLog.push(e);
+  return e;
+}
+function unlog(e){
+  const i = tossLog.indexOf(e);
+  if (i >= 0) tossLog.splice(i, 1);
+  binDrops = binDrops.filter(n => n !== e.n);
+}
+
 // Used or Tossed, from the list or the fridge's popover -- both call this.
 // The toast offers Undo for a few seconds: it puts the same record back
 // where it was and takes the same amounts back off the ledger.
@@ -8205,17 +8542,21 @@ function useItem(id, tossed){
   if (i < 0) return;
   const it = fridge[i];
   const f = food(it);
+  let e;
   if (tossed){
     ledger.wasteG += f.g;
     ledger.wasteUSD += f.usd;
+    e = logToss(it);
   } else {
     ledger.savedG += f.g;
+    e = logUse(f.g, f.usd);
   }
   fridge.splice(i, 1);
   const msg = tossed ? 'Tossed ' + f.en + ' · $' + f.usd.toFixed(2) + ' gone' : 'Used ' + f.en;
   toast(msg, () => {
     if (fridge.some(x => x.id === it.id)) return;
     if (tossed){ ledger.wasteG -= f.g; ledger.wasteUSD -= f.usd; } else ledger.savedG -= f.g;
+    unlog(e);
     fridge.splice(Math.min(i, fridge.length), 0, it);
     render();
   });
@@ -8236,6 +8577,7 @@ function useSome(id){
   const it = fridge[i], before = structuredClone(it);
   const f = food(it), g = f.g / 2;
   ledger.savedG += g;
+  const logged = logUse(g, f.usd / 2);
   it.part = (it.part != null ? it.part : 1) / 2;
   it.crossed = false;
   const open = opensOf(it);
@@ -8267,6 +8609,7 @@ function useSome(id){
     if (j < 0) return;
     fridge[j] = before;
     ledger.savedG -= g;
+    unlog(logged);
     render();
   });
   render();
@@ -8319,16 +8662,17 @@ function removeStanding(key){
 // and what the bottom of the page counts up never disagree.
 function cook(r){
   const atRisk = atRiskMatches(r, today());
-  let g = 0;
+  let g = 0, usd = 0;
   r.matched.forEach(k => {
     const it = r.have[k];
     const i = fridge.findIndex(x => x.id === it.id);
     if (i >= 0){
-      if (atRisk.includes(k)) g += food(it).g;
+      if (atRisk.includes(k)){ g += food(it).g; usd += food(it).usd; }
       fridge.splice(i, 1);
     }
   });
   ledger.savedG += g;
+  if (g) logUse(g, usd);
   leftoversAsk = {dish: r.dish.name, key: leftoversOf(r.matched)};
   toast(Math.round(g) + ' g rescued');
   render();
@@ -8366,6 +8710,7 @@ function clearGone(){
     ledger.wasteG += f.g;
     ledger.wasteUSD += f.usd;
     usd += f.usd;
+    logToss(it);
   });
   fridge = fridge.filter(it => left(it) >= 0);
   toast('Tossed ' + gone.length + ' · $' + usd.toFixed(2) + ' gone');

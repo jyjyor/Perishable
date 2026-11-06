@@ -681,8 +681,13 @@ async function migrationScenario(browser) {
   const wasteG = await page.textContent('#wasteG');
   const savedG = await page.textContent('#savedG');
   console.log('current code ledger: wasteG =', wasteG.trim(), ', savedG =', savedG.trim());
-  if (parseInt(wasteG, 10) !== Math.round(parsed.ledger.wasteG)) throw new Error(`waste ledger lost in migration: expected ${Math.round(parsed.ledger.wasteG)}, got "${wasteG.trim()}"`);
-  if (parseInt(savedG, 10) !== Math.round(parsed.ledger.savedG)) throw new Error(`saved ledger lost in migration: expected ${Math.round(parsed.ledger.savedG)}, got "${savedG.trim()}"`);
+  // Saved before the bin kept each toss: the totals survive whole, as the
+  // plain "earlier" line; this month's bin starts empty (no invented items).
+  const earlier = await page.textContent('#binEarlier');
+  console.log('earlier line:', earlier.trim());
+  if (!earlier.includes(Math.round(parsed.ledger.wasteG) + ' g') || !earlier.includes(Math.round(parsed.ledger.savedG) + ' g rescued')) throw new Error(`ledger lost in migration: "${earlier.trim()}" vs ${JSON.stringify(parsed.ledger)}`);
+  expectEqual('ledger totals kept', await page.evaluate(() => [Math.round(ledger.wasteG), Math.round(ledger.savedG)]), [Math.round(parsed.ledger.wasteG), Math.round(parsed.ledger.savedG)]);
+  expectEqual('no invented bin items', [await page.$$eval('.bin-item', els => els.length), wasteG.trim()], [0, '0 g']);
 
   const restockChips = await page.$$eval('#restock .chip, #restock button', els => els.length);
   console.log('restock chips rendered:', restockChips);
@@ -1162,7 +1167,7 @@ function readReview(page, box) {
 }
 // Every item as the line-art row shows it -- the row does the list's job
 // now -- with days left written out the way the old list wrote them
-// ("10d" -> "10 days", "1d" -> "1 day", "3d gone" -> "3d past") so the
+// ("10d" -> "10 days", "1d" -> "1 day", "3d past" stays "3d past") so the
 // expectations read as before; weight is the popover's Est. weight.
 // The line-art row sits closed under "All items (N)"; it's laid out when
 // it opens, so open it (and let it draw) before reading or clicking in it.
@@ -1176,7 +1181,7 @@ async function readInventory(page) {
   return page.$$eval('#fridgeShelf .fridge-label, #fridgeDrawerItems .fridge-label', els => els.map(e => {
     const name = e.childNodes[0].textContent.trim();
     const days = e.querySelector('.fridge-days').textContent.trim();
-    const m = days.match(/^(\d+)d( gone)?$/);
+    const m = days.match(/^(\d+)d( past)?$/);
     const left = !m ? days : m[2] ? m[1] + 'd past' : m[1] + (m[1] === '1' ? ' day' : ' days');
     const it = fridge.find(i => food(i).en === name);
     return { name, left, g: it ? estWeightOf(it) : '' };
@@ -1537,7 +1542,7 @@ async function mixedFridgeScenario(browser) {
     await page.mouse.click(2, 2);
     const crisper = (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
     const goneN = await page.evaluate(() => fridge.filter(it => left(it) < 0).length);
-    expectEqual('drawer front', crisper, `${goneN} past date · Toss all`);
+    expectEqual('drawer front', crisper, `${goneN} past date — check these · Toss all`);
     const onHandle = await page.evaluate(() => {
       const a = document.getElementById('rfCrisperLabel').getBoundingClientRect();
       const b = document.querySelector('#rfCrisperFrontSvg rect.b3').getBoundingClientRect();
@@ -1819,7 +1824,7 @@ async function phoneDataScenario(browser) {
   await openRow(page);
   const row = await page.$$eval('#allItems [data-fridge-item]', bs => bs.map(b => {
     const days = b.closest('.fridge-item').querySelector('.fridge-days').textContent.trim();
-    const m = days.match(/^(\d+)d( gone)?$/);
+    const m = days.match(/^(\d+)d( past)?$/);
     return [+b.dataset.fridgeItem, days === 'today' ? 0 : m ? (m[2] ? -m[1] : +m[1]) : days];
   }));
   expectEqual('every item in the row', row.map(r => r[0]).sort((a, b) => a - b), ids);
@@ -1943,22 +1948,23 @@ async function goneTossScenario(browser) {
   await typeEntry(page, 'spinach 10d, chicken 12d, tofu');
   if (await previewOpen(page)) await answerPreview(page);
   await page.waitForTimeout(900);
-  expectEqual('drawer front', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date · Toss all');
+  expectEqual('drawer front', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date — check these · Toss all');
   const spinach = await page.evaluate(() => fridge.find(i => i.key === 'spinach').id);
   await page.$eval(`[data-rf-item="${spinach}"]`, el => { el.scrollIntoView({block: 'center'}); el.click(); });
-  await page.click('#rfPopover .rf-pop-tossed');
+  // past date: the popover leads with Still good? and Toss beside it
+  await page.click('#rfPopover .rf-pop-toss');
   await page.waitForTimeout(100);
   const s = await page.evaluate(() => ({ n: fridge.length, waste: ledger.wasteG }));
   expectEqual('spinach tossed', s.n, 2);
   if (!(s.waste > 0)) throw new Error('a toss from the popover should count as waste');
-  expectEqual('drawer front after', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '1 past date · Toss all');
+  expectEqual('drawer front after', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '1 past date — check these · Toss all');
   const front = async () => (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim();
   // Toss all asks on the drawer front; Cancel goes back, nothing tossed.
   await page.click('#rfTossAll');
   expectEqual('asks first', await front(), 'Toss 1 past date? Toss 1 · Cancel');
   expectEqual('nothing tossed while asking', await page.evaluate(() => [fridge.length, ledger.wasteG]), [2, s.waste]);
   await page.click('#rfTossNo');
-  expectEqual('cancel', await front(), '1 past date · Toss all');
+  expectEqual('cancel', await front(), '1 past date — check these · Toss all');
   expectEqual('nothing tossed on cancel', await page.evaluate(() => fridge.length), 2);
   await page.click('#rfTossAll');
   await page.click('#rfTossYes');
@@ -3245,7 +3251,7 @@ async function lastDayScenario(browser) {
     expectEqual(`${tag}: days left`, st.left, [0, 0, -5, -2]);
     expectEqual(`${tag}: last day on the eye-level shelf, past date in the crisper`, st.place, ['rfShelfEye', 'rfShelfEye', 'rfCrisperItems', 'rfCrisperItems']);
     expectEqual(`${tag}: the crisper holds only past date`, st.crisper, ['Mushrooms', 'Spinach']);
-    expectEqual(`${tag}: drawer front`, st.front, '2 past date · Toss all');
+    expectEqual(`${tag}: drawer front`, st.front, '2 past date — check these · Toss all');
     if (!/^2 things are past date/.test(st.headline)) throw new Error(`${tag}: headline should count 2 past date, got "${st.headline}"`);
     if (!['Watermelon', 'Canned beer'].includes(st.centre)) throw new Error(`${tag}: a last-day item should be front and center, got ${st.centre}`);
     expectEqual(`${tag}: last day short of gone, past date gone`, st.decay, [0.75, 0.75, 1]);
@@ -4599,6 +4605,267 @@ async function mealRenderScenario(browser) {
   }
 }
 
+// ---------- the bin, check-don't-toss, the timeline ----------
+
+// A page with a saved state built from today's day number (T).
+async function seededPage(browser, build, opts = {}) {
+  const ctx = await browser.newContext(opts);
+  if (opts.at) await ctx.clock.setFixedTime(opts.at);
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(([src, extra]) => { const T = today(); localStorage.clear();
+    localStorage.setItem('perishable.v1', JSON.stringify({schema: 3, fridge: (0, eval)(src)(T), standing: {}, ledger: {wasteG: 0, wasteUSD: 0, savedG: 0}, uid: 50, startedAt: T - 60, lastVisit: T, ...extra})); }, [build.fridge.toString(), build.extra]);
+  await page.reload();
+  await page.waitForSelector('#headline');
+  await page.waitForTimeout(200);
+  return { page, errors };
+}
+const st = (fridge, extra = {}) => ({fridge, extra});
+
+// The bin: what was tossed this month, each item drawn as it was when
+// tossed (its record and decay that moment), in the order tossed; Used
+// never goes in; one line of this month's amounts; tapping says what and
+// when; Undo takes it back out.
+async function binScenario(browser) {
+  console.log('\n--- BIN: this month\'s tosses, as they were, in order ---');
+  const { page, errors } = await seededPage(browser, st(T => [
+    {id: 1, key: 'spinach', bought: T - 9, custom: null},
+    {id: 2, key: 'strawberry', bought: T, custom: null},
+    {id: 3, key: 'milk', bought: T - 1, custom: null, shelf: 9, shelfFrom: 'date'},
+    {id: 4, key: 'apple', bought: T - 2, custom: null}]));
+  expectEqual('empty to start', [await page.$$eval('.bin-item', e => e.length), await page.isVisible('#binEmpty')], [0, true]);
+  const toss = async id => { await page.evaluate(id => rfShowPopover(id, document.querySelector(`[data-rf-item="${id}"]`)), id); await page.click(`#rfPopover ${await page.evaluate(id => left(fridge.find(i => i.id === id)) < 0, id) ? '.rf-pop-toss' : '.rf-pop-tossed'}`); await page.waitForTimeout(80); };
+  await toss(2);
+  await toss(1);
+  await page.evaluate(() => rfShowPopover(4, document.querySelector('[data-rf-item="4"]')));
+  await page.click('#rfPopover .rf-pop-used');
+  await page.waitForTimeout(80);
+  const log = await page.evaluate(() => tossLog.map(e => [e.t, e.rec ? e.rec.key : null, e.frac]));
+  console.log('log:', JSON.stringify(log));
+  expectEqual('log: strawberries fresh, spinach past date (1), apple used', log.map(l => [l[0], l[1]]), [['toss', 'strawberry'], ['toss', 'spinach'], ['use', null]]);
+  if (!(log[0][2] === 0 && log[1][2] === 1)) throw new Error('each toss keeps its decay that moment: ' + JSON.stringify(log));
+  const items = await page.$$eval('.bin-item', els => els.map(e => e.getAttribute('aria-label')));
+  expectEqual('two in the bin, in order, Used not in it', items.map(l => l.split(' · ')[0]), ['Strawberries', 'Spinach']);
+  // the drawing is the item at its toss decay: the same markup as the fridge at that fraction
+  const same = await page.evaluate(() => {
+    const e = tossLog[1], it = e.rec, cat = fridgeCatOf(it);
+    const want = foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, e.frac), e.frac, cat.sag, cat.mold, cat.wrinkle, 10, it.id, 'x').match(/fill="(#[0-9a-f]{6})"/)[1];
+    return [want, document.querySelectorAll('.bin-item')[1].innerHTML.includes(`fill="${want}"`)];
+  });
+  if (!same[1]) throw new Error('spinach in the bin should be drawn at its toss decay ' + same[0]);
+  const line = (await page.textContent('#binLine')).replace(/\s+/g, ' ').trim();
+  const sums = await page.evaluate(() => [Math.round(FOODS.strawberry.g + FOODS.spinach.g), (FOODS.strawberry.usd + FOODS.spinach.usd).toFixed(2), Math.round(FOODS.apple.g), FOODS.apple.usd.toFixed(2)]);
+  expectEqual('this month line', line, `This month: ${sums[0]} g · $${sums[1]} thrown away · ${sums[2]} g · $${sums[3]} rescued estimated`);
+  await page.click('.bin-item >> nth=1');
+  const note = await page.textContent('#binNote');
+  console.log('tap:', note);
+  if (!/^Spinach · tossed \w{3}, \d\d\/\d\d · 2 days past date · \d+ g · \$\d+\.\d\d$/.test(note)) throw new Error('tap should say what and when: ' + note);
+  // Undo takes the toss back out of the bin and the log
+  await toss(3);
+  expectEqual('three in', await page.$$eval('.bin-item', e => e.length), 3);
+  await page.click('.toast-undo');
+  await page.waitForTimeout(80);
+  expectEqual('undo: out of the bin and the log', [await page.$$eval('.bin-item', e => e.length), await page.evaluate(() => tossLog.length)], [2, 3]);
+  if (await page.$eval('#binEarlier', e => !e.hidden)) throw new Error('a new kitchen has no "earlier" line');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Each month starts with an empty bin; the arrows look back; nothing
+// leaves the log.
+async function binMonthsScenario(browser) {
+  console.log('\n--- BIN: a new month starts empty, earlier months stay ---');
+  const now = new Date(); now.setHours(18, 0, 0, 0);
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 2, 18);
+  const a = await seededPage(browser, st(T => [{id: 1, key: 'spinach', bought: T - 9, custom: null}]));
+  await a.page.evaluate(() => rfShowPopover(1, document.querySelector('[data-rf-item="1"]')));
+  await a.page.click('#rfPopover .rf-pop-toss');
+  await a.page.waitForTimeout(80);
+  const saved = await a.page.evaluate(() => localStorage.getItem('perishable.v1'));
+  await a.page.context().close();
+  const ctx = await browser.newContext();
+  await ctx.clock.setFixedTime(next);
+  const page = await ctx.newPage();
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto(`http://localhost:${PORT}/index.html`);
+  await page.evaluate(s => localStorage.setItem('perishable.v1', s), saved);
+  await page.reload(); await page.waitForSelector('#headline');
+  expectEqual('new month: empty bin, 0 g', [await page.$$eval('.bin-item', e => e.length), (await page.textContent('#wasteG')).trim(), await page.textContent('#binMonth')], [0, '0 g', 'This month']);
+  expectEqual('new month says so', await page.textContent('#binEmpty'), 'Nothing thrown away this month. What you toss lands here.');
+  if (await page.$eval('#binNext', b => !b.disabled)) throw new Error('nothing after this month');
+  await page.click('#binPrev');
+  const month = now.toLocaleDateString('en-US', {month: 'long'});
+  expectEqual('last month', [await page.textContent('#binMonth'), await page.$$eval('.bin-item', e => e.length), await page.textContent('#binLineLabel')], [month, 1, month]);
+  await page.click('#binNext');
+  expectEqual('back to this month', await page.textContent('#binMonth'), 'This month');
+  expectEqual('nothing deleted', await page.evaluate(() => [tossLog.length, ledger.wasteG > 0]), [1, true]);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await ctx.close();
+}
+
+// Saved before the log: no items, dates or decay to draw, so the old
+// totals are a plain "earlier" line and the bin starts empty.
+async function binEarlierScenario(browser) {
+  console.log('\n--- BIN: tosses from before the log are a plain earlier total ---');
+  const { page, errors } = await seededPage(browser, st(() => [], {ledger: {wasteG: 840.4, wasteUSD: 9.2, savedG: 1200}}));
+  expectEqual('earlier line', await page.textContent('#binEarlier'), 'Earlier, before the bin kept each item: 840 g · $9.20 thrown away · 1200 g rescued');
+  expectEqual('no invented items', [await page.$$eval('.bin-item', e => e.length), (await page.textContent('#wasteG')).trim()], [0, '0 g']);
+  await page.evaluate(() => saveState());
+  expectEqual('start of the log saved', await page.evaluate(() => JSON.parse(localStorage.getItem('perishable.v1')).logStart), {wasteG: 840.4, wasteUSD: 9.2, savedG: 1200});
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// A toss while the bin is on screen drops the item into it; reduced
+// motion skips the fall; off screen there is none.
+async function binDropScenario(browser) {
+  console.log('\n--- BIN: a toss drops in while the bin is on screen ---');
+  for (const reduced of [false, true]) {
+    const { page, errors } = await seededPage(browser, st(T => [{id: 1, key: 'spinach', bought: T - 2, custom: null}, {id: 2, key: 'milk', bought: T - 1, custom: null, shelf: 9, shelfFrom: 'date'}]),
+      {viewport: {width: 1280, height: 800}, reducedMotion: reduced ? 'reduce' : 'no-preference'});
+    // off screen first: no fall
+    await page.evaluate(() => useItem(2, true));
+    expectEqual('off screen: no fall', await page.$$eval('.bin-item', els => els.map(e => e.getAnimations().length)), [0]);
+    await page.click('#allItems summary');
+    await page.evaluate(() => document.getElementById('bin').scrollIntoView({block: 'end'}));
+    await page.waitForTimeout(100);
+    await page.evaluate(() => useItem(1, true));
+    const anims = await page.$$eval('.bin-item', els => els.map(e => e.getAnimations().length));
+    console.log(reduced ? 'reduced motion:' : 'motion:', JSON.stringify(anims));
+    expectEqual(reduced ? 'reduced motion: no fall' : 'the new one falls in', anims, reduced ? [0, 0] : [0, 1]);
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
+  }
+}
+
+// Check, don't toss: past date is not a safety line (USDA FSIS, "Food
+// Product Dating"). Every past-date message says check; a past-date
+// popover leads with Still good?, which opens Use by, and Toss beside it.
+async function checkNotTossScenario(browser) {
+  console.log('\n--- CHECK, DON\'T TOSS: past-date wording and Still good? ---');
+  const { page, errors } = await seededPage(browser, st(T => [{id: 1, key: 'spinach', bought: T - 9, custom: null}, {id: 2, key: 'strawberry', bought: T - 1, custom: null}, {id: 3, key: 'chicken', bought: T - 9, custom: null}]));
+  expectEqual('subline', await page.textContent('#subline'), '1 more goes within 72 hours. Check the past-date ones first.');
+  await page.waitForTimeout(800);
+  expectEqual('crisper', (await page.textContent('#rfCrisperLabel')).replace(/\s+/g, ' ').trim(), '2 past date — check these · Toss all');
+  await page.click('#allItems summary');
+  expectEqual('drawer', await page.textContent('.fridge-drawer-label'), 'Past date — check these');
+  const all = await page.evaluate(() => document.body.innerText);
+  for (const old of ['Clear the dead', 'toss to clear', 'Clear them out', 'Clear it out', 'd gone']) if (all.includes(old)) throw new Error('old wording still on the page: ' + old);
+  await page.evaluate(() => rfShowPopover(1, document.querySelector('[data-rf-item="1"]')));
+  expectEqual('leads with Still good? and Toss', (await popButtons(page)).slice(1, 3), ['Still good?', 'Toss']);
+  if (await page.isVisible('#rfPopover .rf-pop-date')) throw new Error('Use by waits for Still good?');
+  if (await page.$('#rfPopover .rf-pop-tossed')) throw new Error('one toss control, beside Still good?');
+  await page.click('#rfPopover .rf-pop-good');
+  expectEqual('Still good? opens Use by, focused', await page.evaluate(() => [!document.querySelector('.rf-pop-useby').hidden, document.activeElement.className]), [true, 'rf-pop-date']);
+  const iso = await page.evaluate(() => isoOfDay(today() + 2));
+  await page.fill('#rfPopover .rf-pop-date', iso);
+  await page.$eval('#rfPopover .rf-pop-date', el => el.dispatchEvent(new Event('change')));
+  await page.waitForTimeout(80);
+  expectEqual('checked: 2 days left now, nothing wasted', await page.evaluate(() => [left(fridge.find(i => i.id === 1)), ledger.wasteG, tossLog.length]), [2, 0, 0]);
+  // a fresh item has no Still good?, and Tossed where it was
+  await page.evaluate(() => rfShowPopover(2, document.querySelector('[data-rf-item="2"]')));
+  if (await page.$('#rfPopover .rf-pop-good') || !(await page.$('#rfPopover .rf-pop-tossed'))) throw new Error('only a past-date item asks Still good?');
+  await page.evaluate(() => rfShowPopover(3, document.querySelector('[data-rf-item="3"]')));
+  await page.click('#rfPopover .rf-pop-toss');
+  expectEqual('Toss beside it tosses', await page.evaluate(() => [fridge.length, tossLog[0].rec.key]), [2, 'chicken']);
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// The timeline: purchase day to a little past use by, starting today;
+// the same item drawn larger on that day by decayFraction; a preview only.
+async function timelineScenario(browser) {
+  console.log('\n--- TIMELINE: the item on any day of its life, a preview only ---');
+  const { page, errors } = await seededPage(browser, st(T => [
+    {id: 1, key: 'milk', bought: T - 2, custom: null, shelf: 7, shelfFrom: 'date'},
+    {id: 2, key: 'vodka', bought: T - 2, custom: null},
+    {id: 3, key: 'chicken', bought: T, custom: null, frozen: true, clockFrom: T},
+    {id: 4, key: 'banana', bought: T, custom: null, ripening: true}]));
+  const before = await page.evaluate(() => JSON.stringify(fridge));
+  await page.evaluate(() => rfShowPopover(1, document.querySelector('[data-rf-item="1"]')));
+  const r = await page.$eval('.rf-tl-range', el => [+el.min, +el.max, +el.value]);
+  const T = await page.evaluate(() => today());
+  expectEqual('purchase day to a little past use by, at today', [r[0] - T, r[1] - T, r[2] - T], [-2, 5 + 2, 0]);
+  expectEqual('label today', await page.textContent('.rf-tl-label'), 'Day 2 of 7 · today');
+  expectEqual('marks', await page.$$eval('.rf-tl-mark b', bs => bs.map(b => b.textContent)), ['Use by', 'Today']);
+  if (await page.$eval('.rf-tl-art svg', s => +s.getAttribute('width')) <= 100) throw new Error('drawn larger than on the shelf');
+  const at = async v => { await page.$eval('.rf-tl-range', (el, v) => { el.value = v; el.dispatchEvent(new Event('input')); }, v); return [await page.textContent('.rf-tl-label'), await page.$eval('.rf-tl-art', a => a.innerHTML)]; };
+  const fill = html => (html.match(/<path d="[^"]+" fill="([^"]+)"/) || [])[1];
+  const [l3, a3] = await at(T + 1), [l7, a7] = await at(T + 5), [l9, a9] = await at(T + 7);
+  console.log(l3, '|', l7, '|', l9);
+  expectEqual('labels', [l3, l7, l9], ['Day 3 of 7', 'Day 7 of 7 · use by', '2 days past date']);
+  const want = await page.evaluate(() => { const it = fridge[0], v = today() + 7, cat = fridgeCatOf(it), frac = decayFraction(it, v); const svg = foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, frac), frac, cat.sag, cat.mold, cat.wrinkle, RF_TL_PX, it.id, 'Milk', null, it.key); const d = document.createElement('div'); d.innerHTML = svg; return d.innerHTML; });
+  const norm = h => h.replace(/\s+/g, ' ').replace(/(id="|url\(#|href="#)[a-z]+\d+/g, '$1X').trim();
+  if (norm(a9) !== norm(want)) { throw new Error('the timeline should draw the item by the same decay function'); }
+  if (a3 === a9) throw new Error('the drawing should change across the timeline');
+  expectEqual('a preview never changes the item', await page.evaluate(() => JSON.stringify(fridge)), before);
+  // Play: day by day, Stop while it runs, then rests on today
+  await page.click('.rf-tl-play');
+  expectEqual('starts at the purchase day', [await page.textContent('.rf-tl-play'), await page.$eval('.rf-tl-range', el => +el.value - today())], ['Stop', -2]);
+  await page.waitForTimeout(1150);
+  expectEqual('about half a second a day', await page.$eval('.rf-tl-range', el => +el.value - today()), 0);
+  await page.waitForTimeout(4500);
+  expectEqual('rests on today', [await page.textContent('.rf-tl-play'), await page.textContent('.rf-tl-label')], ['Play', 'Day 2 of 7 · today']);
+  expectEqual('still unchanged', await page.evaluate(() => JSON.stringify(fridge)), before);
+  for (const id of [2, 3, 4]) {
+    await page.evaluate(id => rfShowPopover(id, document.querySelector(`[data-rf-item="${id}"]`) || document.body), id);
+    if (await page.$('#rfPopover .rf-tl')) throw new Error(`no timeline for ${id} (keeps, frozen, ripening)`);
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(() => rfShowPopover(1, document.querySelector('[data-rf-item="1"]')));
+  if (!(await page.$('.rf-tl-range')) || await page.$('.rf-tl-play')) throw new Error('reduced motion: the slider, no Play');
+  if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+  await page.context().close();
+}
+
+// Screenshots: the bin with a month of tosses, an empty new month, a
+// past-date popover, the timeline at three positions; desktop and phone.
+async function binRenderScenario(browser) {
+  console.log('\n--- RENDER: bin, empty month, past-date popover, timeline ---');
+  for (const [tag, vp] of [['desktop', {width: 1280, height: 800}], ['phone', {width: 390, height: 844}]]) {
+    const { page, errors } = await seededPage(browser, st(T => [
+      {id: 1, key: 'spinach', bought: T - 9, custom: null},
+      {id: 2, key: 'milk', bought: T - 2, custom: null, shelf: 7, shelfFrom: 'date'},
+      {id: 3, key: 'strawberry', bought: T - 1, custom: null}]), {viewport: vp, deviceScaleFactor: 2});
+    // a month of tosses through the real logToss, one every day or so this month
+    const n = await page.evaluate(() => {
+      const t = today(), first = t - (new Date(t * 86400000).getUTCDate() - 1);
+      const keys = ['strawberry', 'leaflettuce', 'milk', 'banana', 'tomato', 'chicken', 'avocado', 'yogurt', 'spinach', 'apple', 'mushroom', 'cucumber', 'lemon', 'hardcheese', 'egg', 'carrot', 'broccoli', 'grapes'];
+      const real = window.today;
+      keys.forEach((k, i) => {
+        const d = first + Math.floor(i * (t - first + 1) / keys.length);
+        const it = {id: 100 + i, key: k, bought: d - [12, 4, 1, 6, 2][i % 5], custom: null};
+        window.today = () => d;
+        try { ledger.wasteG += food(it).g; ledger.wasteUSD += food(it).usd; logToss(it); } finally { window.today = real; }
+      });
+      window.today = real;
+      logUse(640, 7.4); binDrops = []; render();
+      return keys.length;
+    });
+    await page.locator('#bin').scrollIntoViewIfNeeded();
+    await page.click('.bin-item >> nth=5');
+    await page.locator('#bin').screenshot({path: path.join(OUT, `bin-month-${tag}.png`)});
+    expectEqual('a month in the bin', await page.$$eval('.bin-item', e => e.length), n);
+    await page.evaluate(() => { const real = window.today; window.today = () => real() + 40; render(); });
+    await page.locator('#bin').screenshot({path: path.join(OUT, `bin-empty-${tag}.png`)});
+    expectEqual('a new month is empty', await page.$$eval('.bin-item', e => e.length), 0);
+    await page.reload(); await page.waitForSelector('#headline'); await page.waitForTimeout(1500);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => rfShowPopover(1, document.querySelector('[data-rf-item="1"]')));
+    await page.screenshot({path: path.join(OUT, `pop-pastdate-${tag}.png`)});
+    await page.evaluate(() => rfShowPopover(2, document.querySelector('[data-rf-item="2"]')));
+    for (const [name, v] of [['start', 'min'], ['today', null], ['end', 'max']]) {
+      await page.$eval('.rf-tl-range', (el, v) => { el.value = v ? el[v] : today(); el.dispatchEvent(new Event('input')); }, v);
+      await page.locator('#rfPopover').screenshot({path: path.join(OUT, `timeline-${name}-${tag}.png`)});
+    }
+    if (errors.length) throw new Error(`console errors: ${JSON.stringify(errors)}`);
+    await page.context().close();
+  }
+  console.log('screenshots: bin-month, bin-empty, pop-pastdate, timeline-start/today/end, desktop and phone');
+}
+
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
@@ -4710,6 +4977,13 @@ async function mealRenderScenario(browser) {
     () => mealNoReuseScenario(browser),
     () => mealUrgentFirstScenario(browser),
     () => mealRenderScenario(browser),
+    () => binScenario(browser),
+    () => binMonthsScenario(browser),
+    () => binEarlierScenario(browser),
+    () => binDropScenario(browser),
+    () => checkNotTossScenario(browser),
+    () => timelineScenario(browser),
+    () => binRenderScenario(browser),
   ];
   let passed = 0;
   const failed = [];
