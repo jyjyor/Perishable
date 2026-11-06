@@ -115,6 +115,20 @@ consumer food app.
   future or after Use by. Editing either date is a correction: it never
   touches the waste ledger or the restock count. Nothing counts as waste unless the person tosses
   it: a past-date item stays in the drawer until they act on it.
+  Check, not toss. USDA FSIS "Food Product Dating": except for infant
+  formula, product dates are not an indicator of safety, and food should
+  still be safe if handled properly until spoilage is evident. So the
+  page never tells the person to throw past-date food away; every
+  past-date message says check: the headline's subline ("Check the
+  past-date ones first"), the crisper's drawer front ("N past date —
+  check these"), the line-art row's drawer ("Past date —
+  check these", "3d past" under each), the Kitchen's all-past-date note.
+  A past-date item's popover leads with "Still good?", which opens its
+  Use by field (hidden until then) to give it a new date, with Toss
+  beside it (the popover's Tossed is not repeated below). There is no
+  Toss all: past-date items are tossed one at a time from their own
+  popover, after "Still good?", so nothing goes unchecked. Frozen food is
+  never past date (rule 7) and never asks.
   6. Matches: the same food, or the same species under a generic
      FoodKeeper entry. A different species or variety is not a match.
   7. The freezer. Freezer value: DOP_Freeze, else Freeze, upper end, same
@@ -166,8 +180,8 @@ consumer food app.
      - Frozen food never spoils. USDA FSIS "Freezing and Food Safety":
        food kept at 0 °F is always safe, freezer storage times are for
        quality only, and freezer burn doesn't make food unsafe. So a
-       frozen item never becomes past date and never goes to the crisper,
-       Toss all or the gone count. When its freezer time runs out the
+       frozen item never becomes past date and never goes to the crisper
+       or the gone count. When its freezer time runs out the
        popover reads "Best quality passed" (its date is "Best by", not
        "Use by") and the freezer burn is at its heaviest; it stays in the
        freezer until the person thaws, uses or tosses it.
@@ -275,7 +289,10 @@ the same terms: a pale cold stone top, a bleached cutting board and a
 grey glazed bowl, a few flat tones scoped to .kc-unit. The grocery bag
 is the fourth: a muted kraft front, side and mouth (--bag-1, --bag-2,
 --bag-3, --bag-in) and an off-white thermal receipt (--receipt), scoped
-to .bag; the kraft never leaves the bag.
+to .bag; the kraft never leaves the bag. The kitchen bin is the fifth: a
+cold pale enamel body, rim and foot, a darker pedal, its inside wall,
+and a dark grey liner folded over the rim (--bin-1, --bin-2, --bin-3,
+--bin-in, --bin-liner), scoped to .bin.
 
 Food bodies are line-drawn, not flat fills: a thin ink outline over the
 natural-tone wash, identity from a few interior lines (mushroom has a
@@ -389,7 +406,7 @@ The page is three parts, in this order, about three times as far apart
 as anything within one, with rules only between parts: Fridge / Kitchen
 (the tabs are its title; the grocery bag is inside the Fridge panel;
 All items under the swipe area); What's turning (the headline, its subline, and
-the decay line under its own small title); and So far (the ledger). All
+the decay line under its own small title); and So far (the bin). All
 items, What's turning and So far are full width, below and outside the
 swipe area. There is no voice entry. Both come from an Adobe Fonts web project tied to a
 Creative Cloud subscription (use.typekit.net/han2bam.css), not a public
@@ -427,9 +444,34 @@ window, never scrollIntoView, which would scroll the area itself.
 
 Every action on the page is a physical object drawn in the fridge's
 line-and-wash: the fridge is for looking, a paper grocery bag is for
-putting things away, a plate (to come) for using things up, a bin (to
-come) for what's thrown away. Everything drawn is real data; no
-decorative props.
+putting things away, a plate (to come) for using things up, a bin for
+what's thrown away. Everything drawn is real data; no decorative props.
+
+So far is the bin: a kitchen pedal bin in the line-and-wash, drawn cut
+away so its contents show (wall sections, rim, liner over the rim, foot
+and pedal over the heap; the inside wall and the open lid behind),
+holding what was tossed this month. Each item is drawn from the record
+as it was when tossed, at the decay it had that moment (decayFraction, 1
+past date; freezer burn if frozen), through the same food drawing the
+fridge uses, stacked from the floor up in the order tossed, a little
+turned, at the largest size that keeps the heap inside; a month with
+more than the smallest size holds heaps over the rim. Used never goes
+in. Tapping an item says what it was and when, under the bin ("Spinach ·
+tossed Mon, 11/02 · 2 days past date · 200 g · $2.50"). Under that one
+small line: this month's grams and dollars thrown away and rescued,
+estimated (rescued is Used, Used some's half and Cook this's at-risk
+ingredients). ‹ › look back at earlier months, back to the kitchen's
+first; every month starts with an empty bin, and nothing is deleted.
+"Day N of this kitchen" sits beside the month. The record is tossLog
+(saved with the state): one entry per Used or Tossed -- {n, t, day, g,
+usd}, and for a toss rec (a copy of the item record), frac, burn and
+left. The ledger's running totals stay as they were. Before the log
+there was no record of what was tossed or when, so state saved before it
+keeps its totals as logStart, shown as one plain line ("Earlier, before
+the bin kept each item: 840 g · $9.20 thrown away · 1200 g rescued");
+older items are never invented. A toss while the bin is on screen (this
+month) drops into it, 620 ms, one after another 160 ms apart for Toss
+all; reduced motion skips the fall. Undo takes the entry back out.
 
 The Fridge panel, on desktop, is the fridge (its column exactly the unit
 plus the open door's room) and, beside the open door, the grocery bag's
@@ -571,8 +613,8 @@ fridge. More than three in the bowl (two on a phone) heap
 in two rows, drawn larger on a phone. On a phone the peek beside the
 fridge is the counter's edge: the kitchen's text is hidden (opacity)
 until its panel is active. Past
-date, they go to the crisper with everything else past date, so Toss all
-stays one place. Counter food is never out of the count: the headline,
+date, they go to the crisper with everything else past date, the one
+place past-date food waits to be checked. Counter food is never out of the count: the headline,
 the decay line and All items include everything.
 
 Two fridge views, one after the other, from the same `fridge` array.
@@ -627,13 +669,27 @@ holds only items below 0 days. An item on its last day (0 days left,
 goes front and centre on the eye-level shelf, drawn visibly short of gone
 (decayFraction reaches LAST_DAY_DECAY, 0.75, on the last day and 1 only
 once the date has passed). Past-date items sit in the crisper, whose drawer
-front reads "N past date · Toss all"; Toss all asks right there ("Toss N
-past date? Toss N · Cancel") before anything counts as waste.
+front reads "N past date — check these" and has no button: each item is
+checked and tossed from its own popover.
+
+The popover's timeline (rfTimeline): under its rows, a slider from the
+purchase day to a little past the use-by date (30% of the shelf life,
+at least 2 days, at most 14; and at least today) draws the same item on
+that day, 150 px -- larger than on any shelf, so wrinkles and mold read
+-- with the same decay (decayFraction), labelled "Day 3 of 7" (days
+since purchase, of the shelf life; "· bought", "· use by", "· today";
+"2 days past date" after it), Today and Use by marked under the track.
+It opens on today and is a preview only: it never changes the item.
+Play runs it from the purchase day to the end, about half a second a
+day (a long shelf life steps several days at a time, so a run stays
+under about 20 s; Stop while it runs), then rests on today. Under
+reduced motion there is no Play. No timeline for frozen food, what
+keeps, or what is still ripening: none has a use-by date to run to.
 
 The line-art row follows, collapsed under an "All items (N)" toggle that
 is closed on every load (a <details>, so it opens from the keyboard).
 While it's closed, the illustrated fridge's popover is the way to act on
-an item, and the crisper's Toss all still works. Opened, it does the job
+an item, in the fridge and in the crisper. Opened, it does the job
 the list used to: every item drawn by the same food drawings (foodShapeMarkupLine,
 natureColor, fridgeCatOf/fridgeShapeOf), on shelves by urgency, with its
 name and days left in its urgency colour, and Used and Tossed as small
@@ -653,7 +709,8 @@ back and takes the same amounts off the ledger.
 Used some, in the popover only, between Used and Tossed (useSome): the
 item stays, and half of what's left of it -- it.part, 0.5, then 0.25... --
 leaves: half its estimated weight to the used ledger (as Used, which
-records weight only), half its estimated price off the item, so a later
+records weight only; the log also notes half the price, for the bin's
+rescued line), half its estimated price off the item, so a later
 Toss loses only what was still there ("Used some Onion · about 75 g").
 FoodKeeper's after-opening figure, if its own entry has one, restarts the
 clock today (clockFrom; "· 28 days now that it's cut"), carrying on from
