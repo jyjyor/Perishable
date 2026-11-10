@@ -6258,7 +6258,11 @@ function trayParts(x0 = 0.07, y0 = 0.36, x1 = 0.93, y1 = 0.86){
 const filmParts = (x0 = 0.07, y0 = 0.36, x1 = 0.93, y1 = 0.86) => [
   PL([[x0 + 0.1, y0 + 0.08], [x0 + 0.3, y0 + 0.05]], 0.8, {stroke: '#ffffff', w: 2.2, rigid: true, film: true}),
   PL([[x1 - 0.28, y1 - 0.06], [x1 - 0.1, y1 - 0.1]], 0.7, {stroke: '#ffffff', w: 1.8, rigid: true, film: true}),
-  PL([[x0 + 0.13, y1 - 0.08], [x0 + 0.2, y0 + 0.2]], 0.5, {stroke: '#ffffff', w: 1.2, rigid: true, film: true})];
+  PL([[x0 + 0.13, y1 - 0.08], [x0 + 0.2, y0 + 0.2]], 0.5, {stroke: '#ffffff', w: 1.2, rigid: true, film: true}),
+  // the printed sticker on the film, in the corner away from the peel: the
+  // meat's plain name (labelWord), no brand, no price. It stays when the
+  // film is peeled back; in a dish it goes with the tray.
+  PKG([[x0 + 0.05, y1 - 0.15], [x0 + 0.37, y1 - 0.15], [x0 + 0.37, y1 - 0.03], [x0 + 0.05, y1 - 0.03]], '#f6f4ee', {sharp: true, fade: true, w: 0.6})];
 const PEEL = [[0.93, 0.36], [0.93, 0.56], [0.78, 0.44], [0.72, 0.3]];
 // Ground meat: a heaped block, its surface all short curled strands of mince.
 function minceParts(fill, fleck){

@@ -377,8 +377,10 @@ food's English name. foodShapeMarkupLine sets labelWord for each
 drawing, and every label prints it (labelWordSvg): a bottle's, a
 vessel's, a generic package's panel, and a PARTS package's label -- its
 spec.lab box if it has one, else its largest fade part. Packages with
-no label in real life (an egg carton, a meat tray, a wedge of cheese)
-stay unlettered.
+no label in real life (an egg carton, a wedge of cheese) stay
+unlettered; a meat tray carries the supermarket's small printed sticker
+on its film (filmParts), with the meat's plain name -- GROUND TURKEY,
+CHICKEN THIGHS -- and no brand or price.
 tools/fridge-contents-study.js shows them all.
 After Used some (it.part below 1) an item is drawn as what's left of it,
 from its own drawing. Whole food is cut: clipped where the knife went,
