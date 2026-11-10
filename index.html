@@ -4039,8 +4039,6 @@ const FRUIT_OUTLINES = {
   lemon: s => polarRing(s, 24, 0.5, 0.66, 0.29, 0.24, a => 1 + 0.1 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
   lime: s => polarRing(s, 24, 0.5, 0.69, 0.245, 0.215, a => 1 + 0.09 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
   orange: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.3)),
-  // Mandarin: flatter than an orange, sunk a little at both poles.
-  mandarin: s => polarRing(s, 24, 0.5, 0.63, 0.38, 0.27, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)),
   grapefruit: s => polarRing(s, 24, 0.5, 0.57, 0.40, 0.35, a => 1 - 0.05 * bell(a, -Math.PI / 2, 0.35)),
   // Mango: a kidney-teardrop lying down -- the full shoulder on the left,
   // where the stem is, narrowing to a rounded tip low on the right, the
@@ -4089,9 +4087,6 @@ const FRUIT_OUTLINES = {
     const crown = [[0.43, 0.28], [0.38, 0.16], [0.45, 0.22], [0.50, 0.12], [0.55, 0.22], [0.62, 0.16], [0.57, 0.28]];
     return [...body, ...crown].map(([x, y]) => [x * s, y * s]);
   },
-  // Papaya: long, lying down, tapering toward the stem end on the right.
-  papaya: s => polarRing(s, 26, 0.5, 0.64, 0.42, 0.25, () => 1,
-    (x, y) => [x, 0.64 + (y - 0.64) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42))]),
   dragonfruit: s => polarRing(s, 24, 0.5, 0.60, 0.29, 0.32, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.4)),
   // Fig: a teardrop standing up, drawn to a short neck at the stem.
   fig: s => polarRing(s, 24, 0.5, 0.64, 0.3, 0.27, () => 1, neckIn(0.64, 0.27, 0.7, 0.13)),
@@ -4102,8 +4097,6 @@ const FRUIT_OUTLINES = {
   }),
   // Asian pear: round like an apple, not pear-shaped; no dimple.
   asianpear: s => polarRing(s, 24, 0.5, 0.58, 0.36, 0.33, a => 1 - 0.03 * bell(a, -Math.PI / 2, 0.3)),
-  // Lychee: round and finely knobbled, a little pointed at the bottom.
-  lychee: s => polarRing(s, 30, 0.5, 0.60, 0.33, 0.31, a => (1 + 0.025 * Math.cos(15 * a)) * (1 - 0.06 * bell(a, -Math.PI / 2, 0.3) + 0.05 * bell(a, Math.PI / 2, 0.3)))
 };
 function catOutlinePoints(shape, s){
   const cx = s / 2;
@@ -5002,13 +4995,6 @@ const FRUIT_CUES = {
     }).join('');
     return pores(R, size, seed, 22) + ringAt(nav, size * 0.026, size * 0.014) + creases + inkDot(R.edge(-Math.PI / 2), size * 0.013, 0.8);
   },
-  // Mandarin: flat, with a short stem and one leaf still on it.
-  mandarin: (d, size, seed, fraction) => {
-    const R = fruitRider('mandarin', d, size), top = R.edge(-Math.PI / 2);
-    const tip = [top[0] + size * 0.02, top[1] - size * 0.05];
-    const curl = Math.min(1, (fraction || 0) / 0.5) * 0.6;
-    return pores(R, size, seed, 14) + `<path d="${lineD([top, tip])}"/>` + leafPath(tip, -0.35 + curl, size * (0.17 - 0.05 * curl), size * 0.045, dryLeaf(fraction), size);
-  },
   // Grapefruit: more pores, and the stem scar as a ring on the flat top.
   grapefruit: (d, size, seed) => {
     const R = fruitRider('grapefruit', d, size), scar = R.at(0.5, 0.27);
@@ -5211,20 +5197,6 @@ const FRUIT_CUES = {
     const sheen = [R.at(0.27, 0.6), R.at(0.3, 0.47), R.at(0.38, 0.39)];
     return `<path d="${lineD([crown[0], crown[6]])}"/>` + sepals + `<path d="${smoothOpenPath(sheen)}" stroke-opacity="0.35"/>`;
   },
-  // Papaya: faint streaks along its length, the stem end at the right.
-  papaya: (d, size) => {
-    const R = fruitRider('papaya', d, size);
-    const streaks = [-0.45, 0, 0.45].map(v => {
-      const run = [];
-      for (let x = 0.16; x <= 0.84; x += 0.06){
-        const e = Math.sqrt(Math.max(0, 1 - ((x - 0.5) / 0.42) ** 2)) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42));
-        run.push(R.at(x, 0.64 + v * 0.25 * e));
-      }
-      return `<path d="${smoothOpenPath(run)}" stroke-opacity="0.4"/>`;
-    }).join('');
-    const end = R.edge(0);
-    return streaks + `<path d="${lineD([end, [end[0] + size * 0.035, end[1] - size * 0.01]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>`;
-  },
   // Dragon fruit: scales that flick up and out like flames, green at the
   // tips, and a tuft of them at the top.
   dragonfruit: (d, size, seed, fraction) => {
@@ -5256,12 +5228,6 @@ const FRUIT_CUES = {
     const R = fruitRider('asianpear', d, size);
     return pores(R, size, seed, 34, 0.4, 0.006) + stalk(R.edge(-Math.PI / 2), size, 0.08, 0.008);
   },
-  // Lychee: the knobbled shell, and its short stalk.
-  lychee: (d, size, seed) => {
-    const R = fruitRider('lychee', d, size), rand = seededRand(seed + 97), k = size * 0.016;
-    const knobs = R.scatter(rand, 26, 0.1).map(p => `<path d="${lineD([[p[0] - k, p[1] + k * 0.6], [p[0], p[1] - k * 0.6], [p[0] + k, p[1] + k * 0.6]])}" stroke-opacity="0.5"/>`).join('');
-    return knobs + stalk(R.edge(-Math.PI / 2), size, 0.06, 0.02);
-  }
 };
 
 // Washes: second natural tones laid on a fruit's body, under its brown
@@ -6150,6 +6116,70 @@ Object.assign(PARTS, {
     const R = seededRand(11);
     for (let k = 0; k < 9; k++){ const c = [0.24 + R() * 0.28, 0.4 + R() * 0.16]; parts.push(PL([polarPt(c, R() * 3, 0.03), c, polarPt(c, 2 + R() * 3, 0.025)], 0.75, {stroke: '#efe2c8', w: 1.2})); }
     parts.push(PL(bentPts([0.1, 0.55], [0.66, 0.6], 0.04, 10), 0.45));
+    return {parts, fewer: true};
+  }
+});
+
+Object.assign(PARTS, {
+  // Papaya: a whole one lying behind, long and slightly pear-shaped, green
+  // streaks at the stem end; in front, a half cut lengthwise -- deep orange
+  // flesh round a hollow packed with round black seeds.
+  papaya: () => {
+    const parts = [];
+    const hwW = u => 0.16 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.55) * (0.8 + 0.3 * u);
+    parts.push(PF(podPts([0.16, 0.36], [0.9, 0.3], hwW, 0.02, 24), '#d9c24e', 1));
+    parts.push(...alongLines([0.16, 0.36], [0.9, 0.3], hwW, 0.02, [-0.5, 0, 0.5], 0.5, 1, 0.03, 0.4).map(p => Object.assign(p, {stroke: '#7fa04a', w: 1.6})));
+    parts.push(PF(stalkPts([0.17, 0.36], [0.1, 0.37], 0.02, 0.016), '#8a9a52', 1));
+    const C = [0.5, 0.66], hw = u => 0.2 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.55) * (0.8 + 0.3 * u);
+    parts.push(PF(podPts([0.12, 0.68], [0.9, 0.64], hw, 0, 24), '#d9c24e', 0));
+    parts.push(PF(podPts([0.14, 0.68], [0.88, 0.64], u => hw(u) * 0.86, 0, 24), '#f08a4a', 0));
+    parts.push(PF(podPts([0.36, 0.67], [0.82, 0.645], u => 0.085 * Math.pow(Math.sin(Math.PI * u), 0.6) * (0.7 + 0.4 * u), 0, 16), '#c96a3a', 0));
+    const R = seededRand(13);
+    for (let k = 0; k < 26; k++){
+      const u = 0.1 + R() * 0.8, x = 0.36 + u * 0.46, w = 0.07 * Math.pow(Math.sin(Math.PI * u), 0.6) * (0.7 + 0.4 * u);
+      parts.push(dotPart([x, 0.66 + (R() * 2 - 1) * w * 0.8], 0.013, '#2a2320', 0, 0.9));
+    }
+    return {parts, fewer: true};
+  },
+  // Lychees: a sprig of round fruit on their thin twig, the red skin tiled
+  // with small pointed bumps; one peeled, its white flesh showing.
+  lychee: () => {
+    const parts = [PF(stalkPts([0.5, 0.08], [0.5, 0.3], 0.01, 0.008, 0.02), '#7a6a44', null)];
+    parts.push(...leafParts([0.5, 0.12], -0.4, 0.26, 0.06, '#4c7a3e', null, {prof: 'lance', ribOp: 0.45}));
+    const F = [[0.3, 0.6, 0.17], [0.66, 0.56, 0.18], [0.48, 0.8, 0.15]];
+    F.forEach(([x, y, r], g) => parts.push(PF(stalkPts([0.5, 0.28], [x, y - r * 0.9], 0.006, 0.005, (x - 0.5) * 0.1), '#7a6a44', g)));
+    F.forEach(([x, y, r], g) => {
+      const peeled = g === 2;
+      parts.push(PF(blobPts([x, y], r, r * 0.97, a => 1 + (peeled ? 0 : 0.03 * Math.cos(14 * a))), peeled ? '#f3eedf' : '#cf5848', g));
+      if (peeled){
+        parts.push(PF(blobPts([x, y + r * 0.55], r * 1.02, r * 0.5, a => a > 0 && a < Math.PI ? 1 : 0.35), '#cf5848', g));
+        parts.push(PL(bentPts([x - r * 0.5, y - r * 0.3], [x - r * 0.1, y - r * 0.6], -r * 0.1, 4), 0.6, {g, stroke: '#ffffff', w: 1.3}));
+        return;
+      }
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++){
+        const p = [x + i * r * 0.36 + (j % 2) * r * 0.18, y + j * r * 0.34];
+        if (Math.hypot(p[0] - x, p[1] - y) > r * 0.82) continue;
+        parts.push(PL([[p[0] - r * 0.12, p[1] + r * 0.06], [p[0], p[1] - r * 0.1], [p[0] + r * 0.12, p[1] + r * 0.06]], 0.6, {g, w: 0.7}));
+      }
+    });
+    return {parts, fewer: true};
+  },
+  // Mandarins: small and flattened, a loose peel, one still with its stem
+  // and two leaves -- the way they're sold, unlike an orange.
+  mandarin: () => {
+    const parts = [];
+    const M = [[0.3, 0.7, 0.2], [0.7, 0.72, 0.19], [0.5, 0.52, 0.2]];
+    M.forEach(([x, y, r], g) => {
+      parts.push(PF(blobPts([x, y], r, r * 0.8, a => 1 - 0.07 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)), g === 2 ? '#ef7f28' : '#ec7a26', g));
+      const R = seededRand(30 + g);
+      for (let k = 0; k < 10; k++){ const a = R() * 6.28, d = R() * r * 0.7; parts.push(dotPart([x + Math.cos(a) * d, y + Math.sin(a) * d * 0.8], 0.006, '#b85a1c', g, 0.6)); }
+      parts.push(PL(bentPts([x - r * 0.6, y - r * 0.15], [x - r * 0.25, y - r * 0.55], -r * 0.1, 4), 0.45, {g, stroke: '#ffffff', w: 1.2}));
+      parts.push(dotPart([x, y - r * 0.76], 0.012, '#6b7a3a', g));
+    });
+    const top = [0.5, 0.52 - 0.2 * 0.78];
+    parts.push(PF(stalkPts(top, [0.53, top[1] - 0.06], 0.008, 0.006), '#5f7a3a', 2));
+    parts.push(...leafParts([0.53, top[1] - 0.05], -0.35, 0.24, 0.07, '#3f7a40', 2, {ribOp: 0.5, veins: [0.4, 0.65]}));
+    parts.push(...leafParts([0.53, top[1] - 0.05], Math.PI + 0.5, 0.18, 0.055, '#4a8748', 2, {ribOp: 0.5}));
     return {parts, fewer: true};
   }
 });
