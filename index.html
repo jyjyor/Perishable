@@ -1341,8 +1341,8 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    ============================================================ */
 const FOODS = {
   spinach:    {en:'Spinach',        aliases:['baby spinach'], shelf:7, fk:291, g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
-  leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
-  romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', base:'#6aa86f'},
+  leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', shape:'leaflettuce', base:'#81bb85'},
+  romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', shape:'romaine', base:'#6aa86f'},
   milk:       {en:'Milk',           shelf:7, fk:27, pkgDate:true, g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
   yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
   chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
@@ -1351,7 +1351,7 @@ const FOODS = {
   egg:        {en:'Eggs',           shelf:35, fk:21, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
   tofu:       {en:'Tofu',           shelf:7, fk:168, g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
   onion:      {en:'Onion',          aliases:['onions','yellow onion','white onion','red onion','sweet onion'], shelf:30, fk:294, store:'pantry', g:150, usd:0.80, cat:'veg', shape:'onion', base:'#d4a070'},
-  scallion:   {en:'Scallion',       aliases:['scallions','green onion','green onions','spring onion'], shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  scallion:   {en:'Scallion',       aliases:['scallions','green onion','green onions','spring onion'], shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', shape:'scallion', base:'#54ab60'},
   garlic:     {en:'Garlic',         shelf:30, fk:285, store:'pantry', g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
   ginger:     {en:'Ginger',         shelf:21, fk:286, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
   tomato:     {en:'Tomato',         shelf:7, fk:306, estimated:true, note:'FoodKeeper keeps tomatoes at room temperature until ripe and gives no refrigerator figure', g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
@@ -1360,7 +1360,7 @@ const FOODS = {
   pepper:     {en:'Bell pepper',    shelf:14, fk:296, g:300, usd:2.80, cat:'soft', base:'#c65539'},
   broccoli:   {en:'Broccoli',       shelf:5, fk:276, g:400, usd:2.50, cat:'veg', base:'#287139'},
   mushroom:   {en:'Mushrooms',      shelf:7, fk:292, g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
-  cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
+  cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', shape:'cilantro', base:'#3d8f4b'},
   potato:     {en:'Potato',         shelf:60, fk:297, store:'pantry', g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
   lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', shape:'lemon', base:'#e2db8d'},
   mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', shape:'mango', base:'#ea9b3a'},
@@ -1380,7 +1380,7 @@ const FOODS = {
   // under a generic FoodKeeper entry, e.g. Chinese eggplant via the generic
   // "Eggplant" entry). fk is the FoodKeeper product id; see CLAUDE.md for
   // the rule that turns its range into days.
-  bokchoy:        {en:'Bok choy',          shelf:3, fk:275, g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
+  bokchoy:        {en:'Bok choy',          shelf:3, fk:275, g:250, usd:1.80, cat:'leafy', shape:'bokchoy', base:'#569f5d'},
   daikon:         {en:'Daikon',            shelf:14, fk:299, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
   chineseeggplant:{en:'Chinese eggplant',  shelf:7, fk:284, g:300, usd:2.10, cat:'soft', base:'#7e4592'},
   beansprouts:    {en:'Bean sprouts',      shelf:10, fk:549, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
@@ -1396,7 +1396,7 @@ const FOODS = {
   taro:           {en:'Taro',              shelf:3, fk:305, g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
   bambooshoots:   {en:'Bamboo shoots',     shelf:14, fk:272, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
   edamame:        {en:'Edamame',           shelf:5, fk:640, g:300, usd:2.40, cat:'veg', base:'#46a44a'},
-  leek:           {en:'Leeks',             shelf:14, fk:289, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
+  leek:           {en:'Leeks',             shelf:14, fk:289, g:200, usd:1.70, cat:'leafy', plural:true, shape:'leek', base:'#a1be9d'},
   cucumber:       {en:'Cucumber',          shelf:6, fk:283, g:300, usd:1.40, cat:'soft', base:'#54ab54'},
   zucchini:       {en:'Zucchini',          shelf:7, fk:547, g:250, usd:1.90, cat:'soft', base:'#328640'},
   cauliflower:    {en:'Cauliflower',       shelf:5, fk:280, g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
@@ -1409,24 +1409,24 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed items.
-  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', base:'#a7c0a5'},
-  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, base:'#429453'},
+  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', shape:'napacabbage', base:'#a7c0a5'},
+  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, shape:'garlicchives', base:'#429453'},
   lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#dfdad8'},
-  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, note:'No FoodKeeper entry; Broccoli (#276) is a different variety', cat:'leafy', base:'#3a8847'},
-  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#489953'},
-  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#429450'},
+  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, note:'No FoodKeeper entry; Broccoli (#276) is a different variety', cat:'leafy', shape:'gailan', base:'#3a8847'},
+  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', shape:'choysum', base:'#489953'},
+  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', shape:'waterspinach', base:'#429450'},
   wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#b8cfb4'},
   snowpeas:     {en:'Snow peas',      shelf:5, fk:273, g:200, usd:2.70, cat:'veg', plural:true, base:'#5bae61'},
   // US supermarket / Costco staples. shelf is FoodKeeper's under the
   // CLAUDE.md rule; g is the package (Costco size where that's how it's
   // usually bought, else a regular one); usd is estimated (estPrice)
   // except the rotisserie chicken, Costco's fixed $4.99.
-  kale:          {en:'Kale',              aliases:['lacinato kale','curly kale','baby kale'], shelf:5, fk:423, g:454, usd:4.99, estPrice:true, cat:'leafy', base:'#3f7f4a'},
-  arugula:       {en:'Arugula',           aliases:['rocket'], shelf:7, fk:678, g:454, usd:4.49, estPrice:true, cat:'leafy', base:'#4f9a52'},
-  cabbage:       {en:'Cabbage',           aliases:['green cabbage'], shelf:14, fk:278, g:900, usd:2.00, estPrice:true, cat:'leafy', base:'#b5d0a3'},
-  celery:        {en:'Celery',            aliases:['celery hearts','celery stalks'], shelf:14, fk:281, g:700, usd:2.00, estPrice:true, cat:'leafy', base:'#9cc58a'},
-  basil:         {en:'Basil',             aliases:['fresh basil'], shelf:10, fk:509, g:57, usd:2.99, estPrice:true, cat:'leafy', base:'#3d8c45'},
-  parsley:       {en:'Parsley',           aliases:['fresh parsley','flat leaf parsley','italian parsley'], shelf:3, fk:611, g:60, usd:1.29, estPrice:true, cat:'leafy', base:'#3f9148'},
+  kale:          {en:'Kale',              aliases:['lacinato kale','curly kale','baby kale'], shelf:5, fk:423, g:454, usd:4.99, estPrice:true, cat:'leafy', shape:'kale', base:'#3f7f4a'},
+  arugula:       {en:'Arugula',           aliases:['rocket'], shelf:7, fk:678, g:454, usd:4.49, estPrice:true, cat:'leafy', shape:'arugula', base:'#4f9a52'},
+  cabbage:       {en:'Cabbage',           aliases:['green cabbage'], shelf:14, fk:278, g:900, usd:2.00, estPrice:true, cat:'leafy', shape:'cabbage', base:'#b5d0a3'},
+  celery:        {en:'Celery',            aliases:['celery hearts','celery stalks'], shelf:14, fk:281, g:700, usd:2.00, estPrice:true, cat:'leafy', shape:'celery', base:'#9cc58a'},
+  basil:         {en:'Basil',             aliases:['fresh basil'], shelf:10, fk:509, g:57, usd:2.99, estPrice:true, cat:'leafy', shape:'basil', base:'#3d8c45'},
+  parsley:       {en:'Parsley',           aliases:['fresh parsley','flat leaf parsley','italian parsley'], shelf:3, fk:611, g:60, usd:1.29, estPrice:true, cat:'leafy', shape:'parsley', base:'#3f9148'},
   strawberry:    {en:'Strawberries',      aliases:['strawberry'], shelf:3, fk:481, g:907, usd:5.99, estPrice:true, cat:'soft', shape:'strawberry', plural:true, base:'#d0443a'},
   blueberry:     {en:'Blueberries',       aliases:['blueberry'], shelf:14, fk:254, g:510, usd:5.99, estPrice:true, cat:'soft', shape:'blueberry', plural:true, base:'#4b5f9e'},
   raspberry:     {en:'Raspberries',       aliases:['raspberry'], shelf:3, fk:482, g:340, usd:5.99, estPrice:true, cat:'soft', shape:'raspberry', plural:true, base:'#c8403f'},
@@ -3902,29 +3902,6 @@ function cartonOutline(s){
   return [[0.30, 0.93], [0.70, 0.93], [0.70, 0.31], [0.53, 0.17], [0.53, 0.07], [0.47, 0.07],
     [0.47, 0.17], [0.30, 0.31]].map(([x, y]) => [x * s, y * s]);
 }
-// A loose bunch: four broad, round-tipped leaves of unequal length on
-// short stems from one gathered point -- spade-shaped spinach leaves, not
-// narrow pointed ones (five thin points fanned from one spot reads as a
-// different plant entirely). Notches between leaves are deep so each
-// reads as its own leaf. Sits left of centre, well inside the frame,
-// because leafy sag leans the top rightward as it wilts. Per leaf: notch,
-// left side, near-tip, tip, near-tip, right side; then the stem's two cut
-// ends. Leaf tips at 3, 9, 15, 21 (spinachRibs follows them); notches at
-// 0, 6, 12, 18, 24; stem ends at 25 and 26.
-function spinachOutline(s){
-  const gx = 0.44, gy = 0.70;
-  const leaves = [{a: -158, L: 0.40}, {a: -114, L: 0.58}, {a: -70, L: 0.52}, {a: -26, L: 0.42}];
-  const P = (deg, r) => [gx + Math.cos(deg * Math.PI / 180) * r, gy + Math.sin(deg * Math.PI / 180) * r];
-  const pts = [P(-186, 0.12)];
-  leaves.forEach((lf, i) => {
-    pts.push(P(lf.a - 21, lf.L * 0.55), P(lf.a - 10, lf.L * 0.93), P(lf.a, lf.L),
-      P(lf.a + 10, lf.L * 0.93), P(lf.a + 21, lf.L * 0.55));
-    const next = leaves[i + 1];
-    pts.push(next ? P((lf.a + next.a) / 2, Math.min(lf.L, next.L) * 0.26) : P(lf.a + 30, 0.12));
-  });
-  pts.push([gx + 0.05, 0.93], [gx - 0.03, 0.93]);
-  return pts.map(([x, y]) => [x * s, y * s]);
-}
 // Long and tapered, lying almost level: a rounded shoulder on the left
 // (where the tops grow from) narrowing to a fine root tip on the right.
 // Index 0 is the shoulder's top; points 0..6 run along the top edge,
@@ -4143,7 +4120,6 @@ function catOutlinePoints(shape, s){
     case 'chicken':  return chickenOutline(s);
     case 'tofu':     return tofuOutline(s);
     case 'carton':   return cartonOutline(s);
-    case 'spinach':  return spinachOutline(s);
     case 'carrot':   return carrotOutline(s);
     case 'onion':    return onionOutline(s);
     case 'eggs':     return eggsOutline(s);
@@ -4151,7 +4127,7 @@ function catOutlinePoints(shape, s){
     case 'garlic':   return garlicOutline(s);
     case 'dairy':    return dairyOutline(s);
     case 'protein':  return proteinOutline(s);
-    default:         return FRUIT_OUTLINES[shape] ? FRUIT_OUTLINES[shape](s) : genericOutline(s);
+    default:         return PARTS[shape] ? partsRing(shape, s) : FRUIT_OUTLINES[shape] ? FRUIT_OUTLINES[shape](s) : genericOutline(s);
   }
 }
 const BOXY_SHAPES = {dairy:1, cooked:1, generic:1, tofu:1, carton:1, wedge:1};
@@ -4758,27 +4734,6 @@ function cartonPanels(deformed){
     <path d="${lineD([sideTop, rr])}"/><path d="${lineD([rl, rr])}"/>
     <path d="${polyD([labTL, [labBR[0], labTL[1]], labBR, [labTL[0], labBR[1]]])}"/>`;
 }
-// Spinach: a midrib from where the stems gather out into each leaf, the
-// edge of each leaf where it overlaps the one beside it (a short curve in
-// from each notch), and the stems down to their cut ends.
-function spinachRibs(deformed, size){
-  const stemTop = rfLerp(deformed[0], deformed[24], 0.5);
-  const gather = rfLerp(stemTop, rfLerp(deformed[25], deformed[26], 0.5), -0.15);
-  const ribs = [3, 9, 15, 21].map((i, k) => {
-    const tip = rfLerp(gather, deformed[i], 0.86);
-    const mid = rfLerp(gather, tip, 0.5);
-    const bow = (k - 1.5) * size * 0.014;
-    return `<path d="M ${f1(gather[0])} ${f1(gather[1])} Q ${f1(mid[0] + bow)} ${f1(mid[1])} ${f1(tip[0])} ${f1(tip[1])}"/>`;
-  }).join('');
-  const overlaps = [6, 12, 18].map(i => {
-    const notch = deformed[i], toward = rfLerp(notch, gather, 0.55);
-    const side = rfLerp(deformed[i - 1], deformed[i + 1], 0.5);
-    const ctrl = rfLerp(toward, side, 0.25);
-    return `<path d="M ${f1(notch[0])} ${f1(notch[1])} Q ${f1(ctrl[0])} ${f1(ctrl[1])} ${f1(toward[0])} ${f1(toward[1])}"/>`;
-  }).join('');
-  const stems = [0.3, 0.7].map(t => `<path d="${lineD([gather, rfLerp(deformed[26], deformed[25], t)])}"/>`).join('');
-  return ribs + overlaps + stems;
-}
 // Carrot: the green tops from its shoulder -- three stems, each carrying
 // a few leaflets that dry and droop on their own clock, like the
 // tomato's calyx -- and the faint rings across the root.
@@ -5374,9 +5329,454 @@ const FRUIT_WASH = {
   }
 };
 
+// ---- Drawn in parts: a food that isn't one outline -- a bunch of greens,
+// a head of leaves, stalks, pods, florets -- is a list of parts in the
+// unit square (PARTS[shape]()), back to front: filled leaves and stalks,
+// each with its own natural colour, and ink lines over them. Its outline
+// ring (partsRing) is the parts' radial hull, so deformPoints, the frost,
+// Tonight's dash and the cling film work on it as on any outline; every
+// part rides the ring's decay (warpOf), so a bunch wilts, leans and
+// shrivels with the shared mechanics, spots and mold growing only on the
+// parts. fewer: Used some takes whole pieces (stalks, sprigs, leaves --
+// a part's g) instead of cutting.
+// A point at angle a (0 right, -PI/2 up), r away from b.
+const polarPt = (b, a, r) => [b[0] + Math.cos(a) * r, b[1] + Math.sin(a) * r];
+// A quadratic curve from p0 to p1, bowed sideways by bend (in units).
+function bentPts(p0, p1, bend = 0, n = 10){
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy) || 1;
+  const c = [(p0[0] + p1[0]) / 2 - dy / l * bend, (p0[1] + p1[1]) / 2 + dx / l * bend];
+  return Array.from({length: n + 1}, (_, i) => { const t = i / n, u = 1 - t; return [u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]]; });
+}
+// A ribbon along a centreline, half-width hw(t) from t=0 to 1.
+function ribbon(cl, hw){
+  const L = [], R = [];
+  cl.forEach((p, i) => {
+    const a = cl[Math.max(0, i - 1)], b = cl[Math.min(cl.length - 1, i + 1)];
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, w = hw(i / (cl.length - 1));
+    L.push([p[0] - dy / l * w, p[1] + dx / l * w]); R.push([p[0] + dy / l * w, p[1] - dx / l * w]);
+  });
+  return [...L, ...R.reverse()];
+}
+// Leaf outlines by their half-width along the midrib, base (0) to tip (1).
+const LEAF_PROF = {
+  ovate: t => Math.sin(Math.PI * Math.pow(t, 0.8)),
+  spade: t => t < 0.3 ? Math.pow(Math.sin(t / 0.3 * Math.PI / 2), 0.6) : Math.pow(Math.cos((t - 0.3) / 0.7 * Math.PI / 2), 0.55),
+  lance: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 0.7)), 1.1),
+  spoon: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 1.5)), 0.7),
+  fan: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 1.3)), 0.5),
+  strap: t => t < 0.06 ? 0.6 + t / 0.06 * 0.4 : t > 0.86 ? Math.sqrt(Math.max(0, 1 - ((t - 0.86) / 0.14) ** 2)) : 1,
+  arrow: t => t < 0.25 ? 0.5 + t * 2 : Math.pow(Math.cos((t - 0.25) / 0.75 * Math.PI / 2), 0.9)
+};
+// A leaf from base b at angle a: len long, wd its widest half-width; edge(t)
+// scales the width (ruffles, lobes); bend bows the midrib.
+function leafPts(b, a, len, wd, prof = 'ovate', edge = null, bend = 0, n = 18){
+  return ribbon(bentPts(b, polarPt(b, a, len), bend * len, n), t => wd * LEAF_PROF[prof](t) * (edge ? edge(t) : 1));
+}
+const ruffle = (k, amp) => t => 1 + amp * Math.sin(k * Math.PI * t);
+// A blob of radius r, its edge rippled k times (curly parsley, florets).
+const cloudPts = (c, rx, ry, k, amp, n = 30, ph = 0) => Array.from({length: n}, (_, i) => {
+  const a = i / n * Math.PI * 2, r = 1 + amp * Math.abs(Math.sin(k * a / 2 + ph));
+  return [c[0] + Math.cos(a) * rx * r, c[1] + Math.sin(a) * ry * r];
+});
+const ovalPts = (c, rx, ry, rot = 0, n = 22) => Array.from({length: n}, (_, i) => {
+  const a = i / n * Math.PI * 2, x = Math.cos(a) * rx, y = Math.sin(a) * ry;
+  return [c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)];
+});
+// A tapered stalk along a bowed line.
+const stalkPts = (p0, p1, w0, w1, bend = 0, n = 10) => ribbon(bentPts(p0, p1, bend, n), t => w0 + (w1 - w0) * t);
+// Part makers: fill (a hex, decaying through natureColor), g (the piece it
+// belongs to, for fewer), op/w (ink opacity and weight), open (a line).
+const PF = (p, fill, g, o = {}) => Object.assign({p, fill, g}, o);
+const PL = (p, op = 0.55, o = {}) => Object.assign({p, open: true, op}, o);
+// A leaf with its midrib and a few veins, as parts.
+function leafParts(b, a, len, wd, fill, g, o = {}){
+  const prof = o.prof || 'ovate', bend = o.bend || 0;
+  const out = [PF(leafPts(b, a, len, wd, prof, o.edge, bend, o.n || 18), fill, g)];
+  const rib = bentPts(b, polarPt(b, a, len * 0.9), bend * len * 0.9, 8);
+  if (o.rib !== false) out.push(o.ribFill
+    ? PF(ribbon(rib, t => wd * (o.ribW || 0.12) * (1 - t * 0.7)), o.ribFill, g, {op: 0.5})
+    : PL(rib, o.ribOp || 0.5, {g}));
+  (o.veins || []).forEach(t => {
+    const i = Math.round(t * 8), p = rib[i], q = rib[Math.min(8, i + 1)], da = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    const w = wd * LEAF_PROF[prof](t) * 0.85;
+    [-1, 1].forEach(sd => out.push(PL(bentPts(p, polarPt(p, da + sd * 0.75, w), sd * w * 0.12, 3), (o.ribOp || 0.5) * 0.7, {g, w: 0.7})));
+  });
+  return out;
+}
+// The outer edge of closed polygons, seen from c: along each of n rays,
+// the furthest crossing (circleUnion's rule, for any shapes).
+function radialHull(polys, c, n = 64){
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a);
+    let best = 0.02;
+    for (const P of polys) for (let k = 0; k < P.length; k++){
+      const A = P[k], B = P[(k + 1) % P.length], ex = B[0] - A[0], ey = B[1] - A[1];
+      const den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-12) continue;
+      const ax = A[0] - c[0], ay = A[1] - c[1];
+      const t = (ax * ey - ay * ex) / den, u = (ax * dy - ay * dx) / den;
+      if (t > best && u >= 0 && u <= 1) best = t;
+    }
+    pts.push([c[0] + dx * best, c[1] + dy * best]);
+  }
+  return pts;
+}
+const PARTS_CACHE = {};
+function partsSpec(shape){
+  if (!PARTS_CACHE[shape]){
+    const spec = PARTS[shape]();
+    const closed = spec.parts.filter(p => !p.open).map(p => p.p);
+    const all = closed.flat();
+    const c = spec.c || [all.reduce((t, p) => t + p[0], 0) / all.length, all.reduce((t, p) => t + p[1], 0) / all.length];
+    spec.ring = radialHull(closed, c);
+    spec.groups = 1 + Math.max(0, ...spec.parts.map(p => p.g || 0));
+    PARTS_CACHE[shape] = spec;
+  }
+  return PARTS_CACHE[shape];
+}
+const partsRing = (shape, s) => partsSpec(shape).ring.map(([x, y]) => [x * s, y * s]);
+// Any point carried by the ring's decay: the ring's own displacements,
+// weighted toward the nearest (inverse distance, fourth power).
+function warpOf(raw, def){
+  const D = raw.map((p, i) => [def[i][0] - p[0], def[i][1] - p[1]]);
+  if (D.every(d => !d[0] && !d[1])) return p => p;
+  return ([x, y]) => {
+    let sx = 0, sy = 0, sw = 0;
+    for (let i = 0; i < raw.length; i++){
+      const d2 = (raw[i][0] - x) ** 2 + (raw[i][1] - y) ** 2 + 1, w = 1 / (d2 * d2);
+      sx += D[i][0] * w; sy += D[i][1] * w; sw += w;
+    }
+    return [x + sx / sw, y + sy / sw];
+  };
+}
+// A part's colour as it decays: natureColor, except that a pale part (a
+// white stalk, a pale rib, a cut face) keeps some of its lightness, turning
+// a light tan rather than the leaves' deep brown, so a rotten bok choy
+// still shows its white stems against its leaves.
+function partFill(hex, fraction){
+  const nc = natureColor(hex, fraction), L = hexToOklch(hex)[0];
+  if (L < 0.8 || fraction <= 0.6) return nc;
+  return oklchLerp(nc, '#c2b394', Math.min(1, (L - 0.8) / 0.12) * 0.6 * Math.min(1, (fraction - 0.6) / 0.25));
+}
+// The parts drawn: painted back to front, spots and mold on the parts only.
+function partsSvg(shape, raw, deformed, color, fraction, moldW, size, seed, some, key, wrap){
+  // a drawing that fills its square leans out of it as it wilts: moved back in
+  const b = polyBox(deformed), m = size * 0.02;
+  const dx = Math.min(0, size - m - b.x1) + Math.max(0, m - b.x0), dy = Math.min(0, size - m - b.y1) + Math.max(0, m - b.y0);
+  if (dx || dy) deformed = deformed.map(([x, y]) => [x + dx, y + dy]);
+  const spec = partsSpec(shape), warp = warpOf(raw, deformed);
+  const uid = 'fpart' + (fridgeShapeCounter++), sw = Math.max(1, size * 0.008);
+  const fewer = some != null && spec.fewer;
+  let parts = spec.parts;
+  if (fewer){ const k = Math.max(1, Math.round(spec.groups * some)); parts = parts.filter(p => p.g == null || p.g < k); }
+  const P = parts.map(p => Object.assign({}, p, {q: p.p.map(([x, y]) => warp([x * size, y * size]))}));
+  const closedD = P.filter(p => !p.open).map(p => p.sharp ? polyD(p.q) : smoothClosedPath(p.q));
+  const paint = P.map(p => p.open
+    ? `<path d="${smoothOpenPath(p.q)}" fill="none" stroke="${p.stroke ? natureColor(p.stroke, fraction) : INK_HEX}" stroke-opacity="${p.op}" stroke-width="${f1(sw * (p.w || 0.8))}" stroke-linecap="round"/>`
+    : `<path d="${p.sharp ? polyD(p.q) : smoothClosedPath(p.q)}" fill="${p.fill === 'base' ? color : partFill(p.fill, fraction)}" stroke="${INK_HEX}" stroke-opacity="${p.op == null ? 1 : p.op}" stroke-width="${f1(sw * (p.w || 1))}" stroke-linejoin="round"/>`).join('');
+  const spots = genericDiscolorationSpots(deformed, fraction, size, seed), mold = genericMoldMarkup(deformed, fraction, moldW, size, seed);
+  const hullD = smoothClosedPath(deformed);
+  const defs = `<clipPath id="${uid}-clip"><path d="${hullD}"/></clipPath><clipPath id="${uid}-parts">${closedD.map(d => `<path d="${d}"/>`).join('')}</clipPath>`;
+  const body = `${paint}<g clip-path="url(#${uid}-parts)">${spots}${mold}</g>`;
+  const svg = inner => `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${inner}</svg>`;
+  if (some == null || (fewer && !wrap)) return svg(`<defs>${defs}</defs>${body}`);
+  if (fewer){
+    const film = clingFilmMarkup(P.filter(p => !p.open).flatMap(p => p.q), size, seed);
+    return svg(`<defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath>${defs}</defs>${body}${film.markup}`);
+  }
+  const cut = cutShape(shape, key, raw, deformed, color, fraction, size, seed, some);
+  const outline = cut.outline ? `<path d="${cut.outline}" fill="none" stroke="${INK_HEX}" stroke-width="${f1(sw)}"/>` : '';
+  const cutDefs = `<clipPath id="${uid}-cut"><path d="${cut.clip}"/></clipPath>`;
+  if (!wrap) return svg(`<defs>${defs}${cutDefs}</defs><g clip-path="url(#${uid}-cut)">${body}</g>${outline}${cut.face}`);
+  const film = clingFilmMarkup(cut.film, size, seed);
+  return svg(`<defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath>${defs}${cutDefs}</defs><g clip-path="url(#${uid}-cut)">${body}</g>${outline}${cut.face}${film.markup}`);
+}
+
+// Leafy greens. Real relative sizes: a head of cabbage or lettuce fills its
+// square, a bunch of herbs is about two thirds of it, scallions and chives
+// lie down as a slim bundle.
+const STEM_HEX = '#86ad66', PALE_STEM_HEX = '#e6ecd6', BAND_HEX = '#c9a77a';
+// A bunch's band: a short wrapped tie across its stems at y.
+const bandPart = (x0, x1, y, h = 0.035, g = null) => PF([[x0, y - h / 2], [x1, y - h / 2], [x1, y + h / 2], [x0, y + h / 2]], BAND_HEX, g, {sharp: true});
+// Stems from one gathered point out to each leaf's base.
+function fanBunch(G, specs, mk){
+  const out = [];
+  specs.forEach(([a, sl], i) => out.push(PF(stalkPts(G, polarPt(G, a, sl), 0.012, 0.009, (a + Math.PI / 2) * 0.02), STEM_HEX, i)));
+  specs.forEach(([a, sl, ll, lw], i) => out.push(...mk(polarPt(G, a, sl * 0.96), a, ll, lw, i)));
+  return out;
+}
+const UP = -Math.PI / 2;
+const PARTS = {
+  // Spinach: a bunch of broad, rounded, dark leaves on long stems, tied,
+  // with the pink crown of roots below the tie.
+  spinach: () => {
+    const G = [0.5, 0.8], specs = [[UP - 1.05, 0.2, 0.3, 0.12], [UP + 1.05, 0.2, 0.3, 0.12], [UP - 0.6, 0.24, 0.34, 0.135],
+      [UP + 0.6, 0.24, 0.34, 0.135], [UP - 0.2, 0.27, 0.36, 0.14], [UP + 0.22, 0.26, 0.35, 0.14]];
+    const parts = fanBunch(G, specs, (b, a, l, w, i) => leafParts(b, a, l, w, i < 2 ? '#245f30' : '#297037', i,
+      {prof: 'spade', bend: (i % 2 ? -0.08 : 0.08), veins: [0.3, 0.55], ribFill: '#8fb36e', ribW: 0.1}));
+    parts.push(PF(ovalPts([0.5, 0.86], 0.045, 0.03), '#c46a5a', null), bandPart(0.465, 0.535, 0.81));
+    [-0.03, 0, 0.03].forEach(dx => parts.push(PL([[0.5 + dx, 0.88], [0.5 + dx * 1.6, 0.94]], 0.6, {stroke: '#a8705a', w: 0.7})));
+    return {parts, fewer: true};
+  },
+  // Basil: three sprigs of glossy, cupped, pointed leaves in opposite
+  // pairs up a square stem, a cluster at each tip.
+  basil: () => {
+    const parts = [];
+    [[0.36, -0.28], [0.64, 0.28], [0.5, 0]].forEach(([x, lean], g) => {
+      const base = [0.5 + (x - 0.5) * 0.3, 0.88], top = [x + lean * 0.12, 0.3 + Math.abs(lean) * 0.12];
+      const stem = bentPts(base, top, lean * 0.05, 10);
+      parts.push(PF(ribbon(stem, () => 0.009), '#6f9a45', g));
+      [[0.35, 0.15, 0.065], [0.65, 0.13, 0.058]].forEach(([t, l, w]) => {
+        const p = stem[Math.round(t * 10)];
+        [-1, 1].forEach(sd => parts.push(...leafParts(p, UP + lean + sd * 1.15, l, w, '#3d8c45', g, {bend: -sd * 0.18, ribOp: 0.45, veins: [0.45]})));
+      });
+      const tip = stem[10];
+      [-0.55, 0.55, 0].forEach(da => parts.push(...leafParts(tip, UP + lean + da, da ? 0.085 : 0.1, da ? 0.035 : 0.04, '#4a9a4c', g, {bend: -da * 0.2, ribOp: 0.4})));
+    });
+    parts.push(bandPart(0.45, 0.55, 0.8));
+    return {parts, fewer: true};
+  },
+  // Cilantro: thin stems fanning out to flat, rounded, scalloped leaflets in
+  // threes, the bunch's white roots left on below the tie.
+  cilantro: () => {
+    const G = [0.5, 0.78], parts = [];
+    const ends = [[UP - 0.9, 0.36], [UP - 0.5, 0.42], [UP - 0.15, 0.46], [UP + 0.2, 0.45], [UP + 0.55, 0.41], [UP + 0.9, 0.35], [UP + 0.02, 0.33]];
+    const scallop = t => 0.7 + 0.3 * Math.pow(Math.abs(Math.sin(5 * Math.PI * t)), 0.4);
+    ends.forEach(([a, l], g) => {
+      const e = polarPt(G, a, l);
+      parts.push(PF(stalkPts(G, e, 0.006, 0.004, 0.01), '#8ab868', g));
+      [-0.7, 0, 0.7].forEach(da => parts.push(...leafParts(polarPt(e, a + da, 0.01), a + da, 0.085, 0.05, g % 2 ? '#3d8f4b' : '#47a055', g,
+        {prof: 'fan', edge: scallop, rib: true, ribOp: 0.35, n: 22})));
+    });
+    parts.push(PF(ovalPts([0.5, 0.84], 0.04, 0.03), '#ecebdc', null), bandPart(0.47, 0.53, 0.79));
+    [-0.035, -0.012, 0.012, 0.035].forEach(dx => parts.push(PL([[0.5 + dx * 0.6, 0.86], [0.5 + dx * 1.4, 0.95]], 0.55, {w: 0.6})));
+    return {parts, fewer: true};
+  },
+  // Parsley: curly, the tight ruffled clusters on thin stems, tied.
+  parsley: () => {
+    // Curly parsley: many thin stems, branching, each ending in a small,
+    // tightly crimped tuft.
+    const G = [0.5, 0.88], parts = [];
+    const ends = [[UP - 0.8, 0.4, 0.06], [UP - 0.55, 0.5, 0.065], [UP - 0.3, 0.58, 0.07], [UP - 0.08, 0.52, 0.06], [UP + 0.12, 0.6, 0.068], [UP + 0.35, 0.53, 0.066], [UP + 0.6, 0.47, 0.062], [UP + 0.85, 0.38, 0.058], [UP + 0.02, 0.38, 0.056]];
+    ends.forEach(([a, l, r], g) => {
+      const e = polarPt(G, a, l), m = polarPt(G, a + (g % 2 ? 0.1 : -0.1), l * 0.6);
+      parts.push(PF(stalkPts(G, e, 0.006, 0.004, 0.012), '#86b466', g));
+      parts.push(PF(stalkPts(m, polarPt(m, a + (g % 2 ? -0.7 : 0.7), r * 1.6), 0.004, 0.003), '#86b466', g));
+      parts.push(PF(cloudPts(polarPt(m, a + (g % 2 ? -0.7 : 0.7), r * 1.7), r * 0.55, r * 0.5, 11, 0.3, 36, g + 1), '#3a8a43', g));
+      parts.push(PF(cloudPts(e, r, r * 0.88, 14, 0.3, 48, g), g % 2 ? '#2f7d3a' : '#3f9148', g));
+      for (let k = 0; k < 5; k++){
+        const c = polarPt(e, k * 1.3 + g, r * 0.5);
+        parts.push(PL(Array.from({length: 7}, (_, i) => polarPt(c, i * 1.1, r * 0.2 * (1 - i * 0.09))), 0.5, {g, w: 0.6}));
+      }
+    });
+    parts.push(bandPart(0.47, 0.53, 0.82));
+    return {parts, fewer: true};
+  },
+  // Arugula: a loose bunch of narrow, deeply lobed leaves, a rounder lobe
+  // at each tip.
+  arugula: () => {
+    const G = [0.5, 0.86], parts = [];
+    const lobed = t => t > 0.72 ? 1.25 : 0.3 + 0.7 * Math.pow(Math.abs(Math.sin(3.5 * Math.PI * t)), 0.6);
+    [[UP - 0.75, 0.5], [UP + 0.75, 0.5], [UP - 0.4, 0.6], [UP + 0.4, 0.58], [UP - 0.1, 0.64], [UP + 0.15, 0.62]].forEach(([a, l], g) => {
+      parts.push(PF(stalkPts(G, polarPt(G, a, l * 0.3), 0.007, 0.006), '#8ab868', g));
+      parts.push(...leafParts(polarPt(G, a, l * 0.28), a, l * 0.72, 0.065, g % 2 ? '#4f9a52' : '#428a46', g, {prof: 'lance', edge: lobed, bend: (g % 2 ? 0.08 : -0.08), n: 30, ribOp: 0.45}));
+    });
+    parts.push(bandPart(0.465, 0.535, 0.82));
+    return {parts, fewer: true};
+  },
+  // Kale: curly -- long, dark blue-green leaves frilled all along their
+  // edges, on thick pale ribs.
+  kale: () => {
+    // Curly kale: a tied bunch of long pale stalks, each carrying a long
+    // leaf whose edge is curled into tight rounded frills, crinkled within.
+    const G = [0.5, 0.93], parts = [];
+    const frill = t => (0.72 + 0.22 * Math.abs(Math.sin(19 * Math.PI * t)) + 0.08 * Math.abs(Math.sin(53 * Math.PI * t))) * (t < 0.12 ? t / 0.12 : 1);
+    [[UP - 0.42, 0.8], [UP + 0.42, 0.78], [UP - 0.14, 0.86], [UP + 0.16, 0.84]].forEach(([a, l], g) => {
+      const s0 = polarPt(G, a, 0.04), s1 = polarPt(G, a, 0.3);
+      parts.push(PF(stalkPts(s0, s1, 0.016, 0.012), '#b9cfa0', g));
+      parts.push(PF(leafPts(s1, a, l - 0.3, 0.17, 'ovate', frill, g % 2 ? 0.06 : -0.06, 120), g < 2 ? '#2f6447' : '#3a7352', g));
+      const rib = bentPts(s1, polarPt(s1, a, (l - 0.3) * 0.9), (g % 2 ? 0.06 : -0.06) * (l - 0.3), 10);
+      parts.push(PF(ribbon(rib, t => 0.012 * (1 - t * 0.7)), '#a9c48e', g, {op: 0.6}));
+      const R = seededRand(20 + g);
+      for (let k = 0; k < 9; k++){
+        const p = rib[1 + Math.floor(R() * 8)], c = polarPt(p, a + (R() < 0.5 ? 1.57 : -1.57), 0.03 + R() * 0.07);
+        parts.push(PL(Array.from({length: 6}, (_, i) => polarPt(c, i * 1.05 + k, 0.016)), 0.5, {g, w: 0.6}));
+      }
+    });
+    parts.push(bandPart(0.45, 0.55, 0.84));
+    return {parts, fewer: true};
+  },
+  // Leaf lettuce: a loose, open head of broad leaves frilled at the edge,
+  // paler toward the heart, pale ribs fanning from the base.
+  leaflettuce: () => {
+    const G = [0.5, 0.88], parts = [];
+    const fr = ruffle(13, 0.09);
+    [[UP - 1.2, 0.46, 0.2, '#6fae73'], [UP + 1.2, 0.46, 0.2, '#6fae73'], [UP - 0.75, 0.6, 0.22, '#78b57b'], [UP + 0.75, 0.6, 0.22, '#78b57b'],
+      [UP - 0.3, 0.7, 0.21, '#81bb85'], [UP + 0.32, 0.68, 0.21, '#81bb85'], [UP, 0.56, 0.17, '#a2cd94']].forEach(([a, l, w, fill], g) => {
+      parts.push(...leafParts(G, a, l, w, fill, g, {prof: 'spoon', edge: fr, n: 40, ribFill: '#e3edcf', ribW: 0.1, veins: [0.4, 0.62, 0.8], ribOp: 0.4}));
+    });
+    return {parts, fewer: true};
+  },
+  // Romaine: a tall, upright head -- long leaves overlapping, dark at the
+  // tips, a broad pale rib up each.
+  romaine: () => {
+    const parts = [];
+    [[0.36, -0.2, '#5d9c62'], [0.64, 0.2, '#5d9c62'], [0.42, -0.07, '#6aa86f'], [0.58, 0.07, '#6aa86f'], [0.5, 0, '#78b47a']].forEach(([x, lean, fill], g) => {
+      const b = [x, 0.9];
+      parts.push(...leafParts(b, UP + lean, 0.8, 0.12, fill, g, {prof: 'spoon', edge: ruffle(7, 0.05), n: 30, bend: lean * 0.1, ribFill: '#e4ecc9', ribW: 0.32, veins: [0.5, 0.7]}));
+    });
+    return {parts, fewer: true};
+  },
+  // Cabbage: a firm round head, its leaves wrapped round it -- a midrib and
+  // veins across the front leaf, two outer leaves cupping it from below.
+  cabbage: () => {
+    const parts = [PF(ovalPts([0.5, 0.52], 0.37, 0.34, 0, 40), '#b5d0a3', 0)];
+    parts.push(PF(ribbon(bentPts([0.24, 0.3], [0.62, 0.84], 0.1, 12), t => 0.008 + 0.022 * t), '#e3ecd0', 0, {op: 0.55}));
+    const rib = bentPts([0.24, 0.3], [0.62, 0.84], 0.1, 12);
+    [3, 5, 7, 9].forEach((i, k) => { const p = rib[i]; parts.push(PL(bentPts(p, [p[0] + 0.24 - k * 0.02, p[1] - 0.12 + k * 0.02], 0.03, 4), 0.4)); parts.push(PL(bentPts(p, [p[0] - 0.14, p[1] + 0.1], -0.02, 4), 0.35)); });
+    parts.push(PL(bentPts([0.2, 0.55], [0.5, 0.18], -0.12, 8), 0.4));
+    parts.push(PF(leafPts([0.5, 0.9], UP - 1.25, 0.4, 0.15, 'spoon', ruffle(6, 0.06)), '#9fc28e', 0));
+    parts.push(PF(leafPts([0.5, 0.9], UP + 1.25, 0.4, 0.15, 'spoon', ruffle(6, 0.06)), '#9fc28e', 0));
+    parts.push(PL(bentPts([0.5, 0.9], polarPt([0.5, 0.9], UP - 1.25, 0.34), 0.02, 6), 0.4), PL(bentPts([0.5, 0.9], polarPt([0.5, 0.9], UP + 1.25, 0.34), -0.02, 6), 0.4));
+    return {parts, fewer: false};
+  },
+  // Napa cabbage: a tall, barrel-shaped head; broad white ribs below,
+  // crinkled pale green leaf above.
+  napacabbage: () => {
+    const parts = [];
+    [[0.37, -0.12], [0.63, 0.12], [0.5, 0]].forEach(([x, lean], g) => {
+      const b = [x, 0.9], top = polarPt(b, UP + lean, 0.8);
+      parts.push(PF(leafPts(b, UP + lean, 0.8, 0.16, 'spoon', ruffle(9, 0.06), 0, 30), '#bcd59a', g));
+      parts.push(PF(ribbon(bentPts(b, polarPt(b, UP + lean, 0.52), 0, 10), t => 0.1 * (1 - t * 0.55) * (t < 0.04 ? 0.8 : 1)), '#f0f2e4', g, {op: 0.55}));
+      for (let k = 0; k < 4; k++){
+        const y0 = 0.62 - k * 0.1, c = polarPt(b, UP + lean, 0.55 + k * 0.06);
+        parts.push(PL([[c[0] - 0.08, c[1] + 0.02], [c[0] - 0.04, c[1] - 0.01], [c[0], c[1] + 0.015], [c[0] + 0.04, c[1] - 0.01], [c[0] + 0.08, c[1] + 0.02]], 0.35, {g, w: 0.6}));
+      }
+      parts.push(PL([top, polarPt(b, UP + lean, 0.5)], 0.3, {g}));
+    });
+    return {parts, fewer: false};
+  },
+  // Bok choy: thick white spoon-shaped stalks swelling to a bulb at the
+  // base, dark round leaves at their tops.
+  bokchoy: () => {
+    const parts = [], B = [0.5, 0.88];
+    [[-0.38, '#3a7741'], [0.38, '#3a7741'], [-0.14, '#3f7f45'], [0.16, '#3f7f45']].forEach(([lean, leaf], g) => {
+      const top = polarPt(B, UP + lean, 0.46);
+      parts.push(PF(ribbon(bentPts(B, top, -lean * 0.06, 12), t => 0.07 + 0.03 * Math.sin(Math.PI * Math.min(1, t * 1.4)) - 0.04 * t), '#e9eedb', g));
+      parts.push(...leafParts(polarPt(B, UP + lean, 0.4), UP + lean * 1.15, 0.4, 0.15, leaf, g, {prof: 'spoon', ribFill: '#dfe8cb', ribW: 0.16, veins: [0.35, 0.6]}));
+      parts.push(PL(bentPts(polarPt(B, UP + lean, 0.08), polarPt(B, UP + lean, 0.4), -lean * 0.03, 5), 0.3, {g}));
+    });
+    parts.push(PF(ovalPts([0.5, 0.86], 0.12, 0.045), '#e2e9d2', 0));
+    return {parts, fewer: true};
+  },
+  // Choy sum: slender green stems, long oval leaves, and the small yellow
+  // flowers it's picked in.
+  choysum: () => {
+    const G = [0.5, 0.9], parts = [];
+    [[UP - 0.42, 0.72], [UP + 0.42, 0.7], [UP - 0.14, 0.8], [UP + 0.16, 0.78]].forEach(([a, l], g) => {
+      const e = polarPt(G, a, l), stem = bentPts(G, e, (g % 2 ? 0.02 : -0.02), 10);
+      parts.push(PF(ribbon(stem, () => 0.013), '#9fc77f', g));
+      [[0.35, -1], [0.55, 1], [0.72, -1]].forEach(([t, sd]) => parts.push(...leafParts(stem[Math.round(t * 10)], a + sd * 0.55, 0.22, 0.06, '#489953', g, {bend: sd * -0.1, ribOp: 0.45})));
+      for (let k = 0; k < 5; k++) parts.push(PF(ovalPts(polarPt(e, k * 1.26, k ? 0.025 : 0), 0.016, 0.016, 0, 10), '#e8d84a', g, {w: 0.6}));
+    });
+    parts.push(bandPart(0.47, 0.53, 0.82));
+    return {parts, fewer: true};
+  },
+  // Gai lan: thick, round, blue-green stems cut square at the base, broad
+  // flat leaves, and a tight head of white flower buds.
+  gailan: () => {
+    const G = [0.5, 0.9], parts = [];
+    [[UP - 0.36, 0.66], [UP + 0.36, 0.64], [UP - 0.05, 0.72]].forEach(([a, l], g) => {
+      const e = polarPt(G, a, l), stem = bentPts(polarPt(G, a, 0.02), e, 0, 10);
+      parts.push(PF(ribbon(stem, t => 0.026 - 0.008 * t), '#6f9f62', g));
+      parts.push(PL(bentPts(stem[1], stem[9], 0, 4), 0.3, {g}));
+      [[0.35, -1, 0.3], [0.55, 1, 0.3]].forEach(([t, sd, ll]) => parts.push(...leafParts(stem[Math.round(t * 10)], a + sd * 0.75, ll, 0.13, '#3a7a4a', g, {veins: [0.4, 0.65], ribOp: 0.45})));
+      for (let k = 0; k < 6; k++) parts.push(PF(ovalPts(polarPt(e, k * 1.05, k ? 0.025 : 0), 0.016, 0.014, 0, 10), '#eeeddf', g, {w: 0.6}));
+      parts.push(PF(ovalPts(stem[0], 0.024, 0.01, 0, 12), '#d7e3c3', g));
+    });
+    return {parts, fewer: true};
+  },
+  // Celery: a bunch of long ribbed stalks joined at the base, feathery
+  // leaves at the top.
+  celery: () => {
+    const parts = [];
+    [[0.37, -0.12], [0.63, 0.12], [0.44, -0.04], [0.56, 0.04], [0.5, 0]].forEach(([x, lean], g) => {
+      const b = [0.5 + (x - 0.5) * 0.6, 0.9], top = polarPt(b, UP + lean, 0.62);
+      const cl = bentPts(b, top, 0, 12);
+      parts.push(PF(ribbon(cl, t => 0.05 - 0.02 * t), g === 4 ? '#b6d69a' : '#9cc58a', g));
+      [-0.4, 0, 0.4].forEach(k => parts.push(PL(cl.map((p, i) => [p[0] + k * (0.05 - 0.02 * i / 12), p[1]]).slice(1, 11), 0.35, {g, w: 0.6})));
+      [-0.6, 0, 0.6].forEach(da => parts.push(...leafParts(top, UP + lean + da, 0.12, 0.045, '#6fae5a', g, {edge: t => 0.65 + 0.35 * Math.abs(Math.sin(3 * Math.PI * t)), n: 20, ribOp: 0.35})));
+    });
+    return {parts, fewer: true};
+  },
+  // Scallions: a slim bundle lying down -- white bulbs and roots on the
+  // left, hollow green leaves running out to the right.
+  scallion: () => {
+    const parts = [];
+    [[0.5, -0.05], [0.56, 0.02], [0.6, 0.08], [0.53, 0.12], [0.58, -0.1]].forEach(([y, fan], g) => {
+      const p0 = [0.14, y], p1 = [0.93, y + fan * 0.9];
+      const cl = bentPts(p0, p1, fan * 0.05, 14);
+      parts.push(PF(ribbon(cl, t => (t < 0.06 ? 0.022 + t * 0.2 : 0.034 - 0.012 * t)), '#54ab60', g));
+      parts.push(PF(ribbon(cl.slice(0, 6), t => (t < 0.15 ? 0.022 + t * 0.6 : 0.034 - 0.004 * t)), '#eef0e2', g));
+      parts.push(PF(ribbon(cl.slice(5, 7), () => 0.03), '#b8dba0', g, {op: 0}));
+      [-0.02, 0, 0.02].forEach(dy => parts.push(PL([[0.14, y + dy * 0.6], [0.08, y + dy * 1.6]], 0.55, {g, w: 0.6})));
+    });
+    return {parts, fewer: true};
+  },
+  // Leeks: two, lying down -- a thick white shaft, the root plate and
+  // roots at the left, broad flat blue-green leaves fanning to the right.
+  leek: () => {
+    const parts = [];
+    [[0.44, -1], [0.58, 1]].forEach(([y, sd], g) => {
+      [-0.07, 0.07, 0].forEach((fan, k) => parts.push(PF(ribbon(bentPts([0.55, y], [0.95, y + fan + sd * 0.03], fan * 0.08, 10), t => 0.045 - 0.01 * t), k === 2 ? '#7f9f86' : '#6f9278', g)));
+      const shaft = bentPts([0.1, y], [0.6, y], 0, 10);
+      parts.push(PF(ribbon(shaft, t => t < 0.04 ? 0.05 : 0.06 - 0.008 * t), '#eef0e0', g));
+      parts.push(PF(ribbon(shaft.slice(6), () => 0.054), '#c9dcb8', g, {op: 0.4}));
+      [-0.025, 0.02].forEach(dy => parts.push(PL([[0.14, y + dy], [0.56, y + dy * 0.8]], 0.3, {g, w: 0.6})));
+      [-0.04, -0.015, 0.015, 0.04].forEach(dy => parts.push(PL([[0.1, y + dy], [0.05, y + dy * 1.5]], 0.55, {g, w: 0.6})));
+    });
+    return {parts, fewer: true};
+  },
+  // Garlic chives: a flat bundle of thin, flat green blades, cut square at
+  // one end, tied, a few with a pale closed flower bud at the tip.
+  garlicchives: () => {
+    const parts = [];
+    for (let g = 0; g < 7; g++){
+      const y = 0.48 + g * 0.018, fan = (g - 3) * 0.025;
+      const cl = bentPts([0.1, y], [0.9, y + fan], fan * 0.15, 12);
+      parts.push(PF(ribbon(cl, () => 0.011), g % 2 ? '#3a8a4b' : '#429453', g, {w: 0.7}));
+      if (g % 3 === 1) parts.push(PF(leafPts(cl[12], fan * 2, 0.05, 0.016, 'ovate'), '#eeeddf', g, {w: 0.6}));
+    }
+    parts.push(bandPart(0.39, 0.43, 0.535, 0.14));
+    return {parts, fewer: true};
+  },
+  // Water spinach: a bundle of long hollow stems lying down, their cut ends
+  // open at the left, narrow arrow-shaped leaves at the right.
+  waterspinach: () => {
+    // Long hollow stems lying in a bundle, cut ends open, a few long
+    // narrow arrow-head leaves standing off them on short stalks.
+    const parts = [];
+    [[0.5, -0.06], [0.55, 0.0], [0.6, 0.06], [0.65, 0.1], [0.53, 0.16]].forEach(([y, fan], g) => {
+      const cl = bentPts([0.05, y], [0.7, y + fan * 0.5 - 0.04], -0.02, 12);
+      parts.push(PF(ribbon(cl, () => 0.014), '#9ccc84', g));
+      parts.push(PF(ovalPts(cl[0], 0.006, 0.014, 0, 10), '#eef5e2', g, {w: 0.6}), PF(ovalPts(cl[0], 0.0025, 0.007, 0, 8), '#5f7a50', g, {w: 0.4}));
+      [3, 5, 7, 9].forEach(i => parts.push(PL([[cl[i][0], cl[i][1] - 0.01], [cl[i][0], cl[i][1] + 0.01]], 0.45, {g, w: 0.5})));
+      [[0.6, -1], [0.85, 1], [1, 0]].filter((_, k) => (g + k) % 2 === 0 || k === 2).forEach(([t, sd]) => {
+        const p = cl[Math.round(t * 12)], a = fan * 0.5 + sd * 0.55 - 0.05;
+        const e = polarPt(p, a, 0.05);
+        parts.push(PF(stalkPts(p, e, 0.006, 0.005), '#9ccc84', g, {w: 0.6}));
+        parts.push(...leafParts(e, a, 0.27, 0.034, '#3f8f4a', g, {prof: 'arrow', bend: sd * 0.05, ribOp: 0.45}));
+      });
+    });
+    parts.push(bandPart(0.24, 0.29, 0.57, 0.15));
+    return {parts, fewer: true};
+  }
+};
+
 const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: tubBand, protein: wrappedTray,
   cooked: containerLid, generic: packetSeal, potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
-  chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, spinach: spinachRibs, carrot: carrotTops,
+  chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, carrot: carrotTops,
   onion: onionSkin, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves, ...FRUIT_CUES};
 // Packaging behind the food, drawn before its body (see the note above
 // chickenOutline). Kept in its own group so the body outline stays the
@@ -5893,6 +6293,7 @@ function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size
   let raw = catOutlinePoints(shape, size);
   if (some != null && shape === 'eggs') raw = eggsTaken(raw, some, size);
   const deformed = deformPoints(raw, fraction, sagW, wrinkleW, seed, size);
+  if (PARTS[shape]) return partsSvg(shape, raw, deformed, color, fraction, moldW, size, seed, some, key, wrap);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
   const uid = 'fline' + (fridgeShapeCounter++);
   const strokeW = Math.max(1, size * 0.008).toFixed(2);
@@ -5992,6 +6393,7 @@ const CUT_FACES = {
   babycarrot: {flesh: '#f08a2a', pat: 'corering', x: '#f5b25a'},
   mushroom: {flesh: '#efe6d6', pat: 'fibres'}, shiitake: {flesh: '#efe6d6', pat: 'fibres'},
   hardcheese: {pat: 'holes'},
+  cabbage: {flesh: '#eef2d6', pat: 'layers'}, napacabbage: {flesh: '#f2f2e2', pat: 'layers'},
   cucumber: {flesh: '#dfe9b8', pat: 'seedring', x: '#eef2d4'}, zucchini: {flesh: '#efeccb', pat: 'seedring', x: '#f6f2dc'},
   pepper: {pat: 'hollow', x: '#f2ead0'}, chineseeggplant: {flesh: '#efe6c4', pat: 'speckle', x: '#a89a6a'},
   daikon: {flesh: '#f6f4ea', pat: 'plain'}, ginger: {flesh: '#ecd88a', pat: 'fibres'}
@@ -6173,17 +6575,6 @@ function cutShape(shape, key, raw, deformed, color, fraction, size, seed, some){
     const kept = (kind === 'c' ? circleUnion(size, keep) : ellipseUnion(size, keep, 44)).map(p => ridePt(rider.raw, deformed, p));
     return {clip: smoothClosedPath(kept), outline: smoothClosedPath(kept), face: '', film: kept};
   }
-  // spinach, a loose bunch: fewer leaves -- the rightmost go, cut away at
-  // the stems where they gather (leaf tips 3, 9, 15, 21; stems 25, 26)
-  if (shape === 'spinach'){
-    const base = rfLerp(deformed[25], deformed[26], 0.5), ang = p => Math.atan2(p[1] - base[1], p[0] - base[0]);
-    const tips = [3, 9, 15, 21].map(i => deformed[i]).sort((p, q) => p[0] - q[0]);
-    const k = Math.max(1, Math.round(tips.length * some));
-    const cut = (ang(tips[k - 1]) + ang(tips[k])) / 2, far = size * 2, fan = [base];
-    for (let a = cut; a > -1.5 * Math.PI - 0.3; a -= 0.2) fan.push([base[0] + Math.cos(a) * far, base[1] + Math.sin(a) * far]);
-    const keep = deformed.filter(p => inPoly(fan, p));
-    return {clip: straightClosedPath(fan), face: '', film: keep.length > 2 ? keep : deformed};
-  }
   // a melon: a wedge from its centre down to the rind, the cut face to us
   if (spec.wedge){
     const sec = deformed.filter(([x, y]) => { const a = Math.atan2(y - c[1], x - c[0]); return a > 0.2 * Math.PI && a < 0.8 * Math.PI; })
@@ -6254,6 +6645,11 @@ function freezerBurnMarkup(svg, burn, seed){
   const m = svg.match(/^<svg width="([\d.]+)"[^]*?<path d="([^"]+)"/);
   if (!m) return svg;
   const s = +m[1], d = m[2], id = 'frost' + (fridgeShapeCounter++);
+  // a drawing in parts (partsSvg) frosts on its parts, not across the gaps
+  // between its leaves and stalks
+  const pm = svg.match(/<clipPath id="([^"]+-parts)">(.*?)<\/clipPath>/);
+  const ds = pm ? [...pm[2].matchAll(/d="([^"]+)"/g)].map(x => x[1]) : [d];
+  const clipRef = pm ? pm[1] : id;
   const thin = Math.max(0.6, s * 0.005).toFixed(2);
   const rim = s * (0.03 + 0.075 * burn);
   const R = seededRand(seed * 7 + 401);
@@ -6265,11 +6661,12 @@ function freezerBurnMarkup(svg, burn, seed){
       .map(([x, y]) => { const j = 0.75 + R() * 0.5; return [cx + (x - cx) * j, cy + (y - cy) * j]; });
     patches += `<path d="${smoothClosedPath(scalePts(s, pts))}" fill="${BURN_HEX}" fill-opacity="${(0.55 + 0.35 * burn).toFixed(2)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
   }
+  const thinRim = pm ? 0.22 : 1;
   const extra = `<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs>
-    <g clip-path="url(#${id})" class="frost">
+    <g clip-path="url(#${clipRef})" class="frost">
       ${patches}
-      <path d="${d}" fill="none" stroke="${FROST_HEX}" stroke-opacity="${(0.75 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(rim * 2)}" stroke-linejoin="round"/>
-      <path d="${d}" fill="none" stroke="${INK_HEX}" stroke-opacity="${(0.3 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(s * 0.03)}" stroke-dasharray="${f1(s * 0.004)} ${f1(s * (0.045 - 0.02 * burn))}" stroke-linecap="round"/>
+      ${ds.map(dd => `<path d="${dd}" fill="none" stroke="${FROST_HEX}" stroke-opacity="${(0.75 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(rim * 2 * thinRim)}" stroke-linejoin="round"/>
+      <path d="${dd}" fill="none" stroke="${INK_HEX}" stroke-opacity="${(0.3 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(s * 0.03 * thinRim)}" stroke-dasharray="${f1(s * 0.004)} ${f1(s * (0.045 - 0.02 * burn))}" stroke-linecap="round"/>`).join('')}
     </g>`;
   return svg.replace(/<\/svg>\s*$/, extra + '</svg>');
 }

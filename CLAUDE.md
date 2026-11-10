@@ -369,6 +369,43 @@ inside is used down (a bottle's level, a bag's pieces, the eggs left in
 the carton). tools/used-some-study.js shows every food whole, half,
 quarter and half at 60% decayed.
 
+Drawing spec. Every FOODS entry has a drawing of its own that a person
+can name without a label; a FoodKeeper-only (fallback) item keeps its
+category's generic shape. The approved drawings are the quality bar and
+the style reference, and are not redrawn: mushroom, potato, apple,
+banana, tomato, lemon, lime, mango, watermelon, kiwi, guava. Rules:
+- Real silhouettes from explicit geometry (circles, ellipses,
+  superellipses, arcs, unions of them; polarRing, circleUnion,
+  ellipseUnion), never a generic rounded box. Nothing distorts the base
+  outline at 0% decay (deformPoints returns it unchanged).
+- One or two identity cues per food, the feature it is recognised by (a
+  stem and leaf, a calyx, seeds, a crown, netting, a carton's gable top,
+  a head's ribs, florets), plus enough detail lines to read as that
+  food -- a field-guide plate, not a cartoon.
+- Natural colour per the visual system above, distinct by hue from the
+  urgency colours. Real relative sizes: within its square a lime is
+  smaller than a lemon, a lemon than an orange, a bunch of herbs than a
+  head of cabbage.
+- It must still read at phone shelf size (40 CSS px) and at 100% decay.
+- Packaged foods are drawn in their real package (carton, tub, jar,
+  tray, bag, brick, sleeve); blank labels, no brands, no lettering.
+  Where the real package is clear (a bag of shredded cheese, a clamshell
+  of berries, a deli tub of salsa) the food shows through it.
+- Same line weight (max(1, size x 0.008)) and the fridge's wobble filter
+  as the approved drawings. Similar foods share path pieces (leaf, stalk,
+  floret, tray, tub, carton helpers) to keep the file small.
+- References: photos in tools/references/ come first. Otherwise one or
+  two clear photographs per food from Wikimedia Commons (real photos with
+  free licences; no stock sites, watermarks, AI images or other people's
+  illustrations) are downloaded to tools/references/web/ (gitignored,
+  never committed) and looked at before drawing, for shape, proportion
+  and identifying features only. Drawings are our own line-and-wash,
+  never traced or copied from a photo or illustration.
+- Checked by tools/drawings-study.js: labelled sheets, every context
+  (cut and wrapped, opened, freezer burn, in a dish), and an unlabelled
+  blind test (fresh large, 100% decayed, phone size, confusable pairs
+  side by side) for an observer who hasn't seen the names.
+
 Dishes (DISHES) carry the meals they suit (meals: breakfast, lunch,
 dinner, snack), a vessel (bowl, plate, glass, mug, toast, pan) and
 hot:true when served hot -- nothing else, no prep times or anything there
