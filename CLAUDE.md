@@ -315,12 +315,16 @@ in small signs on it -- a bulging lid, a little mold at the seam, a
 label that fades. Bottles and cans (the drinks category) are packages
 too, drawn from a few shared forms (BOTTLE_PROFILES: long-neck, can,
 still wine, sparkling with foil and wire cage, tall spirit, short square
-whiskey, small green, sake), told apart by glass and drink colour
+whiskey, small green, sake, a round brandy decanter, a white porcelain
+baijiu bottle, a tall tequila bottle on a heavy foot), told apart by
+glass and drink colour
 (BOTTLES): the glass never changes, a blank plain label fades, and an
 opened wine (red, white, rosé, vermouth, sparkling) shows its wine
 darkening toward brown through the glass. Sparkling wine uses the
 sparkling form, rosé and vermouth the still wine form in clear glass,
-sake the sake form, soju the small green bottle. No
+sake the sake form in frosted glass, soju the small green bottle; a
+cider and a sparkling wine show bubbles rising, a mezcal its worm
+(BOTTLE_INSIDES), and a label may carry its own colour (labHex). No
 brands, no lettering. Their square is drawn larger in the illustrated
 fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it.
 Frozen food doesn't rot: it is drawn at the decay it had when frozen

@@ -1537,7 +1537,7 @@ const FOODS = {
   // unfermented juice: a different product).
   beer:          {en:'Beer',              aliases:['beers','lager','ale','pale ale','ipa','pilsner','stout','bottle of beer','beer bottle','bottled beer'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the bottle', g:355, usd:1.99, estPrice:true, cat:'drinks', shape:'beer', base:'#7a4520'},
   cannedbeer:    {en:'Canned beer',       aliases:['beer can','beer cans','can of beer','cans of beer','tallboy','tallboys'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the can', g:355, usd:1.79, estPrice:true, cat:'drinks', shape:'beercan', base:'#c9a54c'},
-  hardcider:     {en:'Hard cider',        aliases:['hard ciders','alcoholic cider','cider can','cans of cider'], shelf:null, pkgDate:true, note:'No FoodKeeper entry (#662 Apple cider is fresh juice); the date printed on the can', g:355, usd:2.49, estPrice:true, cat:'drinks', shape:'cidercan', base:'#a9c27a'},
+  hardcider:     {en:'Hard cider',        aliases:['hard ciders','alcoholic cider','cider can','cans of cider'], shelf:null, pkgDate:true, note:'No FoodKeeper entry (#662 Apple cider is fresh juice); the date printed on the can', g:355, usd:2.49, estPrice:true, cat:'drinks', shape:'ciderbottle', base:'#a9c27a'},
   hardseltzer:   {en:'Hard seltzer',      aliases:['hard seltzers','spiked seltzer','spiked seltzers','alcoholic seltzer'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the can', g:355, usd:2.29, estPrice:true, cat:'drinks', shape:'seltzercan', base:'#d5dddf'},
   // #462 Red wine and #463 White wine give no refrigerator figure for an
   // unopened bottle, only the pantry one (red 3-5 years, white 1-2): an
@@ -1581,8 +1581,8 @@ const FOODS = {
   gin:           {en:'Gin',               aliases:['bottle of gin','london dry gin'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'gin', base:'#d3e5e4'},
   rum:           {en:'Rum',               aliases:['bottle of rum','white rum','dark rum','spiced rum','gold rum'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:19.99, estPrice:true, cat:'drinks', shape:'rum', base:'#dbe6e8'},
   tequila:       {en:'Tequila',           aliases:['bottle of tequila','tequila blanco','reposado'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'agave', base:'#dbe6e8'},
-  mezcal:        {en:'Mezcal',            aliases:['mescal','bottle of mezcal'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:39.99, estPrice:true, cat:'drinks', shape:'agave', base:'#dbe6e8'},
-  baijiu:        {en:'Baijiu',            aliases:['bottle of baijiu'], shelf:null, keeps:true, fk:539, store:'pantry', g:500, usd:29.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'},
+  mezcal:        {en:'Mezcal',            aliases:['mescal','bottle of mezcal'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:39.99, estPrice:true, cat:'drinks', shape:'mezcal', base:'#dbe6e8'},
+  baijiu:        {en:'Baijiu',            aliases:['bottle of baijiu'], shelf:null, keeps:true, fk:539, store:'pantry', g:500, usd:29.99, estPrice:true, cat:'drinks', shape:'baijiu', base:'#dbe6e8'},
   liquor:        {en:'Liquor',            aliases:['liquors','spirits','spirit','hard liquor','hard liquors','bottle of liquor'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'},
   whiskey:       {en:'Whiskey',           aliases:['whisky','whiskeys','whiskies','rye whiskey','bottle of whiskey','bottle of whisky'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'whiskey', base:'#dbe6e8'},
   bourbon:       {en:'Bourbon',           aliases:['bourbon whiskey','bottle of bourbon'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'whiskey', base:'#dbe6e8'},
@@ -6719,7 +6719,14 @@ const BOTTLE_PROFILES = {
   squat:     {rows: [[0.3, 0.038], [0.35, 0.04], [0.44, 0.046], [0.6, 0.138], [0.93, 0.138]], label: [0.7, 0.86], cap: 'screw'},
   // a small jar and a tall one
   smalljar:  {rows: [[0.54, 0.128], [0.575, 0.142], [0.93, 0.142]], label: [0.74, 0.86], cap: 'lid'},
-  talljar:   {rows: [[0.24, 0.15], [0.28, 0.168], [0.93, 0.168]], label: [0.8, 0.88], cap: 'lid'}
+  talljar:   {rows: [[0.24, 0.15], [0.28, 0.168], [0.93, 0.168]], label: [0.8, 0.88], cap: 'lid'},
+  // a brandy or cognac bottle: a short neck, a full round body wider at
+  // the shoulder than the foot, a wooden-headed stopper
+  decanter:  {rows: [[0.3, 0.038], [0.37, 0.04], [0.52, 0.168], [0.72, 0.16], [0.93, 0.13]], label: [0.62, 0.8], cap: 'bar'},
+  // a baijiu bottle: opaque white porcelain, a rounded shoulder
+  porcelain: {rows: [[0.22, 0.04], [0.28, 0.046], [0.42, 0.13], [0.93, 0.122]], label: [0.52, 0.72], cap: 'screw'},
+  // a tequila bottle: a tall neck, a straight body on a wide heavy foot
+  tequila:   {rows: [[0.14, 0.04], [0.3, 0.042], [0.4, 0.11], [0.84, 0.11], [0.93, 0.135]], label: [0.5, 0.74], cap: 'bar'}
 };
 // Each drawn drink: its form (p), and what shows through the glass --
 // liquid colour and level (an opened wine has been poured from), or a
@@ -6737,24 +6744,33 @@ const BOTTLES = {
   whitewine:     {p: 'wine', liquid: '#dcc45a', level: 0.40},
   whitewineOpen: {p: 'wine', liquid: '#dcc45a', level: 0.62, open: true},
   vodka:         {p: 'spirit', clear: true, level: 0.25},
-  gin:           {p: 'spirit', clear: true, level: 0.25},
-  agave:         {p: 'spirit', clear: true, liquid: '#ece0a6', level: 0.25},
+  // gin in a blue-green tinted glass
+  gin:           {p: 'spirit', clear: true, glass: '#9cc8c0', level: 0.25},
+  // baijiu in its white porcelain bottle under a red cap
+  baijiu:        {p: 'porcelain', glass: '#f1efe8', capHex: '#c4532c', labHex: '#c4532c'},
+  agave:         {p: 'tequila', clear: true, liquid: '#f1ecd2', level: 0.3},
+  // mezcal: the agave worm lying at the bottom of the bottle
+  mezcal:        {p: 'spirit', clear: true, liquid: '#e6dca8', level: 0.25, inside: ['worm']},
   rum:           {p: 'spirit', clear: true, liquid: '#b87a32', level: 0.25},
   whiskey:       {p: 'square', clear: true, liquid: AMBER, level: 0.46},
   scotch:        {p: 'square', clear: true, liquid: '#c98d3a', level: 0.46},
-  brandy:        {p: 'square', clear: true, liquid: '#8f4a1c', level: 0.46},
-  creamliqueur:  {p: 'square'},
+  brandy:        {p: 'decanter', clear: true, liquid: '#8f4a1c', level: 0.5},
+  // cream liqueur: the milky caramel liqueur showing through clear glass
+  creamliqueur:  {p: 'square', clear: true, liquid: '#e2d2b4', level: 0.46, solid: true},
+  // hard cider: a clear long-neck of hazy gold cider, bubbles rising
+  ciderbottle:   {p: 'longneck', clear: true, glass: '#7fa864', liquid: '#e2c050', level: 0.3, inside: ['bubbles']},
   // Drinks FoodKeeper doesn't list (FOODS cites the source for each, or
   // asks the printed date): sparkling wine, rosé and vermouth open, and
   // darken once opened, as wine does; sake's brown glass and soju's small
   // green bottle show nothing.
-  sparkling:     {p: 'sparkling', liquid: '#e0cf7a', level: 0.45, glass: '#2a4d36'},
-  sparklingOpen: {p: 'sparkling', liquid: '#e0cf7a', level: 0.62, glass: '#2a4d36', open: true},
+  sparkling:     {p: 'sparkling', clear: true, liquid: '#e0cf7a', level: 0.45, glass: '#4f7a52', inside: ['bubbles']},
+  sparklingOpen: {p: 'sparkling', clear: true, liquid: '#e0cf7a', level: 0.62, glass: '#4f7a52', open: true, inside: ['bubbles']},
   rose:          {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.40},
   roseOpen:      {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.62, open: true},
   vermouth:      {p: 'wine', clear: true, liquid: '#a8502a', level: 0.40},
   vermouthOpen:  {p: 'wine', clear: true, liquid: '#a8502a', level: 0.62, open: true},
-  sake:          {p: 'sake', glass: '#5d4128'},
+  // sake: a frosted pale bottle, the clear sake showing faintly
+  sake:          {p: 'sake', clear: true, glass: '#cfd8d4', liquid: '#eeeedd', level: 0.3},
   smallgreen:    {p: 'small', clear: true, glass: '#7fbf8e', level: 0.6}
 };
 // Condiments: the form and what shows through the clear plastic or glass
@@ -6799,6 +6815,21 @@ const BOTTLE_INSIDES = {
     }
     return out;
   }
+};
+BOTTLE_INSIDES.bubbles = c => {
+  const R = seededRand(5); let out = '';
+  for (let k = 0; k < 18; k++){
+    const x = 0.5 + (R() - 0.5) * c.bh * 1.5, y = c.level + 0.03 + R() * (c.baseY - c.level - 0.07);
+    out += `<circle cx="${c.X(x)}" cy="${c.X(y)}" r="${c.X(0.006 + R() * 0.005)}" fill="none" stroke="#ffffff" stroke-opacity=".9" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+  }
+  return out;
+};
+BOTTLE_INSIDES.worm = c => {
+  const y = c.baseY - 0.06, pts = Array.from({length: 9}, (_, i) => [0.5 - 0.06 + i * 0.015, y - 0.018 * Math.sin(i / 8 * Math.PI * 1.4)]);
+  const d = 'M ' + pts.map(([x, yy]) => c.X(x) + ' ' + c.X(yy)).join(' L ');
+  return `<path d="${d}" fill="none" stroke="${INK_HEX}" stroke-width="${c.X(0.03)}" stroke-linecap="round"/>`
+    + `<path d="${d}" fill="none" stroke="${c.col('#e3cfa0')}" stroke-width="${c.X(0.022)}" stroke-linecap="round"/>`
+    + pts.slice(1, -1).map(([x, yy]) => `<line x1="${c.X(x)}" y1="${c.X(yy - 0.01)}" x2="${c.X(x)}" y2="${c.X(yy + 0.01)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${c.thin}"/>`).join('');
 };
 const CONDIMENT_LOOKS = {
   ketchup: ['squeeze', '#b8361f'], mustard: ['squeeze', '#dcc33c'], bbqsauce: ['squeeze', '#6e2c18'],
@@ -6904,7 +6935,7 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
   // drink never shows through it
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const [l0, l1] = b.lab || prof.label;
-  const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
+  const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(b.labHex || BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
     ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`);
   // glass (or metal): a highlight down the body and the neck
   const hi = (x, y0, y1) => y1 > y0 ? `<line x1="${X(x)}" y1="${X(y0)}" x2="${X(x)}" y2="${X(y1)}" stroke="#ffffff" stroke-opacity="${b.clear ? '.8' : '.45'}" stroke-width="${Math.max(1, s * 0.012).toFixed(2)}" stroke-linecap="round"/>` : '';
