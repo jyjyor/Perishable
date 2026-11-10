@@ -5488,10 +5488,13 @@ function partsSvg(shape, raw, deformed, color, fraction, moldW, size, seed, some
   const paint = P.map(p => p.open
     ? `<path d="${smoothOpenPath(p.q)}" fill="none" stroke="${p.stroke ? natureColor(p.stroke, fraction) : INK_HEX}" stroke-opacity="${p.op}" stroke-width="${f1(sw * (p.w || 0.8))}" stroke-linecap="round"/>`
     : `<path d="${p.sharp ? polyD(p.q) : smoothClosedPath(p.q)}" fill="${p.fill === 'base' ? color : p.fade ? hexLerp(p.fill, '#d8d6cc', fraction * 0.8) : p.rigid ? p.fill : partFill(p.fill, fraction)}" stroke="${INK_HEX}" stroke-opacity="${p.op == null ? 1 : p.op}" stroke-width="${f1(sw * (p.w || 1))}" stroke-linejoin="round"/>`).join('');
+  // the label: the spec's own box (spec.lab, unit square) or its largest fade part
+  const lab = spec.lab ? spec.lab.map(v => v * size) : P.filter(p => p.fade && !p.open).map(p => ptsBox(p.q)).sort((a, b) => (b[2] - b[0]) * (b[3] - b[1]) - (a[2] - a[0]) * (a[3] - a[1]))[0];
+  const labWord = lab ? labelWordSvg(...lab, Math.max(0, Math.min(1, fraction * 0.8))) : '';
   const spots = genericDiscolorationSpots(deformed, fraction, size, seed), mold = genericMoldMarkup(deformed, fraction, moldW, size, seed);
   const hullD = smoothClosedPath(deformed);
   const defs = `<clipPath id="${uid}-clip"><path d="${hullD}"/></clipPath><clipPath id="${uid}-parts">${closedD.map(d => `<path d="${d}"/>`).join('')}</clipPath><clipPath id="${uid}-food">${(foodD.length ? foodD : closedD).map(d => `<path d="${d}"/>`).join('')}</clipPath>`;
-  const body = `${paint}<g clip-path="url(#${uid}-food)">${spots}${mold}</g>`;
+  const body = `${paint}${labWord}<g clip-path="url(#${uid}-food)">${spots}${mold}</g>`;
   const svg = inner => `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${inner}</svg>`;
   if (some == null || (fewer && !wrap)) return svg(`<defs>${defs}</defs>${body}`);
   // a package is opened, never wrapped: its film peeled back from a corner
@@ -6478,6 +6481,8 @@ Object.assign(PARTS, {
     sp.parts.push(PL(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(7, 14).concat(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(0, 2)), 0.9, {w: 0.7, rigid: true}));
     sp.parts.push(PL([[cx - 0.02, cy - 0.08], [cx - 0.01, cy - 0.11], [cx - 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
     sp.parts.push(PL([[cx + 0.02, cy - 0.08], [cx + 0.03, cy - 0.11], [cx + 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
+    // its name in the strip of band under the cup
+    sp.lab = [cx - w / 2, cy + 0.06, cx + w / 2, y0 + h * 0.7];
     return sp;
   },
   // Shredded cheese: a clear zip bag full of short orange-gold shreds.
@@ -6681,7 +6686,7 @@ function bulgedOutline(shape, pts, fraction, size){
 function packageSigns(shape, pts, fraction, size, seed){
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const op = (0.55 * (1 - 0.75 * fade)).toFixed(2), lineOp = (0.7 * (1 - 0.6 * fade)).toFixed(2);
-  const panel = q => `<path d="${polyD(q)}" fill="${LABEL_HEX}" fill-opacity="${op}" stroke="${INK_HEX}" stroke-opacity="${lineOp}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>`;
+  const panel = q => `<path d="${polyD(q)}" fill="${LABEL_HEX}" fill-opacity="${op}" stroke="${INK_HEX}" stroke-opacity="${lineOp}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>` + labelWordSvg(...ptsBox(q), fade);
   const band = (a, b, c, d, t0, t1) => [rfLerp(a, b, t0), rfLerp(c, d, t0), rfLerp(c, d, t1), rfLerp(a, b, t1)];
   let label = '', seam = null;
   if (shape === 'dairy'){
@@ -6910,6 +6915,48 @@ Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid, x = {}]]) => {
   BOTTLES[k + 'Open'] = Object.assign({p, clear: true, liquid, solid: true}, x, {level: level + 0.12, open: true});
 });
 Object.keys(BOTTLES).forEach(k => { PACKAGED_SHAPES[k] = 1; });
+// A package's blank label carries the food's plain generic name in tiny
+// capitals, as the leftovers tape carries the dish's name: what a real
+// one says first, never a brand, a logo or any other lettering. Short
+// words where the full name would be too long for a label (LABEL_WORDS);
+// otherwise the food's own English name. foodShapeMarkupLine sets
+// labelWord for the drawing it is making; every label (a bottle's, a
+// vessel's, a package's panel, a PARTS package's fade band) prints it.
+const LABEL_WORDS = {
+  cannedbeer: 'BEER', hardcider: 'CIDER', hardseltzer: 'SELTZER', redwine: 'RED WINE', whitewine: 'WHITE WINE',
+  sparklingwine: 'SPARKLING', creamliqueur: 'CREAM LIQUEUR',
+  mayonnaise: 'MAYO', soysauce: 'SOY', teriyaki: 'TERIYAKI', oystersauce: 'OYSTER', hoisin: 'HOISIN', hotsauce: 'HOT SAUCE',
+  saladdressing: 'DRESSING', creamydressing: 'RANCH', bbqsauce: 'BBQ', jarredsalsa: 'SALSA',
+  shreddedcheese: 'SHREDDED', heavycream: 'CREAM', halfandhalf: 'HALF & HALF', cottagecheese: 'COTTAGE',
+  creamcheese: 'CREAM CHEESE', sourcream: 'SOUR CREAM', stringcheese: 'STRING', egg: 'EGGS',
+  frozenberries: 'BERRIES', frozenveg: 'MIXED VEG', frozendumplings: 'DUMPLINGS', frozenpizza: 'PIZZA', icepops: 'ICE POPS',
+  flourtortilla: 'FLOUR', corntortilla: 'CORN', cookedrice: 'RICE', salsa: 'SALSA'
+};
+let labelWord = '', labelSize = 0;
+function labelWordOf(key, name){
+  if (key && LABEL_WORDS[key]) return LABEL_WORDS[key];
+  const en = key && FOODS[key] ? FOODS[key].en : name;
+  return String(en || '').toUpperCase();
+}
+// The word set in a label's box (px), centred, as large as fits: one line,
+// or two words on two lines when that fits larger. Fades with the label.
+function labelWordSvg(x0, y0, x1, y1, fade){
+  const word = labelWord, w = x1 - x0, h = y1 - y0;
+  if (!word || w <= 0 || h <= 0) return '';
+  const ADV = 0.66;  // a mono capital's advance, with the letter-spacing
+  // tiny: never larger than the leftovers tape's lettering (0.062 of the drawing)
+  const cap = labelSize ? labelSize * 0.062 : Infinity;
+  const one = Math.min(h * 0.5, w * 0.84 / (word.length * ADV), cap);
+  const words = word.split(' ');
+  const lines = words.length === 2 ? words : null;
+  const two = lines ? Math.min(h * 0.32, w * 0.84 / (Math.max(...lines.map(l => l.length)) * ADV), cap) : 0;
+  const rows = two > one * 1.15 ? lines : [word], fs = rows.length > 1 ? two : one;
+  if (fs < 1.4) return '';
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, lh = fs * 1.12;
+  const op = (0.78 * (1 - 0.55 * fade)).toFixed(2);
+  return rows.map((r, i) => `<text x="${cx.toFixed(2)}" y="${(cy + (i - (rows.length - 1) / 2) * lh + fs * 0.36).toFixed(2)}" text-anchor="middle" font-family="tonos-mono-vf, ui-monospace, monospace" font-weight="600" style="text-transform:none;letter-spacing:.06em" font-size="${fs.toFixed(2)}" fill="${INK_HEX}" fill-opacity="${op}">${esc(r)}</text>`).join('');
+}
+const ptsBox = q => [Math.min(...q.map(p => p[0])), Math.min(...q.map(p => p[1])), Math.max(...q.map(p => p[0])), Math.max(...q.map(p => p[1]))];
 const BOTTLE_LABEL_HEX = '#ECE8DC', BOTTLE_FADED_HEX = '#C4C2B8', CAP_HEX = '#B4B9B6', CORK_HEX = '#C9A46A',
   FOIL_HEX = '#BBA765', WOOD_HEX = '#6A4A31';
 function bottleOutline(prof, s){
@@ -6977,7 +7024,7 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const [l0, l1] = b.lab || prof.label;
   const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(b.labHex || BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
-    ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`);
+    ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`) + labelWordSvg(s * (0.5 - bh + 0.012), s * l0, s * (0.5 + bh - 0.012), s * l1, fade);
   // glass (or metal): a highlight down the body and the neck
   const hi = (x, y0, y1) => y1 > y0 ? `<line x1="${X(x)}" y1="${X(y0)}" x2="${X(x)}" y2="${X(y1)}" stroke="#ffffff" stroke-opacity="${b.clear ? '.8' : '.45'}" stroke-width="${Math.max(1, s * 0.012).toFixed(2)}" stroke-linecap="round"/>` : '';
   const shine = hi(0.5 - bh * 0.62, shoulderEnd + 0.03, l0 - 0.025) + hi(0.5 - bh * 0.62, l1 + 0.02, baseY - 0.05)
@@ -7112,7 +7159,7 @@ const BAG_BITS = {
 function vesselSigns(fraction, size, seed, labelPts, seam){
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const thin = Math.max(0.6, size * 0.005).toFixed(2);
-  const label = labelPts ? `<path d="${polyD(labelPts)}" fill="${hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}" stroke-width="${thin}"/>` : '';
+  const label = labelPts ? `<path d="${polyD(labelPts)}" fill="${hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}" stroke-width="${thin}"/>` + labelWordSvg(...ptsBox(labelPts), fade) : '';
   let mold = '';
   if (seam && fraction > MOLD_START){
     const rand = seededRand(seed + 997), growT = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
@@ -7355,6 +7402,13 @@ Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 // some: what's left after "Used some" (usedSomeOf; null for a whole
 // item) and key, the FOODS key, which picks a cut face before the shape.
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some = null, key = null, wrap = true){
+  const was = labelWord;
+  const wasSize = labelSize;
+  labelWord = labelWordOf(key, name); labelSize = size;
+  try { return foodShapeDrawing(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some, key, wrap); }
+  finally { labelWord = was; labelSize = wasSize; }
+}
+function foodShapeDrawing(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some, key, wrap){
   if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed, some);
   if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape, some);
   if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed, some);
@@ -9931,7 +9985,7 @@ function usualShape(key, i){
   if (st.name) it.name = st.name;
   try {
     const cat = fridgeCatOf(it);
-    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 64, 900 + i);
+    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 64, 900 + i, null, null, key);
   } catch (e){ return ''; }
 }
 function usualButton(key, i){

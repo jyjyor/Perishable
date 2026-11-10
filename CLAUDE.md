@@ -326,14 +326,14 @@ still wine, sparkling with foil and wire cage, tall spirit, short square
 whiskey, small green, sake, a round brandy decanter, a white porcelain
 baijiu bottle, a tall tequila bottle on a heavy foot), told apart by
 glass and drink colour
-(BOTTLES): the glass never changes, a blank plain label fades, and an
+(BOTTLES): the glass never changes, a plain label fades, and an
 opened wine (red, white, rosé, vermouth, sparkling) shows its wine
 darkening toward brown through the glass. Sparkling wine uses the
 sparkling form, rosé and vermouth the still wine form in clear glass,
 sake the sake form in frosted glass, soju the small green bottle; a
 cider and a sparkling wine show bubbles rising, a mezcal its worm
 (BOTTLE_INSIDES), and a label may carry its own colour (labHex). No
-brands, no lettering. Their square is drawn larger in the illustrated
+brands, no logos. Their square is drawn larger in the illustrated
 fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it.
 Frozen food doesn't rot: it is drawn at the decay it had when frozen
 (it.decayFrom; fresh if it went in fresh) and shows freezer
@@ -367,8 +367,18 @@ own shapes (blueberries with crowns, raspberry drupelets, strawberry
 halves, carrot cubes, corn kernels, dumplings), three ice pops on
 sticks in their wrappers, a shrink-wrapped pizza (a slice gone after
 Used some), and a clear lidded container whose food browns
-and molds, with a strip of tape carrying the dish's name -- the one
-place a drawing has lettering, because a real one would.
+and molds, with a strip of tape carrying the dish's name.
+Every package's plain label carries the food's plain generic name the
+same way, in tiny capitals ("SOY", "OYSTER", "CIDER", "TAHINI",
+"CREAM", "ICE CREAM"): never a brand, a logo or any other lettering,
+never larger than the tape's lettering (0.062 of the drawing), fading
+with the label. LABEL_WORDS holds the short words; otherwise it is the
+food's English name. foodShapeMarkupLine sets labelWord for each
+drawing, and every label prints it (labelWordSvg): a bottle's, a
+vessel's, a generic package's panel, and a PARTS package's label -- its
+spec.lab box if it has one, else its largest fade part. Packages with
+no label in real life (an egg carton, a meat tray, a wedge of cheese)
+stay unlettered.
 tools/fridge-contents-study.js shows them all.
 After Used some (it.part below 1) an item is drawn as what's left of it,
 from its own drawing. Whole food is cut: clipped where the knife went,
@@ -407,7 +417,8 @@ banana, tomato, lemon, lime, mango, watermelon, kiwi, guava. Rules:
   head of cabbage.
 - It must still read at phone shelf size (40 CSS px) and at 100% decay.
 - Packaged foods are drawn in their real package (carton, tub, jar,
-  tray, bag, brick, sleeve); blank labels, no brands, no lettering.
+  tray, bag, brick, sleeve); plain labels with the food's generic name in
+  tiny capitals, no brands, no logos.
   Where the real package is clear (a bag of shredded cheese, a clamshell
   of berries, a deli tub of salsa) the food shows through it.
 - Same line weight (max(1, size x 0.008)) and the fridge's wobble filter
