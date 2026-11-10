@@ -339,8 +339,13 @@ one and a half times the bin front's height (binItemU; a wine bottle a
 little more, a jar, a can or butter less), its width from its own form,
 and the bin's front and solid lip are drawn over its lower part, so it
 stands inside the bin. On a phone the door opens only to square and its
-bins can't be seen: these stand on the upper shelf, sized by urgency. They are packages drawn from three more shared bottle forms
-(squeeze bottle, glass jar, narrow sauce bottle; CONDIMENT_LOOKS) and
+bins can't be seen: these stand on the upper shelf, sized by urgency. They are packages drawn from more shared bottle forms
+(squeeze bottle, glass jar, narrow sauce bottle, dressing bottle, slim
+hot-sauce bottle, soy dispenser, squat sauce bottle, small and tall
+jars; CONDIMENT_LOOKS), each with one cue inside it where the real one
+shows it (BOTTLE_INSIDES: pickle spears, herb flecks, chili seeds,
+sesame, a separated oil layer, diced relish, thick sauce clinging to the
+glass; a gingham cloth over the jam's lid), and
 the butter block: the contents show through clear plastic or glass in
 their natural colour, the blank label fades, and an opened one is used
 down a little, its contents darkening toward brown as its time runs

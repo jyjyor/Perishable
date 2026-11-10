@@ -6708,7 +6708,18 @@ const BOTTLE_PROFILES = {
   // a narrow sauce bottle: long neck, small screw cap
   sauce:     {rows: [[0.12, 0.032], [0.16, 0.034], [0.36, 0.038], [0.52, 0.102], [0.93, 0.102]], label: [0.67, 0.83], cap: 'screw'},
   // a glass jar: a short neck under a wide metal lid
-  jar:       {rows: [[0.42, 0.165], [0.465, 0.188], [0.93, 0.188]], label: [0.63, 0.80], cap: 'lid'}
+  jar:       {rows: [[0.42, 0.165], [0.465, 0.188], [0.93, 0.188]], label: [0.63, 0.80], cap: 'lid'},
+  // a dressing bottle: tall, a short neck under a flip-top
+  dressing:  {rows: [[0.2, 0.05], [0.26, 0.056], [0.4, 0.112], [0.93, 0.112]], label: [0.62, 0.8], cap: 'flip'},
+  // a hot-sauce bottle: slim, a long thin neck, a small cap
+  woozy:     {rows: [[0.18, 0.024], [0.22, 0.026], [0.48, 0.03], [0.62, 0.072], [0.93, 0.072]], label: [0.72, 0.86], cap: 'screw'},
+  // a table soy dispenser: a squat flask, a short pouring neck
+  dispenser: {rows: [[0.4, 0.03], [0.44, 0.034], [0.5, 0.05], [0.62, 0.118], [0.93, 0.118]], label: [0.74, 0.86], cap: 'screw'},
+  // a squat sauce bottle: broad shoulders, a medium neck
+  squat:     {rows: [[0.3, 0.038], [0.35, 0.04], [0.44, 0.046], [0.6, 0.138], [0.93, 0.138]], label: [0.7, 0.86], cap: 'screw'},
+  // a small jar and a tall one
+  smalljar:  {rows: [[0.54, 0.128], [0.575, 0.142], [0.93, 0.142]], label: [0.74, 0.86], cap: 'lid'},
+  talljar:   {rows: [[0.24, 0.15], [0.28, 0.168], [0.93, 0.168]], label: [0.8, 0.88], cap: 'lid'}
 };
 // Each drawn drink: its form (p), and what shows through the glass --
 // liquid colour and level (an opened wine has been poured from), or a
@@ -6752,19 +6763,79 @@ const BOTTLES = {
 // as the opened jar's time runs out -- the same sign as an opened wine.
 // Natural colours, leaning away from the urgency palette: the reds toward
 // orange, mustard toward lemon, the greens toward leaf.
-const CONDIMENT_LOOKS = {
-  ketchup: ['squeeze', '#b8361f'], mayonnaise: ['squeeze', '#efe7c6'], mustard: ['squeeze', '#dcc33c'],
-  bbqsauce: ['squeeze', '#6e2c18'],
-  soysauce: ['sauce', '#3b2317'], teriyaki: ['sauce', '#4a2a17'], oystersauce: ['sauce', '#4c2e1e'],
-  hotsauce: ['sauce', '#c8431f'], dressing: ['sauce', '#e3d6a8'], creamydressing: ['sauce', '#eee9d6'],
-  vinaigrette: ['sauce', '#d9bf55'],
-  jam: ['jar', '#ad3127'], hoisin: ['jar', '#4b2219'], pickles: ['jar', '#86a640'], jarredsalsa: ['jar', '#c4512b'],
-  tahini: ['jar', '#cfb07e'], horseradish: ['jar', '#ece6d4'], pesto: ['jar', '#4f8c3c'], relish: ['jar', '#6f9c3a']
+// Inside a clear condiment, the identity cue on top of the contents:
+// pickle spears, herb or chili flecks, seeds, a separated oil layer.
+// Pieces darken with the contents once it's opened (natureColor).
+const BOTTLE_INSIDES = {
+  flecks: (c, hex, n = 26, r = 0.007) => c.dots(n, hex, r),
+  seeds: (c, hex) => c.dots(22, hex, 0.008, 1.8),
+  oil: (c, hex) => `<rect x="0" y="${c.X(c.level)}" width="${c.s}" height="${c.X(0.05)}" fill="${c.col(hex)}" fill-opacity=".85" clip-path="url(#${c.uid}-clip)"/>`
+    + `<line x1="0" y1="${c.X(c.level + 0.05)}" x2="${c.s}" y2="${c.X(c.level + 0.05)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`,
+  pickles: c => {
+    let out = '';
+    [-0.1, -0.035, 0.035, 0.1].forEach((dx, k) => {
+      const x = 0.5 + dx, y0 = c.level + 0.05 + (k % 2) * 0.03, y1 = c.baseY - 0.04, w = 0.028;
+      out += `<rect x="${c.X(x - w)}" y="${c.X(y0)}" width="${c.X(2 * w)}" height="${c.X(y1 - y0)}" rx="${c.X(w)}" fill="${c.col('#6f8a34')}" stroke="${INK_HEX}" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+      for (let j = 0; j < 4; j++) out += `<circle cx="${c.X(x + (j % 2 ? 0.01 : -0.01))}" cy="${c.X(y0 + 0.04 + j * (y1 - y0 - 0.06) / 4)}" r="${c.X(0.004)}" fill="${INK_HEX}" fill-opacity=".45"/>`;
+    });
+    return out;
+  },
+  // thick sauce clinging to the glass above its level, a few runs down
+  clings: (c, hex) => [0.42, 0.5, 0.57].map((x, k) => `<path d="M ${c.X(x - 0.012)} ${c.X(c.level)} L ${c.X(x - 0.012)} ${c.X(c.level - 0.05 - k * 0.025)} Q ${c.X(x)} ${c.X(c.level - 0.07 - k * 0.025)} ${c.X(x + 0.012)} ${c.X(c.level - 0.05 - k * 0.025)} L ${c.X(x + 0.012)} ${c.X(c.level)} Z" fill="${c.col(hex)}" fill-opacity=".85" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`).join(''),
+  // diced pieces (relish, salsa): small squares
+  dice: (c, hex, n = 24, r = 0.012) => {
+    const R = seededRand(n * 7 + hex.length); let out = '';
+    for (let k = 0; k < n; k++){
+      const x = 0.5 + (R() - 0.5) * c.bh * 1.7, y = c.level + 0.02 + R() * (c.baseY - c.level - 0.05);
+      out += `<rect x="${c.X(x - r)}" y="${c.X(y - r)}" width="${c.X(2 * r)}" height="${c.X(2 * r)}" transform="rotate(${Math.round(R() * 80)} ${c.X(x)} ${c.X(y)})" fill="${c.col(hex)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${(c.thin * 0.7).toFixed(2)}" clip-path="url(#${c.uid}-clip)"/>`;
+    }
+    return out;
+  },
+  shreds: (c, hex) => {
+    const R = seededRand(9); let out = '';
+    for (let k = 0; k < 26; k++){
+      const x = 0.5 + (R() - 0.5) * c.bh * 1.7, y = c.level + 0.02 + R() * (c.baseY - c.level - 0.06), a = R() * 3;
+      out += `<line x1="${c.X(x)}" y1="${c.X(y)}" x2="${c.X(x + Math.cos(a) * 0.022)}" y2="${c.X(y + Math.sin(a) * 0.012)}" stroke="${c.col(hex)}" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+    }
+    return out;
+  }
 };
-const CONDIMENT_LEVEL = {squeeze: 0.31, sauce: 0.40, jar: 0.48};
-Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid]]) => {
-  BOTTLES[k] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p], solid: true};
-  BOTTLES[k + 'Open'] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p] + 0.12, solid: true, open: true};
+const CONDIMENT_LOOKS = {
+  ketchup: ['squeeze', '#b8361f'], mustard: ['squeeze', '#dcc33c'], bbqsauce: ['squeeze', '#6e2c18'],
+  // a wide jar of white mayonnaise, the label low so the white shows
+  mayonnaise: ['jar', '#f3eed8', {lab: [0.72, 0.84]}],
+  // soy in a table dispenser under an orange-red cap; teriyaki thicker,
+  // sesame seeds in it; oyster sauce in a broad squat bottle, near black
+  soysauce: ['dispenser', '#2e1a10', {capHex: '#c4532c', level: 0.52}],
+  teriyaki: ['sauce', '#5a3018', {inside: ['seeds', '#efe3c0']}],
+  oystersauce: ['squat', '#3a2216', {level: 0.46, inside: ['clings', '#3a2216']}],
+  // hot sauce: a slim bottle, chili seeds and flakes in the red
+  hotsauce: ['woozy', '#c8431f', {inside: ['seeds', '#f0d48a'], level: 0.36}],
+  // dressings in a tall flip-top bottle, herbs flecked through them; the
+  // vinaigrette separated, oil over vinegar
+  dressing: ['dressing', '#e8c87a', {inside: ['flecks', '#55813a']}],
+  creamydressing: ['dressing', '#efeadb', {inside: ['flecks', '#4f7a34', 40]}],
+  vinaigrette: ['dressing', '#b8763a', {inside: ['oil', '#e2c650'], inside2: ['flecks', '#4f7a34', 30]}],
+  // jam: fruit seeds in the red, a gingham cloth tied over the lid
+  jam: ['jar', '#ad3127', {inside: ['seeds', '#e7b19a'], over: 'gingham'}],
+  // hoisin: a glossy red-brown sauce, a highlight across its surface
+  hoisin: ['smalljar', '#6e2618', {inside: ['oil', '#8a3a24']}],
+  jarredsalsa: ['jar', '#c4512b', {inside: ['dice', '#f1ecd8', 14, 0.014], inside2: ['dice', '#5f8f3e', 10, 0.011]}],
+  // pickles: whole spears standing in pale brine, label low on a tall jar
+  pickles: ['talljar', '#dcdca6', {inside: ['pickles']}],
+  // tahini: the oil separated on top of the paste
+  tahini: ['jar', '#ddcfae', {inside: ['oil', '#b58a3a'], inside2: ['seeds', '#f6f0dc']}],
+  // horseradish: a small jar of grated white root
+  horseradish: ['smalljar', '#ece6d4', {inside: ['shreds', '#a89a78'], inside2: ['shreds', '#c4b896']}],
+  pesto: ['smalljar', '#4f8c3c', {inside: ['flecks', '#9cc072', 30, 0.009]}],
+  // relish: a squeeze bottle of finely chopped green pickle
+  relish: ['jar', '#b3c24a', {inside: ['dice', '#6f9a2c', 40, 0.012], inside2: ['dice', '#e6e08a', 18, 0.01]}]
+};
+const CONDIMENT_LEVEL = {squeeze: 0.31, sauce: 0.40, jar: 0.48, dressing: 0.34, woozy: 0.36, dispenser: 0.52, squat: 0.5, smalljar: 0.6, talljar: 0.34};
+Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid, x = {}]]) => {
+  const level = x.level || CONDIMENT_LEVEL[p];
+  BOTTLES[k] = Object.assign({p, clear: true, liquid, solid: true}, x, {level});
+  BOTTLES[k + 'Open'] = Object.assign({p, clear: true, liquid, solid: true}, x, {level: level + 0.12, open: true});
 });
 Object.keys(BOTTLES).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 const BOTTLE_LABEL_HEX = '#ECE8DC', BOTTLE_FADED_HEX = '#C4C2B8', CAP_HEX = '#B4B9B6', CORK_HEX = '#C9A46A',
@@ -6815,13 +6886,24 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
   } else if (b.clear){
     drink = hline(level, 0.06, 0.3);
   }
+  // a condiment's identity cue inside it
+  [b.inside, b.inside2].filter(Boolean).forEach(([name, ...args]) => {
+    const R = seededRand(name.length * 13 + (b.liquid || '').length);
+    const ctx = {X, s, thin, uid, level, baseY, bh,
+      col: hex => b.open || some != null ? natureColor(hex, fraction) : hex,
+      dots: (n, hex, r, stretch = 1) => Array.from({length: n}, () => {
+        const x = 0.5 + (R() - 0.5) * bh * 1.8, y = level + 0.02 + R() * (baseY - level - 0.05);
+        return `<ellipse cx="${X(x)}" cy="${X(y)}" rx="${X(r * stretch)}" ry="${X(r)}" fill="${ctx.col(hex)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${(thin * 0.6).toFixed(2)}" clip-path="url(#${uid}-clip)"/>`;
+      }).join('')};
+    drink += BOTTLE_INSIDES[name](ctx, ...args);
+  });
   // a clear bottle's thick glass base
   if (b.clear) drink += `<line x1="${X(0.5 - bh + 0.012)}" y1="${X(baseY - 0.03)}" x2="${X(0.5 + bh - 0.012)}" y2="${X(baseY - 0.03)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
   // the blank label, fading as the fraction climbs (packageSigns' timing):
   // paper dulling toward grey, its edge going faint -- opaque, so the
   // drink never shows through it
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
-  const [l0, l1] = prof.label;
+  const [l0, l1] = b.lab || prof.label;
   const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
     ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`);
   // glass (or metal): a highlight down the body and the neck
@@ -6878,6 +6960,14 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
       + `<ellipse cx="${X(0.5 + w * 0.15)}" cy="${X(ly)}" rx="${X(w * 0.35)}" ry="${X(0.009)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}" stroke-opacity=".6"/>`;
   }
   if (some != null && prof.cap !== 'lid') cap = bottleOpened(prof, b, cap, color, s, thin, baseY, bh);
+  if (b.capHex) cap = cap.split(CAP_HEX).join(b.capHex);
+  // jam's gingham cloth over the lid, tied under it (not once it's opened)
+  if (b.over === 'gingham' && some == null){
+    const w = lh * 1.25, y0 = ly - 0.075, y1 = ly + 0.03, gid = uid + '-g';
+    cap += `<defs><pattern id="${gid}" width="${X(0.04)}" height="${X(0.04)}" patternUnits="userSpaceOnUse"><rect width="${X(0.04)}" height="${X(0.04)}" fill="#f2efe6"/><rect width="${X(0.02)}" height="${X(0.04)}" fill="#c96a5a" fill-opacity=".55"/><rect width="${X(0.04)}" height="${X(0.02)}" fill="#c96a5a" fill-opacity=".55"/></pattern></defs>`
+      + `<path d="M ${X(0.5 - w)} ${X(y1 + 0.03)} L ${X(0.5 - w * 0.86)} ${X(y0 + 0.01)} Q ${X(0.5)} ${X(y0 - 0.02)} ${X(0.5 + w * 0.86)} ${X(y0 + 0.01)} L ${X(0.5 + w)} ${X(y1 + 0.03)} L ${X(0.5 + w * 0.5)} ${X(y1)} L ${X(0.5)} ${X(y1 + 0.035)} L ${X(0.5 - w * 0.5)} ${X(y1)} Z" fill="url(#${gid})" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`
+      + `<line x1="${X(0.5 - lh * 1.05)}" y1="${X(ly + 0.012)}" x2="${X(0.5 + lh * 1.05)}" y2="${X(ly + 0.012)}" stroke="${INK_HEX}" stroke-width="${f1(s * 0.012)}"/>`;
+  }
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <path d="${d}" fill="${color}" fill-opacity="${b.clear ? '.55' : '1'}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
     <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
