@@ -1344,7 +1344,7 @@ const FOODS = {
   leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', shape:'leaflettuce', base:'#81bb85'},
   romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', shape:'romaine', base:'#6aa86f'},
   milk:       {en:'Milk',           shelf:7, fk:27, pkgDate:true, g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
-  yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
+  yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', shape:'yogurt', base:'#e7e7e4'},
   chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chickenbreast', base:'#e9b8a6'},
   beef:       {en:'Ground beef',    shelf:2, fk:43, g:450, usd:7.20, cat:'protein', shape:'beef', base:'#91473b'},
   bacon:      {en:'Bacon',          shelf:7, fk:79, g:340, usd:6.00, cat:'protein', shape:'bacon', base:'#c76b60'},
@@ -1371,8 +1371,8 @@ const FOODS = {
   // (see avocado).
   banana:     {en:'Banana',         shelf:3, fk:251, ripens:true, g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
   hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
-  shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
-  softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
+  shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', shape:'shreddedcheese', base:'#e3d79a'},
+  softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', shape:'softcheese', base:'#ecebe4'},
   // In the door's butter compartment (RF_DOOR_KEYS), drawn as a wrapped block.
   butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', shape:'butter', base:'#d7d0a2'},
   cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
@@ -1498,12 +1498,12 @@ const FOODS = {
   butternut:     {en:'Butternut squash',  aliases:['winter squash','acorn squash'], shelf:42, fk:303, store:'pantry', g:1200, usd:2.99, estPrice:true, cat:'veg', shape:'butternut', base:'#e0a457'},
   // A deep true red, leaning away from the plum urgency colour's purple.
   beets:         {en:'Beets',             aliases:['beet','beetroot','red beets'], shelf:14, fk:274, g:700, usd:2.99, estPrice:true, cat:'veg', plural:true, shape:'beets', base:'#b0262c'},
-  sourcream:     {en:'Sour cream',        shelf:null, fk:29, pkgDate:true, g:454, usd:2.49, estPrice:true, cat:'dairy', base:'#efeee8'},
-  creamcheese:   {en:'Cream cheese',      shelf:14, fk:10, g:227, usd:2.79, estPrice:true, cat:'dairy', base:'#eeece4'},
-  heavycream:    {en:'Heavy cream',       aliases:['heavy whipping cream','whipping cream'], shelf:10, fk:14, g:946, usd:5.49, estPrice:true, cat:'dairy', base:'#f0ecdc'},
-  halfandhalf:   {en:'Half and half',     aliases:['half & half'], shelf:4, fk:13, g:946, usd:3.99, estPrice:true, cat:'dairy', base:'#eeebe0'},
-  cottagecheese: {en:'Cottage cheese',    shelf:14, fk:9, g:680, usd:3.99, estPrice:true, cat:'dairy', base:'#efede6'},
-  stringcheese:  {en:'String cheese',     aliases:['mozzarella sticks','cheese sticks'], shelf:150, fk:544, g:1360, usd:13.99, estPrice:true, cat:'dairy', base:'#ecead8'},
+  sourcream:     {en:'Sour cream',        shelf:null, fk:29, pkgDate:true, g:454, usd:2.49, estPrice:true, cat:'dairy', shape:'sourcream', base:'#efeee8'},
+  creamcheese:   {en:'Cream cheese',      shelf:14, fk:10, g:227, usd:2.79, estPrice:true, cat:'dairy', shape:'creamcheese', base:'#eeece4'},
+  heavycream:    {en:'Heavy cream',       aliases:['heavy whipping cream','whipping cream'], shelf:10, fk:14, g:946, usd:5.49, estPrice:true, cat:'dairy', shape:'heavycream', base:'#f0ecdc'},
+  halfandhalf:   {en:'Half and half',     aliases:['half & half'], shelf:4, fk:13, g:946, usd:3.99, estPrice:true, cat:'dairy', shape:'halfandhalf', base:'#eeebe0'},
+  cottagecheese: {en:'Cottage cheese',    shelf:14, fk:9, g:680, usd:3.99, estPrice:true, cat:'dairy', shape:'cottagecheese', base:'#efede6'},
+  stringcheese:  {en:'String cheese',     aliases:['mozzarella sticks','cheese sticks'], shelf:150, fk:544, g:1360, usd:13.99, estPrice:true, cat:'dairy', shape:'stringcheese', base:'#ecead8'},
   salmon:        {en:'Salmon',            aliases:['salmon fillet','salmon fillets','atlantic salmon'], shelf:2, fk:146, g:1360, usd:32.00, estPrice:true, cat:'protein', shape:'salmon', base:'#e88a62'},
   // Usually bought frozen; #151 is the refrigerator value, fresh or thawed.
   shrimp:        {en:'Shrimp',            aliases:['raw shrimp','prawns'], shelf:3, fk:151, g:907, usd:17.99, estPrice:true, cat:'protein', shape:'shrimp', base:'#d9a59a'},
@@ -6340,6 +6340,146 @@ Object.assign(PARTS, {
     parts.push(PF(ovalPts([0.42, 0.58], 0.06, 0.04, 0.3, 14), '#f1e1cc', 0, {op: 0.5, w: 0.6}));
     parts.push(...filmParts());
     return {parts, fewer: false, pkg: true, peel: PEEL};
+  }
+});
+
+// Dairy packages, front-on with a little of the top showing: plastic tubs
+// and cups, gable-top cartons, a foil brick, a clear zip bag. The package
+// is rigid and keeps its colour; a blank label (fade) bleaches as it ages;
+// where the package is clear the food shows, and it is the food that
+// decays. opened:true parts appear only once it's opened (Used some).
+const TUB_PLASTIC_HEX = '#f1f1ec', SILVER_FOIL_HEX = '#cfd3d3';
+const PKG = (p, fill, o = {}) => PF(p, fill, null, Object.assign({rigid: true}, o));
+// A tub or cup: tapered body from y0 (top, half-width w0) to y1 (w1), a
+// lid of rim height rh.
+function tubParts(cx, y0, y1, w0, w1, rh, lidHex, band){
+  const ry = w0 * 0.22, out = [];
+  out.push(PKG([[cx - w0, y0], [cx + w0, y0], [cx + w1, y1], ...ovalPts([cx, y1], w1, ry * 0.8, 0, 16).slice(1, 8), [cx - w1, y1]], TUB_PLASTIC_HEX, {sharp: true}));
+  if (band){ const t0 = 0.3, t1 = 0.75, at = t => [w0 + (w1 - w0) * t, y0 + (y1 - y0) * t];
+    const [a0, b0] = at(t0), [a1, b1] = at(t1);
+    out.push(PKG([[cx - a0, b0], [cx + a0, b0], [cx + a1, b1], [cx - a1, b1]], band, {sharp: true, fade: true, w: 0.6})); }
+  out.push(PKG(ovalPts([cx, y0 - rh * 0.5], w0 * 1.04, ry, 0, 24), lidHex, {w: 0.9}));
+  out.push(PKG([[cx - w0 * 1.04, y0 - rh * 0.5], [cx + w0 * 1.04, y0 - rh * 0.5], [cx + w0 * 1.04, y0 + rh * 0.4], [cx - w0 * 1.04, y0 + rh * 0.4]], lidHex, {sharp: true, w: 0.9}));
+  return out;
+}
+// A gable-top carton, front face and a sliver of side, the roof and fin.
+function cartonPartsD(cx, y1, w, h, band){
+  const y0 = y1 - h, roof = w * 0.55, sd = w * 0.28, out = [];
+  out.push(PKG([[cx + w / 2, y0], [cx + w / 2 + sd, y0 - sd * 0.4], [cx + w / 2 + sd, y1 - sd * 0.4], [cx + w / 2, y1]], '#dcdcd4', {sharp: true}));
+  out.push(PKG([[cx - w / 2, y0], [cx + w / 2, y0], [cx + w / 2, y1], [cx - w / 2, y1]], TUB_PLASTIC_HEX, {sharp: true}));
+  out.push(PKG([[cx - w / 2, y0], [cx, y0 - roof], [cx + w / 2, y0]], '#e8e8e1', {sharp: true}));
+  out.push(PKG([[cx + w / 2, y0], [cx, y0 - roof], [cx + sd * 0.6, y0 - roof - sd * 0.25], [cx + w / 2 + sd, y0 - sd * 0.4]], '#d6d6ce', {sharp: true}));
+  out.push(PKG([[cx - w * 0.08, y0 - roof - w * 0.02], [cx + sd * 0.6 + w * 0.02, y0 - roof - sd * 0.25 - w * 0.02], [cx + sd * 0.6 + w * 0.02, y0 - roof - sd * 0.25 - w * 0.13], [cx - w * 0.08, y0 - roof - w * 0.13]], '#ecece6', {sharp: true, w: 0.8}));
+  out.push(PKG([[cx - w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.7], [cx - w / 2, y0 + h * 0.7]], band, {sharp: true, fade: true, w: 0.6}));
+  out.push(PKG(ovalPts([cx + w * 0.18, y0 - roof * 0.45], w * 0.07, w * 0.07, 0, 12), '#f6f6f2', {opened: true, w: 0.8}));
+  return out;
+}
+const cartonPkg = (w, h, band) => ({parts: cartonPartsD(0.45, 0.92, w, h, band), fewer: false, pkg: true});
+Object.assign(PARTS, {
+  // Yogurt: single cups, tall and tapered, sealed with foil and a tab.
+  yogurt: () => {
+    // a multipack: three squat cups joined at their foil lids, one torn
+    // off and opened (white yogurt)
+    const parts = [];
+    [0.24, 0.5, 0.76].forEach((cx, k) => {
+      parts.push(...tubParts(cx, 0.56, 0.86, 0.12, 0.095, 0.025, SILVER_FOIL_HEX, k === 1 ? '#d9e3ea' : '#cfdde6'));
+    });
+    parts.push(PKG([[0.12, 0.53], [0.88, 0.53], [0.88, 0.56], [0.12, 0.56]], SILVER_FOIL_HEX, {sharp: true, w: 0.8}));
+    [0.37, 0.63].forEach(x => parts.push(PL([[x, 0.53], [x, 0.56]], 0.6, {rigid: true, w: 0.6})));
+    parts.push(PKG([[0.85, 0.53], [0.93, 0.47], [0.94, 0.53]], SILVER_FOIL_HEX, {sharp: true, w: 0.7}));
+    parts.push(PKG(ovalPts([0.24, 0.53], 0.11, 0.025, 0, 20), '#f7f5ee', {opened: true}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Sour cream: one wide, low tub, its lid clear enough to show the white
+  // cream piled to a swirled peak.
+  sourcream: () => {
+    const parts = tubParts(0.5, 0.52, 0.88, 0.36, 0.31, 0.06, '#e6eae6', '#d5e3cf');
+    parts.push(PF(cloudPts([0.5, 0.46], 0.28, 0.05, 3, 0.15, 30), '#f7f6f0', 0, {w: 0.7}));
+    parts.push(PL(Array.from({length: 12}, (_, i) => polarPt([0.5, 0.45], i * 0.9, 0.02 + i * 0.012).map((v, j) => j ? 0.45 + (v - 0.45) * 0.3 : v)), 0.5, {w: 0.7}));
+    parts.push(PKG([[0.38, 0.44], [0.56, 0.43]], '#ffffff', {open: true, op: 0.8, stroke: '#ffffff', w: 1.6}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Cottage cheese: a deeper tub, the lumpy curds showing through its lid.
+  cottagecheese: () => {
+    const parts = tubParts(0.5, 0.44, 0.9, 0.33, 0.28, 0.06, '#e6eae6', '#e3dcc6');
+    parts.push(PF(cloudPts([0.5, 0.39], 0.3, 0.055, 9, 0.2, 40), '#f8f6ee', 0, {w: 0.7}));
+    // try 3: fewer, rounder, whiter curds heaped higher, a spoon in them
+    const R = seededRand(5);
+    [[0.3,0.37],[0.4,0.33],[0.5,0.31],[0.6,0.33],[0.7,0.37],[0.35,0.4],[0.47,0.37],[0.58,0.38],[0.66,0.41]].forEach(([x, y], k) =>
+      parts.push(PF(cloudPts([x + (R() - 0.5) * 0.01, y], 0.048, 0.034, 6, 0.12, 16, k), '#ffffff', 0, {w: 0.7})));
+    parts.push(PF([[0.62, 0.32], [0.82, 0.12], [0.85, 0.14], [0.66, 0.34]], '#c9ccc9', null, {rigid: true, sharp: true, w: 0.7}));
+    parts.push(PF(ovalPts([0.86, 0.11], 0.035, 0.02, -0.8, 12), '#c9ccc9', null, {rigid: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Cream cheese: a foil-wrapped brick, seen at an angle, a blank paper
+  // band round it; opened, the foil turned back from a white end.
+  creamcheese: () => {
+    const x0 = 0.14, x1 = 0.74, y0 = 0.5, y1 = 0.82, dx = 0.14, dy = 0.12, parts = [];
+    parts.push(PKG([[x1, y0], [x1 + dx, y0 - dy], [x1 + dx, y1 - dy], [x1, y1]], '#bfc4c4', {sharp: true}));
+    parts.push(PKG([[x0, y0], [x0 + dx, y0 - dy], [x1 + dx, y0 - dy], [x1, y0]], '#dde0e0', {sharp: true}));
+    parts.push(PKG([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], SILVER_FOIL_HEX, {sharp: true}));
+    parts.push(PKG([[0.3, y0], [0.3 + dx, y0 - dy], [0.52 + dx, y0 - dy], [0.52, y0], [0.52, y1], [0.3, y1]], '#e8edf0', {sharp: true, fade: true, w: 0.7}));
+    [[0.2, 0.56, 0.26, 0.76], [0.62, 0.55, 0.68, 0.78], [0.18, 0.47, 0.3, 0.42]].forEach(([a, b, c, d]) => parts.push(PL([[a, b], [c, d]], 0.4, {rigid: true, w: 0.6})));
+    parts.push(PKG([[x1, y0], [x1 + dx, y0 - dy], [x1 + dx, y1 - dy], [x1, y1]], '#f4f1e6', {sharp: true, opened: true}));
+    parts.push(PKG([[x1 + dx, y0 - dy], [x1 + dx + 0.06, y0 - dy - 0.05], [x1 + dx + 0.07, y1 - dy - 0.02], [x1 + dx, y1 - dy]], SILVER_FOIL_HEX, {sharp: true, opened: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Heavy cream: a small (half-pint) gable-top carton.
+  heavycream: () => cartonPkg(0.3, 0.42, '#e7dcc0'),
+  // Half and half: a pint carton, a little taller and wider.
+  // Half-and-half: the carton band split half white, half cream, a
+  // coffee cup on it (what it's for); try 3.
+  halfandhalf: () => {
+    const sp = cartonPkg(0.36, 0.52, '#f3f1e8'), cx = 0.45, w = 0.36, y0 = 0.92 - 0.52, h = 0.52;
+    sp.parts.push(PKG([[cx, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.7], [cx, y0 + h * 0.7]], '#d8c69c', {sharp: true, fade: true, w: 0.6}));
+    const cy = y0 + h * 0.5;
+    sp.parts.push(PKG([[cx - 0.07, cy - 0.05], [cx + 0.07, cy - 0.05], [cx + 0.055, cy + 0.06], [cx - 0.055, cy + 0.06]], '#8a6a4c', {sharp: true, fade: true, w: 0.7}));
+    sp.parts.push(PL(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(7, 14).concat(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(0, 2)), 0.9, {w: 0.7, rigid: true}));
+    sp.parts.push(PL([[cx - 0.02, cy - 0.08], [cx - 0.01, cy - 0.11], [cx - 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
+    sp.parts.push(PL([[cx + 0.02, cy - 0.08], [cx + 0.03, cy - 0.11], [cx + 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
+    return sp;
+  },
+  // Shredded cheese: a clear zip bag full of short orange-gold shreds.
+  shreddedcheese: () => {
+    const parts = [PKG([[0.16, 0.24], [0.84, 0.24], [0.85, 0.5], [0.87, 0.86], [0.84, 0.9], [0.16, 0.9], [0.13, 0.86], [0.15, 0.5]], '#f2f2ec', {sharp: true})];
+    parts.push(PKG([[0.16, 0.24], [0.84, 0.24], [0.84, 0.3], [0.16, 0.3]], '#dfe3e3', {sharp: true, w: 0.8}));
+    const R = seededRand(19);
+    for (let k = 0; k < 90; k++){
+      const c = [0.21 + R() * 0.58, 0.36 + R() * 0.5], a = R() * 3.14;
+      parts.push(PF(ovalPts(c, 0.032, 0.008, a, 8), R() < 0.5 ? '#e9b648' : '#f0d27a', 0, {w: 0.4}));
+    }
+    parts.push(PKG([[0.34, 0.5], [0.66, 0.5], [0.66, 0.64], [0.34, 0.64]], '#f6f4ee', {sharp: true, fade: true, w: 0.6}));
+    parts.push(PL([[0.22, 0.36], [0.24, 0.84]], 0.8, {rigid: true, film: true, stroke: '#ffffff', w: 2}));
+    parts.push(PKG([[0.16, 0.24], [0.3, 0.12], [0.36, 0.24]], '#e6eaea', {sharp: true, opened: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Soft cheese: a round of brie, its white bloomy rind, a wedge cut out
+  // and lying in front to show the pale creamy inside.
+  softcheese: () => {
+    const C = [0.5, 0.5], RX = 0.38, RY = 0.15, H = 0.14, a0 = -0.25, a1 = 0.55, parts = [];
+    const rim = (a, dy = 0) => [C[0] + Math.cos(a) * RX, C[1] + Math.sin(a) * RY + dy];
+    const arc = (b0, b1, dy, n = 16) => Array.from({length: n + 1}, (_, i) => rim(b0 + (b1 - b0) * i / n, dy));
+    parts.push(PF([...arc(0, Math.PI, 0), ...arc(Math.PI, 0, H)], '#f1ede0', 0));
+    parts.push(PF([C, ...arc(a1, a0 + Math.PI * 2, 0, 30)], '#f5f2e8', 0));
+    parts.push(PF([C, rim(a0), rim(a0, H), [C[0], C[1] + H]], '#f1dfa6', 0, {sharp: true}));
+    parts.push(PF([C, rim(a1), rim(a1, H), [C[0], C[1] + H]], '#ecd794', 0, {sharp: true}));
+    const W = [0.62, 0.8];
+    parts.push(PF([W, [W[0] + 0.24, W[1] - 0.03], [W[0] + 0.24, W[1] + 0.06], [W[0], W[1] + 0.09]], '#f1dfa6', 1, {sharp: true}));
+    parts.push(PF([W, [W[0] - 0.1, W[1] - 0.06], [W[0] + 0.14, W[1] - 0.09], [W[0] + 0.24, W[1] - 0.03]], '#f5f2e8', 1, {sharp: true}));
+    return {parts, fewer: true};
+  },
+  // String cheese: three white sticks in their clear wrappers, crimped at
+  // the ends; one opened, peeled into strings.
+  stringcheese: () => {
+    const parts = [];
+    [[0.3, 0.84, 0.36], [0.5, 0.86, 0.52], [0.72, 0.84, 0.66]].forEach(([x0, y0, x1], g) => {
+      const top = [x1, 0.16 + g * 0.03];
+      parts.push(PKG(podPts([x0, y0], top, () => 0.055, 0, 10), '#eef0ee', {w: 0.6}));
+      parts.push(PF(podPts([x0, y0 - 0.04], [top[0], top[1] + 0.04], u => 0.04 * Math.min(1, u * 20, (1 - u) * 20), 0, 10), '#f4efdc', g));
+      parts.push(PL(Array.from({length: 7}, (_, i) => [top[0] - 0.05 + i * 0.0167, top[1] - 0.012 * (i % 2)]), 0.6, {rigid: true, w: 0.6}));
+      parts.push(PL([[x0 + 0.01 + (x1 - x0) * 0.2, y0 - 0.1], [x0 + (x1 - x0) * 0.85, 0.3 + g * 0.03]], 0.7, {rigid: true, stroke: '#ffffff', w: 1.4}));
+    });
+    return {parts, fewer: true};
   }
 });
 
