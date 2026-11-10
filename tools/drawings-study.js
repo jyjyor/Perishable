@@ -4,9 +4,10 @@
 // exactly as the illustrated fridge draws it, with the fridge's wobble
 // filter -- no separate drawing path.
 //
-//   node tools/drawings-study.js sheet [out]
+//   node tools/drawings-study.js sheet [out] [key,key...]
 //     Labelled contact sheets, one per category: each food fresh large,
 //     100% decayed large, and fresh at phone shelf size (40 CSS px at 3x).
+//     Given keys, only those foods (a sheet of the flagged drawings).
 //     -> tools/screenshots/<out|drawings>/sheet-<group>.png
 //   node tools/drawings-study.js contexts [out]
 //     Every place a food is drawn, per category: fresh, 50%, 100%, Used
@@ -144,12 +145,13 @@ async function shoot(page, html, file, width = null) {
   await el.screenshot({ path: file });
 }
 
-async function sheets(out, mode) {
+async function sheets(out, mode, only) {
   const dir = path.join(SHOTS, out);
   fs.mkdirSync(dir, { recursive: true });
   const { browser, page, errors } = await open();
   for (const g of GROUPS) {
-    const keys = await page.evaluate(g => Object.keys(FOODS).filter(k => __study.groupOf(k) === g), g);
+    const keys = await page.evaluate(({ g, only }) => Object.keys(FOODS).filter(k => __study.groupOf(k) === g && (!only || only.includes(k))), { g, only });
+    if (!keys.length) continue;
     const cells = await page.evaluate(({ keys, mode, LARGE, PHONE_DRAW, PHONE_SHOW, MONO, BG }) => keys.map(k => {
       const f = FOODS[k], shape = fridgeShapeOf({key: k});
       const col = (art, label, w) => `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:${w}px">
@@ -240,6 +242,6 @@ async function blind(name, only) {
   try {
     if (mode === 'blind') await blind(arg || 'run', arg2 ? arg2.split(',') : null);
     else if (mode === 'contexts') await sheets(arg || 'drawings', 'contexts');
-    else await sheets(arg || 'drawings', 'sheet');
+    else await sheets(arg || 'drawings', 'sheet', arg2 ? arg2.split(',') : null);
   } finally { server.close(); }
 })();

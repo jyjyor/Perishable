@@ -1,187 +1,158 @@
-# Real fridge — autonomous session report
+# Drawings report — branch `drawings`
 
-Branch: `real-fridge`. Not pushed, not merged into `main`. The existing
-line-art fridge view and every file outside this project were left alone.
+Every FOODS entry was audited with a blind recognition test. The ones that
+failed were redrawn one category at a time, retested blind, and redrawn
+again up to three tries. Anything that still failed is flagged below.
+Fallback (FoodKeeper-only) items keep their category's generic shape. The
+hand-tuned drawings were not touched: mushroom, potato, apple, banana,
+tomato, lemon, lime, mango, watermelon, kiwi, guava, milk, eggs, hard
+cheese, butter, tofu and the leftovers.
 
-## What I built
+One commit per category: leafy greens, vegetables, fruit, protein, dairy,
+cooked and deli, condiments, drinks, frozen. The drawing spec is in
+CLAUDE.md under "Drawing spec". Main was never merged or pushed.
 
-A new `.rf` section (`#rf`) in `index.html`, directly above the existing
-`<section class="fridgeview">`, which I did not touch — both currently
-show the same real `fridge` data side by side, as asked, so you can
-compare them before deciding which stays.
+## Sheets (tools/screenshots/, gitignored)
 
-**The illustration.** A literal fridge, flat-filled line art in the
-page's existing cold palette: rounded-corner body, a freezer compartment
-with vent lines near the top, a door seam, a rubber-gasket outline inset
-on the door face, two hinges on the body's right edge, a handle with top
-and bottom mounting brackets, a vent grille and two feet at the bottom,
-and a flat (not blurred) shadow ellipse underneath. Inside: a back wall
-that visibly lightens when the door opens, a light-fixture rectangle that
-does the same, two glass shelves with side rail marks, a crisper drawer
-at the bottom, and three door bins on the door's inside face. No
-gradients anywhere, no metal texture, nothing cute — flat fills and thin
-ink strokes throughout, same as the food.
+| What | Where |
+|---|---|
+| Before, per category (main's index.html) | `before/sheet-<category>.png` |
+| After, per category | `after/sheet-<category>.png` |
+| Everything flagged | `flagged/sheet-<category>.png` |
+| Every place each food is drawn (shelf, door bin, used some, cling film, freezer burn, dish) | `drawings/contexts-<category>.png` |
+| Final unlabelled sheets, to run the test with people | `blind-final/sheet-{fresh,decayed,phone}-N.png`, `blind-final/pairs/`, answers in `blind-final/key.json` |
 
-**The door.** A real CSS 3D transform (`rotateY` around the hinge edge,
-`transform-style: preserve-3d`, two `backface-visibility: hidden` faces
-for the front and the inside) rather than a slide or fade standing in for
-a hinge. It opens once on page load, closed on the very first paint, then
-animates open — so you see it shut before you see it decided to open,
-not a jump cut. Clicking the handle (a real `<button>`, focusable,
-`aria-pressed`/`aria-label` kept in sync) toggles it either way, and also
-dismisses any open item popover, since a popover pointing at a now-hidden
-item looked broken. Under `prefers-reduced-motion: reduce`, it's open
-within one frame of load with no visible swing — I didn't write a
-separate media-query path for this; the page already had a global
-`*{transition:none!important}` rule under that same media query, so my
-JS only needed to skip its own 500ms delay before flipping the class, and
-the existing CSS infrastructure does the rest.
+`node tools/drawings-study.js sheet <out> [key,key…]` renders a labelled
+sheet; given keys, it renders only those foods (that is how the flagged
+sheet is made). `blind <name>` renders the unlabelled sets.
 
-**Food placement.** Items come from the real `fridge` array via the real
-`leftAt`/`decayFraction`/`natureColor`/`foodShapeMarkupLine`/
-`fridgeCatOf`/`fridgeShapeOf` — no parallel rendering path. Items with
-days-left ≥ 0 are sorted soonest-first; the most urgent (up to three) go
-on the eye-level shelf, the single most urgent one enlarged and placed in
-the middle of that row; the rest recede onto the lower shelf, shrinking
-slightly with each step down the urgency order. Already-past-date items
-go into the crisper drawer with the same `Toss` action the old fridge
-view uses (`useItem(id, true)`), not a reimplementation. Tapping any item
-— never the door — opens a popover with its name, bought date, status
-(the same `state()`/`COLOR` bucket the rest of the page already uses),
-and days left; it closes on an outside click, Escape, or the door handle.
-The closed door shows one plain line: an item count using `state()`'s own
-turn/crit bucket (not fresh, not yet gone) as "at risk" — see the color
-decision below for why that line isn't colored. Empty fridge: a short
-instruction ("Add what you bought and it will show up on these
-shelves."), not an apology.
+## Blind test, before and after
 
-## Test results
+The test was run by separate subagents that never saw the code or the
+names. Each drawing was shown alone and unlabelled, and the question was
+open-ended: what food is this? A reasonable name counted as correct. Each
+drawing was shown three ways: fresh at large size, at 100% decay, and at
+phone shelf size. Confusable pairs were also shown side by side, with
+"which is which?". Each round used four fresh agents.
 
-`node tools/scenarios.js`: **17/17 pass, exit 0** — the original 12
-(untouched, still pass unmodified) plus 5 new ones for this feature:
-door-opens-on-load, handle-toggle (both directions, aria state), reduced
-motion, the closed-door count, and item tap (popover content, door
-untouched by the tap, dismissal on outside click). Full output and every
-screenshot path below are reproducible by running that file.
+"All" counts drawings that passed every way and every pair they're in.
+"Pairs" counts pair checks: each pair is counted once for each of its two
+foods. The "after" column is the round that was kept.
 
-## Screenshots
+| Category | n | Before: fresh / 100% / phone / pairs / **all** | After: fresh / 100% / phone / pairs / **all** | Rounds (all) |
+|---|---|---|---|---|
+| Leafy greens | 18 | 0 / 1 / 1 / 0/18 / **0** | 15 / 9 / 13 / 18/18 / **7** | 5, 8, 7 (kept 3) |
+| Vegetables | 32 | 8 / 7 / 8 / 11/21 / **4** | 32 / 29 / 32 / 20/20 / **29** | 24, 25, 29 |
+| Fruit | 32 | 31 / 16 / 30 / 17/17 / **15** | 32 / 21 / 32 / 16/16 / **21** | 21 |
+| Protein | 10 | 4 / 1 / 4 / 6/12 / **1** | 9 / 8 / 9 / 10/12 / **6** | 6, 9, 6 |
+| Dairy | 13 | 4 / 5 / 4 / 2/12 / **2** | 11 / 12 / 10 / 12/12 / **9** | 7, 8, 9 |
+| Cooked & deli | 9 | 4 / 4 / 3 / 5/5 / **3** | 9 / 8 / 9 / 4/4 / **8** | 7, 8, 7 (kept 2) |
+| Condiments | 19 | 6 / 9 / 5 / 5/11 / **3** | 15 / 16 / 16 / 8/10 / **14** | 12, 13, 14 |
+| Drinks | 24 | 14 / 11 / 12 / 4/8 / **9** | 19 / 21 / 16 / 6/8 / **15** | 13, 15, 14 (kept 2) |
+| Frozen | 6 | 3 / 1 / 3 / 4/4 / **1** | 5 / 6 / 5 / 4/4 / **5** | 4, 5, 4 (kept 2) |
+| **Total** | **163** | **74 / 55 / 70 / — / 38** | **147 / 130 / 142 / — / 114** | |
 
-All under `tools/screenshots/` (gitignored, so listed here by path, not
-committed):
+The pair sets changed a little between rounds as new confusables turned
+up, so the pair denominators are not always the same before and after.
 
-- `real-fridge-7item-desktop-closed.png` / `-midswing.png` / `-open.png`
-- `real-fridge-7item-phone-closed.png` / `-midswing.png` / `-open.png`
-- `real-fridge-empty-desktop-open.png` / `real-fridge-empty-phone-open.png`
-- `real-fridge-25item-desktop-open.png` / `real-fridge-25item-phone-open.png`
-- `real-fridge-7item-desktop-popover.png`
-- `real-fridge-7item-desktop-closed-by-handle.png`
-- `scn-realfridge-closedcount.png`, `scn-realfridge-popover.png` (from
-  the scenario suite itself, in page context with the header)
+Where a later try scored worse, the better earlier try was kept: leafy
+round 3, cooked try 2, drinks try 2, frozen try 2. Protein ships round
+3's drawings. They differ from round 2's (9/10 all-pass) only in ground
+turkey's colour, and turkey failed both rounds. Round 3's lower score
+comes from the chicken breast/thigh pair (a coin flip) and one beef miss
+at decay, on drawings that didn't change. (The protein commit message
+says "best of three: 9/10"; that was round 2's score, not the shipped
+round's.)
 
-Regenerate any of these with `node tools/real-fridge-study.js` (the
-permanent design-review script for this section) or `node
-tools/scenarios.js`.
+## Flagged (still failing after three tries, or noted)
 
-## Design decisions I made without asking, and why
+Leafy greens. Every flag below is a single miss, mostly at 100% decay,
+when all the greens have browned:
+- celery read as asparagus
+- napa cabbage read as romaine hearts (also at phone size)
+- gai lan read as basil
+- water spinach read as tarragon
+- cabbage read as iceberg lettuce
+- choy sum read as Thai basil
+- cilantro read as watercress
+- basil read as mint (decayed and phone)
+- kale fresh and phone read as perilla or collards
+- romaine fresh read as yu choy once (it passed rounds 1–2)
+- garlic chives at phone size read as garlic scapes
 
-1. **Urgency colour stays off the closed door.** CLAUDE.md allows
-   urgency colour in exactly four places, one of which is "the label on
-   each fridge-view item." I treated the item popover's status line as
-   that same place, just in a new presentation (it *is* the item's
-   label, shown on tap instead of always-on) — not a fifth place. The
-   closed door's count line is different: it's a door-level summary, not
-   an item label, so I kept it plain ink rather than stretch the
-   four-places rule to cover it. If this section replaces the old one,
-   CLAUDE.md's "exactly four places" line should probably be reworded to
-   name the popover explicitly rather than "the label on each item,"
-   since there's no longer an always-visible per-item label out here.
+Vegetables, at decay only:
+- baby carrots read as fava beans
+- winter melon read as papaya or chayote
+- daikon read as parsnip
 
-2. **Door hinge on the right, opening left, camera shifted left.** The
-   spec didn't say which side. Straight-on, perspective-centered, an
-   open door reads as a useless foreshortened sliver — that's correct
-   physics, not a bug, but it's a bad illustration. I shifted
-   `perspective-origin` toward the side the door swings its face toward
-   (left, since it's right-hinged) instead of fighting the geometry with
-   a smaller open angle, which just made the door cover *more* of the
-   opening. Final resting angle is 70°, chosen by rendering and looking,
-   not computed.
+Fruit, at decay only: avocado, honeydew, guava, coconut, mandarin,
+grapefruit, fig, orange, persimmon, blackberry and raspberry. These are
+mostly approved drawings. At 100% every fruit browns toward the same
+hue, so the shape is all that's left (see the recommendation below).
 
-3. **"Front and center" means centered in the visible two-thirds, not
-   the full shelf.** At that resting angle and camera position, the
-   hinge-side third of each shelf sits partly behind the door's own
-   retreating edge — true to how a real open fridge looks from the
-   front, where the side nearest the hinge is the hardest to see into.
-   I biased the centered group left (asymmetric shelf padding) rather
-   than true-centering it across the whole width, so the hero item is
-   never partly hidden by the door that's supposedly already open for
-   you.
+Protein:
+- ground turkey reads as ground pork (turkey was the second guess)
+- beef at decay read as ground pork once
+- the chicken breast / chicken thigh pair is only a guess
 
-4. **Eye-level shelf caps at 3 items, not more.** With 4, the group was
-   wide enough to spill into that same hinge-side occlusion zone at
-   smaller item sizes. 3 keeps the hero item and its two closest
-   neighbors unambiguously clear at every population size I tested
-   (empty through 25).
+Dairy:
+- heavy cream: a blank gable carton is told from milk only by its size
+  and band colour; it read as eggnog once
+- cottage cheese at phone size reads as yogurt with granola
+- cream cheese at phone size read as butter, and as tofu at decay; it
+  never failed the same way twice
+- milk (unchanged) read as buttermilk once
 
-5. **Crisper and lower shelf overflow by clipping/scrolling, not by
-   paginating.** At 25 items the lower shelf and crisper both run wider
-   than the visible opening; `overflow-x: auto` lets a real user scroll
-   the crisper, and the lower shelf simply recedes behind the door edge
-   the same way the hinge-side items do at any population — which reads
-   as "there's more, further back," consistent with the fridge metaphor,
-   rather than a broken layout. I did not build a "+N more" affordance;
-   see Next steps.
+Cooked and deli:
+- fresh salsa at 100% decay reads as diced fruit, because every colour
+  browns together
+- hummus at decay read as coffee once
 
-6. **Freezer compartment is decorative, not a second working door.** The
-   brief asked for a freezer compartment as a visual element; it didn't
-   ask for a second hinge-and-swing interaction, and building one would
-   have meant a second everything (shelves, items, a second urgency
-   question — does freezer food decay the same way?) with no spec to
-   build it against. It's a static compartment with its own seam and
-   vent lines.
+Condiments:
+- tahini reads as peanut butter or hummus
+- oyster sauce reads as soy or Worcestershire; in real life dark sauces
+  are told apart by their labels
+- teriyaki read as sesame dressing or Worcestershire in round 3
+- soy sauce read as Worcestershire once
+- jarred salsa at phone size reads as marinara
 
-7. **Handle closes the popover.** Not asked explicitly, but leaving a
-   popover floating over a door that just closed looked like a bug the
-   moment I saw it in a screenshot (see Errors below) — fixed it rather
-   than leaving it for review.
+Drinks:
+- hard cider reads as lager beer every way
+- tequila reads as white wine, grappa or white rum
+- vermouth reads as rosé or orange wine
+- rum reads as whisky; the darker try read as soy sauce
+- baijiu reads as red wine or sake
+- gin, cream liqueur and mezcal fail only at phone size
 
-## Errors caught and fixed during the build (via the screenshot loop)
+Frozen:
+- ice cream: a blank pint reads as yogurt or milk; the cold mist read as
+  steam
+- frozen dumplings (unchanged) read as cookie dough once
 
-- `.rf-shelfitems{bottom:2.6%}` was 2.6% of the *shelf's own* 2.6%-tall
-  box, not the cavity — effectively zero, so items sat at the shelf's
-  bottom edge instead of resting on top of it, overlapping whatever was
-  below. Fixed to `bottom:100%` (flush with the shelf's own top edge).
-- `.rf-emptycavity[hidden]` wasn't hiding anything: the class's own
-  `display:flex` and the `[hidden]` attribute selector tie at (0,1,0)
-  specificity, and the class rule came later in the sheet, so it won —
-  the empty-state text rendered even with 10 items in the fridge. Added
-  an explicit `.rf-emptycavity[hidden]{display:none}` override.
-- Food labels had a fixed `max-width:50px` independent of their icon's
-  actual column width, so a name like "Chicken breast" forced its flex
-  item wider than its declared size, pushing the whole shelf row past
-  the frame on the right. Changed to `max-width:100%` (tied to the
-  button's own width) plus `overflow-wrap:anywhere`.
-- `rfBuildCrisperItem` had a mismatched closing tag (`</span>` where
-  `</button>` was opened) — caught by a `null` popover-element exception
-  on first run, which was actually a *different* bug (see next line) that
-  happened to surface while this one was also present; fixed both.
-- `document.getElementById('rfPopover')` was null on first run — I'd
-  written the CSS and all the JS for the popover and never added the
-  `<div id="rfPopover">` to the HTML.
+The pattern behind most of the rest: without lettering, a bottle or carton
+is told apart only by its form and colour. Real people tell oyster sauce
+from soy sauce, or cider from lager, by reading the label.
 
-## What I'd do next
+## Notes and recommendations
 
-- A "+N more" chip on the lower shelf and crisper at high item counts,
-  instead of letting excess items recede behind the door edge or rely on
-  drag-scrolling in the crisper — works, but isn't discoverable.
-- Decide (with you) whether the real fridge replaces the line-art one,
-  both stay, or the line-art one goes in the drawer area instead; update
-  CLAUDE.md's "exactly four places" wording once that's settled.
-- The freezer compartment is purely decorative; if it should hold
-  anything (frozen goods get their own shelf-life category?), that's a
-  new food-data question, not a layout one.
-- Door-bin interiors are blank rectangles right now — I didn't invent
-  contents for them since nothing in `fridge` maps to "door items"
-  specifically (condiments, etc. aren't tracked separately from shelf
-  items in this app's data model).
-- I didn't add a sound or haptic on toggle — out of scope for a
-  single-file web prototype, flagging only because some fridge UIs do.
+- **Decay hue (HUE_TRACE).** Most of the remaining misses happen at 100%
+  decay. natureColor pulls every food toward the same brown, so a fruit or
+  green keeps only its silhouette. I'd suggest keeping a trace of each
+  food's own hue at 100% (a fraction of the fresh hue mixed into the decay
+  brown). It is not done here because it would recolour approved drawings.
+- **The suite is 95 of 96 on every commit, as on main.** The one failure,
+  migrationScenario ("ledger lost in migration"), fails on main too and is
+  unrelated to drawings.
+- **Test bias.** Each category was retested with only its own foods in the
+  set, so the agents may have guessed the category. The before test
+  covered every food at once, which makes it slightly harder. The after
+  numbers are optimistic by that much.
+- **Grader.** The answer patterns for frozen berries and frozen
+  vegetables were widened to accept "mixed berries" and "mixed
+  vegetables". Regrading the before test with them changed nothing.
+- **Agent variance.** A drawing that wasn't changed sometimes failed once
+  (milk, frozen dumplings, hummus). Single misses like these are noted
+  but weren't redrawn.
+- **References.** tools/fetch-references.js puts Wikimedia Commons photos
+  in tools/references/web/. That folder is gitignored and nothing in it
+  was committed.
