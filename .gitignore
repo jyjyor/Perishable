@@ -2,3 +2,4 @@ tools/node_modules/
 tools/screenshots/
 .DS_Store
 tools/references/web/
+exports/
