@@ -5380,6 +5380,19 @@ function leafPts(b, a, len, wd, prof = 'ovate', edge = null, bend = 0, n = 18){
   return ribbon(bentPts(b, polarPt(b, a, len), bend * len, n), t => wd * LEAF_PROF[prof](t) * (edge ? edge(t) : 1));
 }
 const ruffle = (k, amp) => t => 1 + amp * Math.sin(k * Math.PI * t);
+// An arrowhead (sagittate) leaf, water spinach's: a long pointed blade
+// whose two basal lobes point back past the stalk, a notch between them.
+function arrowLeafPts(b, a, len, wd){
+  const half = [[1, 0], [0.62, 0.62], [0.3, 0.95], [0.08, 1], [-0.12, 1.08], [-0.24, 1.02], [-0.18, 0.62], [-0.05, 0.22], [0, 0.07]];
+  const P = ([x, y]) => [b[0] + Math.cos(a) * x * len - Math.sin(a) * y * wd, b[1] + Math.sin(a) * x * len + Math.cos(a) * y * wd];
+  return [...half.map(P), ...half.slice().reverse().map(([x, y]) => P([x, -y]))];
+}
+// Cilantro's leaflet edge: cut into three broad lobes (two side notches)
+// and finely toothed along every lobe.
+const cilantroEdge = t => (1 - 0.5 * Math.exp(-(((t - 0.5) / 0.06) ** 2)) - 0.42 * Math.exp(-(((t - 0.78) / 0.05) ** 2)))
+  * (0.92 + 0.08 * Math.abs(Math.sin(7 * Math.PI * t))) * (t < 0.15 ? 0.4 + t / 0.15 * 0.6 : 1);
+// Curly kale's edge: deep ruffles with smaller ruffles on them.
+const kaleEdge = t => (0.6 + 0.4 * Math.pow(Math.abs(Math.sin(10 * Math.PI * t)), 0.6) + 0.1 * Math.abs(Math.sin(33 * Math.PI * t))) * (t < 0.1 ? t / 0.1 : 1);
 // A blob of radius r, its edge rippled k times (curly parsley, florets).
 const cloudPts = (c, rx, ry, k, amp, n = 30, ph = 0) => Array.from({length: n}, (_, i) => {
   const a = i / n * Math.PI * 2, r = 1 + amp * Math.abs(Math.sin(k * a / 2 + ph));
@@ -5561,17 +5574,25 @@ const PARTS = {
   // Cilantro: thin stems fanning out to flat, rounded, scalloped leaflets in
   // threes, the bunch's white roots left on below the tie.
   cilantro: () => {
-    const G = [0.5, 0.78], parts = [];
-    const ends = [[UP - 0.9, 0.36], [UP - 0.5, 0.42], [UP - 0.15, 0.46], [UP + 0.2, 0.45], [UP + 0.55, 0.41], [UP + 0.9, 0.35], [UP + 0.02, 0.33]];
-    const scallop = t => 0.7 + 0.3 * Math.pow(Math.abs(Math.sin(5 * Math.PI * t)), 0.4);
+    // Cilantro: a dense bunch of long, thin, bare stems, each branching at
+    // its top into flat, bright, broadly three-lobed leaflets with toothed
+    // edges (not the small round leaflets of watercress), the white roots
+    // left on below the tie.
+    const G = [0.5, 0.82], parts = [];
+    const ends = [[UP - 0.95, 0.3], [UP - 0.55, 0.4], [UP - 0.18, 0.46], [UP + 0.18, 0.45], [UP + 0.55, 0.39], [UP + 0.95, 0.3], [UP - 0.02, 0.3]];
     ends.forEach(([a, l], g) => {
       const e = polarPt(G, a, l);
-      parts.push(PF(stalkPts(G, e, 0.006, 0.004, 0.01), '#8ab868', g));
-      [-0.7, 0, 0.7].forEach(da => parts.push(...leafParts(polarPt(e, a + da, 0.01), a + da, 0.085, 0.05, g % 2 ? '#3d8f4b' : '#47a055', g,
-        {prof: 'fan', edge: scallop, rib: true, ribOp: 0.35, n: 22})));
+      parts.push(PF(stalkPts(G, e, 0.005, 0.0035, 0.008), '#93c071', g));
+      // a branched top: a terminal leaflet and two on short side stalks
+      [[0, 0.115, 0.085], [-1.0, 0.095, 0.07], [1.0, 0.095, 0.07]].forEach(([da, ll, lw], k) => {
+        const b = k ? polarPt(e, a + da * 0.7, 0.025) : e;
+        if (k) parts.push(PF(stalkPts(e, b, 0.003, 0.0025), '#93c071', g, {w: 0.6}));
+        parts.push(...leafParts(b, a + da, ll, lw, (g + k) % 2 ? '#4aa13e' : '#3f9437', g,
+          {prof: 'fan', edge: cilantroEdge, ribOp: 0.35, n: 40, veins: [0.55]}));
+      });
     });
-    parts.push(PF(ovalPts([0.5, 0.84], 0.04, 0.03), '#ecebdc', null), bandPart(0.47, 0.53, 0.79));
-    [-0.035, -0.012, 0.012, 0.035].forEach(dx => parts.push(PL([[0.5 + dx * 0.6, 0.86], [0.5 + dx * 1.4, 0.95]], 0.55, {w: 0.6})));
+    parts.push(PF(ovalPts([0.5, 0.875], 0.04, 0.028), '#ecebdc', null), bandPart(0.465, 0.535, 0.83));
+    [-0.035, -0.012, 0.012, 0.035].forEach(dx => parts.push(PL([[0.5 + dx * 0.6, 0.895], [0.5 + dx * 1.4, 0.97]], 0.55, {w: 0.6})));
     return {parts, fewer: true};
   },
   // Parsley: curly, the tight ruffled clusters on thin stems, tied.
@@ -5609,23 +5630,26 @@ const PARTS = {
   // Kale: curly -- long, dark blue-green leaves frilled all along their
   // edges, on thick pale ribs.
   kale: () => {
-    // Curly kale: a tied bunch of long pale stalks, each carrying a long
-    // leaf whose edge is curled into tight rounded frills, crinkled within.
+    // Curly kale: a tied bunch of long stalks, each leaf's edge deeply
+    // ruffled into tight curls with smaller curls on them, a thick pale
+    // rib running up its centre, curled crinkles all over the blade.
     const G = [0.5, 0.93], parts = [];
-    const frill = t => (0.72 + 0.22 * Math.abs(Math.sin(19 * Math.PI * t)) + 0.08 * Math.abs(Math.sin(53 * Math.PI * t))) * (t < 0.12 ? t / 0.12 : 1);
-    [[UP - 0.42, 0.8], [UP + 0.42, 0.78], [UP - 0.14, 0.86], [UP + 0.16, 0.84]].forEach(([a, l], g) => {
-      const s0 = polarPt(G, a, 0.04), s1 = polarPt(G, a, 0.3);
-      parts.push(PF(stalkPts(s0, s1, 0.016, 0.012), '#b9cfa0', g));
-      parts.push(PF(leafPts(s1, a, l - 0.3, 0.17, 'ovate', frill, g % 2 ? 0.06 : -0.06, 120), g < 2 ? '#2f6447' : '#3a7352', g));
-      const rib = bentPts(s1, polarPt(s1, a, (l - 0.3) * 0.9), (g % 2 ? 0.06 : -0.06) * (l - 0.3), 10);
-      parts.push(PF(ribbon(rib, t => 0.012 * (1 - t * 0.7)), '#a9c48e', g, {op: 0.6}));
-      const R = seededRand(20 + g);
-      for (let k = 0; k < 9; k++){
-        const p = rib[1 + Math.floor(R() * 8)], c = polarPt(p, a + (R() < 0.5 ? 1.57 : -1.57), 0.03 + R() * 0.07);
-        parts.push(PL(Array.from({length: 6}, (_, i) => polarPt(c, i * 1.05 + k, 0.016)), 0.5, {g, w: 0.6}));
+    [[UP - 0.45, 0.8], [UP + 0.45, 0.78], [UP - 0.15, 0.87], [UP + 0.17, 0.85]].forEach(([a, l], g) => {
+      const s0 = polarPt(G, a, 0.04), s1 = polarPt(G, a, 0.28), bend = g % 2 ? 0.06 : -0.06, len = l - 0.28;
+      parts.push(PF(stalkPts(s0, s1, 0.02, 0.016), '#c6d9ae', g));
+      parts.push(PF(leafPts(s1, a, len, 0.19, 'ovate', kaleEdge, bend, 160), g < 2 ? '#3d6f53' : '#46795b', g));
+      const rib = bentPts(s1, polarPt(s1, a, len * 0.92), bend * len, 12);
+      parts.push(PF(ribbon(rib, t => 0.022 * (1 - t * 0.75)), '#c6d9ae', g, {w: 0.7}));
+      // the curls: tight rounded frills heaped along both sides of the rib,
+      // a shade lighter, so the whole blade reads ruffled, not just its edge
+      const fill2 = g < 2 ? '#4a7e5f' : '#548766';
+      for (let i = 2; i <= 10; i++){
+        const w = 0.19 * LEAF_PROF.ovate(i / 12) * 0.55;
+        [-1, 1].forEach((sd, j) => parts.push(PF(cloudPts(polarPt(rib[i], a + sd * 1.57, w), 0.03, 0.026, 7, 0.32, 28, i + j), fill2, g, {w: 0.6})));
       }
+      parts.push(PF(ribbon(rib, t => 0.022 * (1 - t * 0.75)), '#c6d9ae', g, {w: 0.7}));
     });
-    parts.push(bandPart(0.45, 0.55, 0.84));
+    parts.push(bandPart(0.44, 0.56, 0.84));
     return {parts, fewer: true};
   },
   // Leaf lettuce: a loose, open head of broad leaves frilled at the edge,
@@ -5775,22 +5799,24 @@ const PARTS = {
   // Water spinach: a bundle of long hollow stems lying down, their cut ends
   // open at the left, narrow arrow-shaped leaves at the right.
   waterspinach: () => {
-    // Long hollow stems lying in a bundle, cut ends open, a few long
-    // narrow arrow-head leaves standing off them on short stalks.
+    // Water spinach: long hollow stems lying in a tied bundle, each cut end
+    // an open ring, with narrow arrowhead leaves -- two lobes pointing back
+    // past their stalk -- standing up off them, the leaves what the eye
+    // finds first.
     const parts = [];
-    [[0.5, -0.06], [0.55, 0.0], [0.6, 0.06], [0.65, 0.1], [0.53, 0.16]].forEach(([y, fan], g) => {
-      const cl = bentPts([0.05, y], [0.7, y + fan * 0.5 - 0.04], -0.02, 12);
-      parts.push(PF(ribbon(cl, () => 0.014), '#9ccc84', g));
-      parts.push(PF(ovalPts(cl[0], 0.006, 0.014, 0, 10), '#eef5e2', g, {w: 0.6}), PF(ovalPts(cl[0], 0.0025, 0.007, 0, 8), '#5f7a50', g, {w: 0.4}));
-      [3, 5, 7, 9].forEach(i => parts.push(PL([[cl[i][0], cl[i][1] - 0.01], [cl[i][0], cl[i][1] + 0.01]], 0.45, {g, w: 0.5})));
-      [[0.6, -1], [0.85, 1], [1, 0]].filter((_, k) => (g + k) % 2 === 0 || k === 2).forEach(([t, sd]) => {
-        const p = cl[Math.round(t * 12)], a = fan * 0.5 + sd * 0.55 - 0.05;
-        const e = polarPt(p, a, 0.05);
-        parts.push(PF(stalkPts(p, e, 0.006, 0.005), '#9ccc84', g, {w: 0.6}));
-        parts.push(...leafParts(e, a, 0.27, 0.034, '#3f8f4a', g, {prof: 'arrow', bend: sd * 0.05, ribOp: 0.45}));
+    [[0.6, -0.04], [0.64, 0.0], [0.68, 0.05], [0.72, 0.09]].forEach(([y, fan], g) => {
+      const cl = bentPts([0.04, y], [0.6, y + fan * 0.5 - 0.03], -0.02, 12);
+      parts.push(PF(ribbon(cl, () => 0.012), '#a6cf8c', g));
+      parts.push(PF(ovalPts(cl[0], 0.008, 0.012, 0, 12), '#eef5e2', g, {w: 0.6}), PF(ovalPts(cl[0], 0.0045, 0.007, 0, 10), '#4d6a40', g, {w: 0.4}));
+      [3, 6, 9].forEach(i => parts.push(PL([[cl[i][0], cl[i][1] - 0.009], [cl[i][0], cl[i][1] + 0.009]], 0.45, {g, w: 0.5})));
+      [[0.3 + g * 0.05, UP - 0.3], [0.62 + g * 0.06, UP + 0.32]].forEach(([t, a]) => {
+        const p = cl[Math.round(t * 12)], e = polarPt(p, a, 0.09);
+        parts.push(PF(stalkPts(p, e, 0.005, 0.004), '#a6cf8c', g, {w: 0.6}));
+        parts.push(PF(arrowLeafPts(e, a, 0.19, 0.075), g % 2 ? '#3f8f4a' : '#478f45', g));
+        parts.push(PL(bentPts(e, polarPt(e, a, 0.18), 0, 6), 0.45, {g, w: 0.7}));
       });
     });
-    parts.push(bandPart(0.24, 0.29, 0.57, 0.15));
+    parts.push(bandPart(0.22, 0.27, 0.66, 0.14));
     return {parts, fewer: true};
   }
 };
