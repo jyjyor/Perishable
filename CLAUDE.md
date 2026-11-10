@@ -261,15 +261,23 @@ the ochre's dull side. Greens lean leaf, away from the olive's dull side.
 Hue is what keeps a body from ever being misread as an urgency colour;
 lightness and saturation are free to follow the real food.
 
-natureColor(base, fraction) blends that base colour toward a shared decay
-brown as fraction climbs, but slowly: a food keeps its own hue clearly
+natureColor(base, fraction) blends that base colour toward brown as
+fraction climbs, but slowly: a food keeps its own hue clearly
 recognisable through roughly 60% decayed (discoloration spots appear on
-top of it well before that), and only closes out to brown by around 85%.
-Past that it goes darker still, but never to black — 100% decayed lands
-on a deep brown that still carries a trace of the food's own hue, so a
-rotten tomato reads dark red-brown, a rotten potato dark earth brown, a
-rotten banana dark brown with a trace of its own warmth, never the same
-black lump every food collapses into. This applies to the gone drawer
+top of it well before that), and only closes out to its own brown by
+around 85% (halfway between a shared decay brown and its end). 100%
+decayed is the food's own end colour (decayEndsOf), never one shared
+brown and never black: its own hue, turned a fifth of the way toward
+brown, with chroma cut to about 60% and lightness pulled down and
+squeezed together (0.2 + 0.4 L) -- so a rotten tomato reads dark brick
+red, a rotten lime dark olive green, a rotten blueberry dark slate
+violet, and a pale part (a white stalk, a cut face) still sits lighter
+than the dark part beside it, which keeps every identity cue readable
+at 100%. That end must never read as an urgency colour: if it lands
+within 0.085 (OKLab) of one of BUCKET_HEX, only its lightness moves, to
+the nearest value that clears them all (the 85% brown keeps at least
+the old shared brown's distance, 0.054). Shapes are not touched by
+this: only the colour. This applies to the gone drawer
 too, at fraction 1 through the same function — shrinking, collapse, and
 mold are what carry "gone," not blackness. Colour draining away is
 itself part of decay, not an early cue that fires before anything else
