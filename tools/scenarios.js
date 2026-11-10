@@ -566,6 +566,17 @@ async function dishRepeatScenario(browser) {
 // the ledger, and the fridge view all survive with no console errors.
 // Never touches the working tree; the "live" copy exists only in a temp
 // file for the few seconds this scenario needs it.
+// Saved before the bin kept each toss: the totals survive whole, as the
+// plain "earlier" line; this month's bin starts empty (no invented items).
+async function expectPreBinLedger(page, saved) {
+  const earlier = await page.textContent('#binEarlier');
+  console.log('earlier line:', earlier.trim());
+  if (!earlier.includes(Math.round(saved.ledger.wasteG) + ' g') || !earlier.includes(Math.round(saved.ledger.savedG) + ' g rescued')) throw new Error(`ledger lost in migration: "${earlier.trim()}" vs ${JSON.stringify(saved.ledger)}`);
+  expectEqual('pre-bin ledger totals kept', await page.evaluate(() => [Math.round(ledger.wasteG), Math.round(ledger.savedG), Math.round(logStart.wasteG), Math.round(logStart.savedG)]),
+    [Math.round(saved.ledger.wasteG), Math.round(saved.ledger.savedG), Math.round(saved.ledger.wasteG), Math.round(saved.ledger.savedG)]);
+  expectEqual('no invented bin items', [await page.$$eval('.bin-item', els => els.length), (await page.textContent('#wasteG')).trim()], [0, '0 g']);
+}
+
 async function migrationScenario(browser) {
   const liveHtml = execSync('git show origin/main:index.html', { cwd: ROOT, maxBuffer: 1024 * 1024 * 20 });
   const tmpLive = path.join(os.tmpdir(), 'perishable-live-' + Date.now() + '.html');
@@ -681,13 +692,38 @@ async function migrationScenario(browser) {
   const wasteG = await page.textContent('#wasteG');
   const savedG = await page.textContent('#savedG');
   console.log('current code ledger: wasteG =', wasteG.trim(), ', savedG =', savedG.trim());
-  // Saved before the bin kept each toss: the totals survive whole, as the
-  // plain "earlier" line; this month's bin starts empty (no invented items).
-  const earlier = await page.textContent('#binEarlier');
-  console.log('earlier line:', earlier.trim());
-  if (!earlier.includes(Math.round(parsed.ledger.wasteG) + ' g') || !earlier.includes(Math.round(parsed.ledger.savedG) + ' g rescued')) throw new Error(`ledger lost in migration: "${earlier.trim()}" vs ${JSON.stringify(parsed.ledger)}`);
   expectEqual('ledger totals kept', await page.evaluate(() => [Math.round(ledger.wasteG), Math.round(ledger.savedG)]), [Math.round(parsed.ledger.wasteG), Math.round(parsed.ledger.savedG)]);
-  expectEqual('no invented bin items', [await page.$$eval('.bin-item', els => els.length), wasteG.trim()], [0, '0 g']);
+  if (Array.isArray(parsed.tossLog)) {
+    // Saved by the bin (since 594690e, pushed in 21305e5): the toss log
+    // comes through exactly as saved, the bin draws this month's tosses
+    // with their weight, and the "earlier" line is the saved logStart
+    // (hidden while it's zero).
+    const got = await page.evaluate(() => ({tossLog, logStart, earlierHidden: document.getElementById('binEarlier').hidden}));
+    expectEqual('toss log kept exactly', got.tossLog, parsed.tossLog);
+    expectEqual('log start kept', got.logStart, parsed.logStart);
+    const tosses = parsed.tossLog.filter(e => e.t === 'toss');
+    console.log('toss log:', got.tossLog.length, 'entries,', tosses.length, 'toss(es) in the bin');
+    if (!tosses.length) throw new Error('origin/main logged no toss -- the scenario no longer drives its Tossed button');
+    expectEqual('the saved tosses in the bin', [await page.$$eval('.bin-item', els => els.length), wasteG.trim()],
+      [tosses.length, Math.round(tosses.reduce((a, e) => a + e.g, 0)) + ' g']);
+    expectEqual('earlier line only for a pre-bin total', got.earlierHidden, !(parsed.logStart.wasteG > 0 || parsed.logStart.savedG > 0));
+  } else await expectPreBinLedger(page, parsed);
+
+  // A phone that still holds data saved before the bin (7b00e88 and
+  // earlier) has no tossLog or logStart: the same blob without them must
+  // keep its totals whole as the "earlier" line, with no invented bin items.
+  if (Array.isArray(parsed.tossLog)) {
+    const old = {...parsed}; delete old.tossLog; delete old.logStart;
+    const prePage = await (await browser.newContext()).newPage();
+    prePage.on('pageerror', e => errors.push(e.message));
+    await prePage.goto(`http://localhost:${PORT}/index.html`);
+    await prePage.evaluate(state => localStorage.setItem('perishable.v1', state), JSON.stringify(old));
+    await prePage.reload();
+    await prePage.waitForSelector('#headline');
+    await prePage.waitForTimeout(250);
+    await expectPreBinLedger(prePage, old);
+    await prePage.context().close();
+  }
 
   const restockChips = await page.$$eval('#restock .chip, #restock button', els => els.length);
   console.log('restock chips rendered:', restockChips);

@@ -1341,26 +1341,26 @@ button.fridge-shape:focus-visible{outline:2px solid var(--ink);outline-offset:3p
    ============================================================ */
 const FOODS = {
   spinach:    {en:'Spinach',        aliases:['baby spinach'], shelf:7, fk:291, g:200, usd:3.20, cat:'leafy', shape:'spinach', base:'#297037'},
-  leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', base:'#81bb85'},
-  romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', base:'#6aa86f'},
+  leaflettuce:{en:'Leaf lettuce',   aliases:['lettuce','leaf lettuces','green leaf lettuce','red leaf lettuce','butter lettuce','butterhead lettuce','bibb lettuce'], shelf:7, fk:291, g:400, usd:2.60, cat:'leafy', shape:'leaflettuce', base:'#81bb85'},
+  romaine:    {en:'Romaine lettuce', aliases:['lettuce','romaine','romaine lettuces','romaine hearts','iceberg','iceberg lettuce','iceberg lettuces'], shelf:14, fk:290, g:400, usd:2.60, cat:'leafy', shape:'romaine', base:'#6aa86f'},
   milk:       {en:'Milk',           shelf:7, fk:27, pkgDate:true, g:900, usd:4.10, cat:'dairy', shape:'carton', base:'#e8e7e3'},
-  yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', base:'#e7e7e4'},
-  chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chicken', base:'#c3ada2'},
-  beef:       {en:'Ground beef',    shelf:2, fk:43, g:450, usd:7.20, cat:'protein', base:'#91473b'},
-  bacon:      {en:'Bacon',          shelf:7, fk:79, g:340, usd:6.00, cat:'protein', base:'#c76b60'},
+  yogurt:     {en:'Yogurt',         aliases:['greek yogurt','plain yogurt'], shelf:14, fk:33, g:450, usd:3.90, cat:'dairy', shape:'yogurt', base:'#e7e7e4'},
+  chicken:    {en:'Chicken breast', shelf:2, fk:117, g:500, usd:6.50, cat:'protein', shape:'chickenbreast', base:'#e9b8a6'},
+  beef:       {en:'Ground beef',    shelf:2, fk:43, g:450, usd:7.20, cat:'protein', shape:'beef', base:'#91473b'},
+  bacon:      {en:'Bacon',          shelf:7, fk:79, g:340, usd:6.00, cat:'protein', shape:'bacon', base:'#c76b60'},
   egg:        {en:'Eggs',           shelf:35, fk:21, g:600, usd:4.80, cat:'dairy', shape:'eggs', plural:true, base:'#e5e2dc'},
   tofu:       {en:'Tofu',           shelf:7, fk:168, g:400, usd:2.40, cat:'protein', shape:'tofu', base:'#ecebea'},
   onion:      {en:'Onion',          aliases:['onions','yellow onion','white onion','red onion','sweet onion'], shelf:30, fk:294, store:'pantry', g:150, usd:0.80, cat:'veg', shape:'onion', base:'#d4a070'},
-  scallion:   {en:'Scallion',       aliases:['scallions','green onion','green onions','spring onion'], shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', base:'#54ab60'},
+  scallion:   {en:'Scallion',       aliases:['scallions','green onion','green onions','spring onion'], shelf:7, fk:295, g:100, usd:1.20, cat:'leafy', shape:'scallion', base:'#54ab60'},
   garlic:     {en:'Garlic',         shelf:30, fk:285, store:'pantry', g:80,  usd:1.00, cat:'veg', shape:'garlic', base:'#e8e7e3'},
-  ginger:     {en:'Ginger',         shelf:21, fk:286, g:90,  usd:1.40, cat:'veg', base:'#bd9e7f'},
+  ginger:     {en:'Ginger',         shelf:21, fk:286, g:90,  usd:1.40, cat:'veg', shape:'ginger', base:'#bd9e7f'},
   tomato:     {en:'Tomato',         shelf:7, fk:306, estimated:true, note:'FoodKeeper keeps tomatoes at room temperature until ripe and gives no refrigerator figure', g:400, usd:3.00, cat:'soft', shape:'tomato', base:'#c2532e'},
   carrot:     {en:'Carrots',        aliases:['carrot','whole carrots'], shelf:21, fk:279, g:350, usd:1.60, cat:'veg', shape:'carrot', base:'#d08a4e'},
-  babycarrot: {en:'Baby carrots',   aliases:['baby carrot'], shelf:28, fk:491, g:350, usd:1.60, cat:'veg', plural:true, shape:'carrot', base:'#d9894a'},
-  pepper:     {en:'Bell pepper',    shelf:14, fk:296, g:300, usd:2.80, cat:'soft', base:'#c65539'},
-  broccoli:   {en:'Broccoli',       shelf:5, fk:276, g:400, usd:2.50, cat:'veg', base:'#287139'},
+  babycarrot: {en:'Baby carrots',   aliases:['baby carrot'], shelf:28, fk:491, g:350, usd:1.60, cat:'veg', plural:true, shape:'babycarrot', base:'#d9894a'},
+  pepper:     {en:'Bell pepper',    shelf:14, fk:296, g:300, usd:2.80, cat:'soft', shape:'pepper', base:'#c65539'},
+  broccoli:   {en:'Broccoli',       shelf:5, fk:276, g:400, usd:2.50, cat:'veg', shape:'broccoli', base:'#287139'},
   mushroom:   {en:'Mushrooms',      shelf:7, fk:292, g:250, usd:3.40, cat:'soft', plural:true, shape:'mushroom', base:'#d9d4c9'},
-  cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', base:'#3d8f4b'},
+  cilantro:   {en:'Cilantro',       shelf:21, fk:506, g:60,  usd:1.10, cat:'leafy', shape:'cilantro', base:'#3d8f4b'},
   potato:     {en:'Potato',         shelf:60, fk:297, store:'pantry', g:600, usd:2.20, cat:'veg', shape:'potato', base:'#bf8e69'},
   lemon:      {en:'Lemon',          shelf:21, fk:256, g:150, usd:0.90, cat:'soft', shape:'lemon', base:'#e2db8d'},
   mango:      {en:'Mango',          shelf:7, fk:265, g:300, usd:2.00, cat:'soft', shape:'mango', base:'#ea9b3a'},
@@ -1371,21 +1371,21 @@ const FOODS = {
   // (see avocado).
   banana:     {en:'Banana',         shelf:3, fk:251, ripens:true, g:118, usd:0.25, cat:'soft', shape:'banana', base:'#e7de6a'},
   hardcheese: {en:'Hard cheese',    aliases:['cheese','cheddar','cheddar cheese','parmesan','parmesan cheese','block parmesan','swiss','swiss cheese','gouda','gruyere','pecorino','block cheese'], shelf:180, fk:3, g:250, usd:5.50, cat:'dairy', shape:'wedge', base:'#cdc6a2'},
-  shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', base:'#e3d79a'},
-  softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', base:'#ecebe4'},
+  shreddedcheese:{en:'Shredded cheese', aliases:['cheese','shredded cheddar','shredded mozzarella','mexican blend cheese','shredded cheese blend'], shelf:30, fk:5, g:250, usd:5.50, cat:'dairy', shape:'shreddedcheese', base:'#e3d79a'},
+  softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', shape:'softcheese', base:'#ecebe4'},
   // In the door's butter compartment (RF_DOOR_KEYS), drawn as a wrapped block.
   butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', shape:'butter', base:'#d7d0a2'},
-  cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
+  cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', shape:'cookedrice', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper entry, e.g. Chinese eggplant via the generic
   // "Eggplant" entry). fk is the FoodKeeper product id; see CLAUDE.md for
   // the rule that turns its range into days.
-  bokchoy:        {en:'Bok choy',          shelf:3, fk:275, g:250, usd:1.80, cat:'leafy', base:'#569f5d'},
-  daikon:         {en:'Daikon',            shelf:14, fk:299, g:500, usd:1.50, cat:'veg', base:'#e6e7e4'},
-  chineseeggplant:{en:'Chinese eggplant',  shelf:7, fk:284, g:300, usd:2.10, cat:'soft', base:'#7e4592'},
-  beansprouts:    {en:'Bean sprouts',      shelf:10, fk:549, g:250, usd:1.30, cat:'veg', plural:true, base:'#e3e2de'},
-  shiitake:       {en:'Shiitake mushroom', shelf:7, fk:292, g:150, usd:3.60, cat:'soft', shape:'mushroom', base:'#b49274'},
-  enoki:          {en:'Enoki mushroom',    shelf:7, fk:292, g:150, usd:2.80, cat:'soft', shape:'mushroom', base:'#e0ddd7'},
+  bokchoy:        {en:'Bok choy',          shelf:3, fk:275, g:250, usd:1.80, cat:'leafy', shape:'bokchoy', base:'#569f5d'},
+  daikon:         {en:'Daikon',            shelf:14, fk:299, g:500, usd:1.50, cat:'veg', shape:'daikon', base:'#e6e7e4'},
+  chineseeggplant:{en:'Chinese eggplant',  shelf:7, fk:284, g:300, usd:2.10, cat:'soft', shape:'chineseeggplant', base:'#7e4592'},
+  beansprouts:    {en:'Bean sprouts',      shelf:10, fk:549, g:250, usd:1.30, cat:'veg', plural:true, shape:'beansprouts', base:'#e3e2de'},
+  shiitake:       {en:'Shiitake mushroom', shelf:7, fk:292, g:150, usd:3.60, cat:'soft', shape:'shiitake', base:'#b49274'},
+  enoki:          {en:'Enoki mushroom',    shelf:7, fk:292, g:150, usd:2.80, cat:'soft', shape:'enoki', base:'#e0ddd7'},
   // FoodKeeper lists 2-3 days for taro. That contradicts how taro is
   // usually handled (more like a potato — weeks, not days) and I could not
   // verify it against the primary USDA source (fsis.usda.gov blocks
@@ -1393,14 +1393,14 @@ const FOODS = {
   // dataset). Shipping the sourced figure as-is rather than quietly
   // correcting it toward intuition — that correction is exactly the kind
   // of move that turns a source into a guess. Revisit if verified.
-  taro:           {en:'Taro',              shelf:3, fk:305, g:400, usd:2.50, cat:'veg', base:'#c0b3c6'},
-  bambooshoots:   {en:'Bamboo shoots',     shelf:14, fk:272, g:250, usd:2.90, cat:'veg', plural:true, base:'#d8d4cb'},
-  edamame:        {en:'Edamame',           shelf:5, fk:640, g:300, usd:2.40, cat:'veg', base:'#46a44a'},
-  leek:           {en:'Leeks',             shelf:14, fk:289, g:200, usd:1.70, cat:'leafy', plural:true, base:'#a1be9d'},
-  cucumber:       {en:'Cucumber',          shelf:6, fk:283, g:300, usd:1.40, cat:'soft', base:'#54ab54'},
-  zucchini:       {en:'Zucchini',          shelf:7, fk:547, g:250, usd:1.90, cat:'soft', base:'#328640'},
-  cauliflower:    {en:'Cauliflower',       shelf:5, fk:280, g:600, usd:2.70, cat:'veg', base:'#e7e7e4'},
-  corn:           {en:'Corn',              shelf:2, fk:282, g:300, usd:1.60, cat:'veg', base:'#d4ca68'},
+  taro:           {en:'Taro',              shelf:3, fk:305, g:400, usd:2.50, cat:'veg', shape:'taro', base:'#c0b3c6'},
+  bambooshoots:   {en:'Bamboo shoots',     shelf:14, fk:272, g:250, usd:2.90, cat:'veg', plural:true, shape:'bambooshoots', base:'#d8d4cb'},
+  edamame:        {en:'Edamame',           shelf:5, fk:640, g:300, usd:2.40, cat:'veg', shape:'edamame', base:'#46a44a'},
+  leek:           {en:'Leeks',             shelf:14, fk:289, g:200, usd:1.70, cat:'leafy', plural:true, shape:'leek', base:'#a1be9d'},
+  cucumber:       {en:'Cucumber',          shelf:6, fk:283, g:300, usd:1.40, cat:'soft', shape:'cucumber', base:'#54ab54'},
+  zucchini:       {en:'Zucchini',          shelf:7, fk:547, g:250, usd:1.90, cat:'soft', shape:'zucchini', base:'#328640'},
+  cauliflower:    {en:'Cauliflower',       shelf:5, fk:280, g:600, usd:2.70, cat:'veg', shape:'cauliflower', base:'#e7e7e4'},
+  corn:           {en:'Corn',              shelf:2, fk:282, g:300, usd:1.60, cat:'veg', shape:'corn', base:'#d4ca68'},
   // No FoodKeeper entry, and no same-species proxy close enough to call
   // sourced — either nothing in the dataset resembles them (lotus root,
   // winter melon, water spinach, snow peas) or the closest entry is a
@@ -1409,24 +1409,24 @@ const FOODS = {
   // Chives, gai lan/choy sum via bok choy's family). `estimated:true`
   // drives the same "shelf life estimated" marker already used for
   // unrecognised typed items.
-  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', base:'#a7c0a5'},
-  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, base:'#429453'},
-  lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#dfdad8'},
-  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, note:'No FoodKeeper entry; Broccoli (#276) is a different variety', cat:'leafy', base:'#3a8847'},
-  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#489953'},
-  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', base:'#429450'},
-  wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, note:'No FoodKeeper entry', cat:'veg', base:'#b8cfb4'},
-  snowpeas:     {en:'Snow peas',      shelf:5, fk:273, g:200, usd:2.70, cat:'veg', plural:true, base:'#5bae61'},
+  napacabbage:  {en:'Napa cabbage',   shelf:7, g:900, usd:2.20, estimated:true, note:'No FoodKeeper entry; Cabbage (#278) is a different species', cat:'leafy', shape:'napacabbage', base:'#a7c0a5'},
+  garlicchives: {en:'Garlic chives',  shelf:6, g:150, usd:1.90, estimated:true, note:'No FoodKeeper entry; Chives (#512) is a different plant', cat:'leafy', plural:true, shape:'garlicchives', base:'#429453'},
+  lotusroot:    {en:'Lotus root',     shelf:6, g:300, usd:2.60, estimated:true, note:'No FoodKeeper entry', cat:'veg', shape:'lotusroot', base:'#dfdad8'},
+  gailan:       {en:'Chinese broccoli', shelf:4, g:250, usd:2.40, estimated:true, note:'No FoodKeeper entry; Broccoli (#276) is a different variety', cat:'leafy', shape:'gailan', base:'#3a8847'},
+  choysum:      {en:'Choy sum',       shelf:4, g:200, usd:2.10, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', shape:'choysum', base:'#489953'},
+  waterspinach: {en:'Water spinach',  shelf:4, g:200, usd:2.30, estimated:true, note:'No FoodKeeper entry; only the generic Greens (#287)', cat:'leafy', shape:'waterspinach', base:'#429450'},
+  wintermelon:  {en:'Winter melon',   shelf:7, g:800, usd:2.00, estimated:true, note:'No FoodKeeper entry', cat:'veg', shape:'wintermelon', base:'#b8cfb4'},
+  snowpeas:     {en:'Snow peas',      shelf:5, fk:273, g:200, usd:2.70, cat:'veg', plural:true, shape:'snowpeas', base:'#5bae61'},
   // US supermarket / Costco staples. shelf is FoodKeeper's under the
   // CLAUDE.md rule; g is the package (Costco size where that's how it's
   // usually bought, else a regular one); usd is estimated (estPrice)
   // except the rotisserie chicken, Costco's fixed $4.99.
-  kale:          {en:'Kale',              aliases:['lacinato kale','curly kale','baby kale'], shelf:5, fk:423, g:454, usd:4.99, estPrice:true, cat:'leafy', base:'#3f7f4a'},
-  arugula:       {en:'Arugula',           aliases:['rocket'], shelf:7, fk:678, g:454, usd:4.49, estPrice:true, cat:'leafy', base:'#4f9a52'},
-  cabbage:       {en:'Cabbage',           aliases:['green cabbage'], shelf:14, fk:278, g:900, usd:2.00, estPrice:true, cat:'leafy', base:'#b5d0a3'},
-  celery:        {en:'Celery',            aliases:['celery hearts','celery stalks'], shelf:14, fk:281, g:700, usd:2.00, estPrice:true, cat:'leafy', base:'#9cc58a'},
-  basil:         {en:'Basil',             aliases:['fresh basil'], shelf:10, fk:509, g:57, usd:2.99, estPrice:true, cat:'leafy', base:'#3d8c45'},
-  parsley:       {en:'Parsley',           aliases:['fresh parsley','flat leaf parsley','italian parsley'], shelf:3, fk:611, g:60, usd:1.29, estPrice:true, cat:'leafy', base:'#3f9148'},
+  kale:          {en:'Kale',              aliases:['lacinato kale','curly kale','baby kale'], shelf:5, fk:423, g:454, usd:4.99, estPrice:true, cat:'leafy', shape:'kale', base:'#3f7f4a'},
+  arugula:       {en:'Arugula',           aliases:['rocket'], shelf:7, fk:678, g:454, usd:4.49, estPrice:true, cat:'leafy', shape:'arugula', base:'#4f9a52'},
+  cabbage:       {en:'Cabbage',           aliases:['green cabbage'], shelf:14, fk:278, g:900, usd:2.00, estPrice:true, cat:'leafy', shape:'cabbage', base:'#b5d0a3'},
+  celery:        {en:'Celery',            aliases:['celery hearts','celery stalks'], shelf:14, fk:281, g:700, usd:2.00, estPrice:true, cat:'leafy', shape:'celery', base:'#9cc58a'},
+  basil:         {en:'Basil',             aliases:['fresh basil'], shelf:10, fk:509, g:57, usd:2.99, estPrice:true, cat:'leafy', shape:'basil', base:'#3d8c45'},
+  parsley:       {en:'Parsley',           aliases:['fresh parsley','flat leaf parsley','italian parsley'], shelf:3, fk:611, g:60, usd:1.29, estPrice:true, cat:'leafy', shape:'parsley', base:'#3f9148'},
   strawberry:    {en:'Strawberries',      aliases:['strawberry'], shelf:3, fk:481, g:907, usd:5.99, estPrice:true, cat:'soft', shape:'strawberry', plural:true, base:'#d0443a'},
   blueberry:     {en:'Blueberries',       aliases:['blueberry'], shelf:14, fk:254, g:510, usd:5.99, estPrice:true, cat:'soft', shape:'blueberry', plural:true, base:'#4b5f9e'},
   raspberry:     {en:'Raspberries',       aliases:['raspberry'], shelf:3, fk:482, g:340, usd:5.99, estPrice:true, cat:'soft', shape:'raspberry', plural:true, base:'#c8403f'},
@@ -1490,37 +1490,37 @@ const FOODS = {
   asianpear:     {en:'Asian pears',       aliases:['asian pear','nashi','nashi pear','nashi pears','apple pear','apple pears'], shelf:90, estimated:true, note:'No FoodKeeper entry (#266 Pears is a different species); Oregon State Extension SP 50-694 gives ripe Asian pears up to 3 months refrigerated', g:900, usd:5.49, estPrice:true, cat:'soft', plural:true, shape:'asianpear', base:'#d8cf86'},
   // #252 "Berries (cherries, goose berries, lychee)": 7 days.
   lychee:        {en:'Lychees',           aliases:['lychee','litchi','litchis','lichee'], shelf:7, fk:252, g:454, usd:5.99, estPrice:true, cat:'soft', shape:'lychee', plural:true, base:'#cf5848'},
-  cherrytomato:  {en:'Cherry tomatoes',   aliases:['cherry tomato','grape tomatoes','grape tomato'], shelf:5, fk:600, g:907, usd:5.49, estPrice:true, cat:'soft', plural:true, base:'#d4482b'},
-  sweetpotato:   {en:'Sweet potatoes',    aliases:['sweet potato','yams','yam'], shelf:21, fk:422, store:'pantry', g:1360, usd:3.99, estPrice:true, cat:'veg', plural:true, base:'#c9733d'},
-  asparagus:     {en:'Asparagus',         shelf:4, fk:271, g:907, usd:5.99, estPrice:true, cat:'veg', base:'#6a9a4c'},
-  greenbeans:    {en:'Green beans',       aliases:['green bean','string beans','string bean','haricots verts'], shelf:5, fk:273, g:907, usd:4.49, estPrice:true, cat:'veg', plural:true, base:'#4d9a45'},
-  brussels:      {en:'Brussels sprouts',  aliases:['brussels sprout','brussel sprouts'], shelf:5, fk:277, g:907, usd:4.99, estPrice:true, cat:'veg', plural:true, base:'#5f9c48'},
-  butternut:     {en:'Butternut squash',  aliases:['winter squash','acorn squash'], shelf:42, fk:303, store:'pantry', g:1200, usd:2.99, estPrice:true, cat:'veg', base:'#e0a457'},
+  cherrytomato:  {en:'Cherry tomatoes',   aliases:['cherry tomato','grape tomatoes','grape tomato'], shelf:5, fk:600, g:907, usd:5.49, estPrice:true, cat:'soft', plural:true, shape:'cherrytomato', base:'#d4482b'},
+  sweetpotato:   {en:'Sweet potatoes',    aliases:['sweet potato','yams','yam'], shelf:21, fk:422, store:'pantry', g:1360, usd:3.99, estPrice:true, cat:'veg', plural:true, shape:'sweetpotato', base:'#c9733d'},
+  asparagus:     {en:'Asparagus',         shelf:4, fk:271, g:907, usd:5.99, estPrice:true, cat:'veg', shape:'asparagus', base:'#6a9a4c'},
+  greenbeans:    {en:'Green beans',       aliases:['green bean','string beans','string bean','haricots verts'], shelf:5, fk:273, g:907, usd:4.49, estPrice:true, cat:'veg', plural:true, shape:'greenbeans', base:'#4d9a45'},
+  brussels:      {en:'Brussels sprouts',  aliases:['brussels sprout','brussel sprouts'], shelf:5, fk:277, g:907, usd:4.99, estPrice:true, cat:'veg', plural:true, shape:'brussels', base:'#5f9c48'},
+  butternut:     {en:'Butternut squash',  aliases:['winter squash','acorn squash'], shelf:42, fk:303, store:'pantry', g:1200, usd:2.99, estPrice:true, cat:'veg', shape:'butternut', base:'#e0a457'},
   // A deep true red, leaning away from the plum urgency colour's purple.
-  beets:         {en:'Beets',             aliases:['beet','beetroot','red beets'], shelf:14, fk:274, g:700, usd:2.99, estPrice:true, cat:'veg', plural:true, base:'#b0262c'},
-  sourcream:     {en:'Sour cream',        shelf:null, fk:29, pkgDate:true, g:454, usd:2.49, estPrice:true, cat:'dairy', base:'#efeee8'},
-  creamcheese:   {en:'Cream cheese',      shelf:14, fk:10, g:227, usd:2.79, estPrice:true, cat:'dairy', base:'#eeece4'},
-  heavycream:    {en:'Heavy cream',       aliases:['heavy whipping cream','whipping cream'], shelf:10, fk:14, g:946, usd:5.49, estPrice:true, cat:'dairy', base:'#f0ecdc'},
-  halfandhalf:   {en:'Half and half',     aliases:['half & half'], shelf:4, fk:13, g:946, usd:3.99, estPrice:true, cat:'dairy', base:'#eeebe0'},
-  cottagecheese: {en:'Cottage cheese',    shelf:14, fk:9, g:680, usd:3.99, estPrice:true, cat:'dairy', base:'#efede6'},
-  stringcheese:  {en:'String cheese',     aliases:['mozzarella sticks','cheese sticks'], shelf:150, fk:544, g:1360, usd:13.99, estPrice:true, cat:'dairy', base:'#ecead8'},
-  salmon:        {en:'Salmon',            aliases:['salmon fillet','salmon fillets','atlantic salmon'], shelf:2, fk:146, g:1360, usd:32.00, estPrice:true, cat:'protein', base:'#e88a62'},
+  beets:         {en:'Beets',             aliases:['beet','beetroot','red beets'], shelf:14, fk:274, g:700, usd:2.99, estPrice:true, cat:'veg', plural:true, shape:'beets', base:'#b0262c'},
+  sourcream:     {en:'Sour cream',        shelf:null, fk:29, pkgDate:true, g:454, usd:2.49, estPrice:true, cat:'dairy', shape:'sourcream', base:'#efeee8'},
+  creamcheese:   {en:'Cream cheese',      shelf:14, fk:10, g:227, usd:2.79, estPrice:true, cat:'dairy', shape:'creamcheese', base:'#eeece4'},
+  heavycream:    {en:'Heavy cream',       aliases:['heavy whipping cream','whipping cream'], shelf:10, fk:14, g:946, usd:5.49, estPrice:true, cat:'dairy', shape:'heavycream', base:'#f0ecdc'},
+  halfandhalf:   {en:'Half and half',     aliases:['half & half'], shelf:4, fk:13, g:946, usd:3.99, estPrice:true, cat:'dairy', shape:'halfandhalf', base:'#eeebe0'},
+  cottagecheese: {en:'Cottage cheese',    shelf:14, fk:9, g:680, usd:3.99, estPrice:true, cat:'dairy', shape:'cottagecheese', base:'#efede6'},
+  stringcheese:  {en:'String cheese',     aliases:['mozzarella sticks','cheese sticks'], shelf:150, fk:544, g:1360, usd:13.99, estPrice:true, cat:'dairy', shape:'stringcheese', base:'#ecead8'},
+  salmon:        {en:'Salmon',            aliases:['salmon fillet','salmon fillets','atlantic salmon'], shelf:2, fk:146, g:1360, usd:32.00, estPrice:true, cat:'protein', shape:'salmon', base:'#e88a62'},
   // Usually bought frozen; #151 is the refrigerator value, fresh or thawed.
-  shrimp:        {en:'Shrimp',            aliases:['raw shrimp','prawns'], shelf:3, fk:151, g:907, usd:17.99, estPrice:true, cat:'protein', base:'#d9a59a'},
-  groundturkey:  {en:'Ground turkey',     shelf:2, fk:115, g:454, usd:5.49, estPrice:true, cat:'protein', base:'#c99a8a'},
-  chickenthigh:  {en:'Chicken thighs',    aliases:['chicken thigh','chicken legs','chicken drumsticks'], shelf:2, fk:118, g:680, usd:5.99, estPrice:true, cat:'protein', plural:true, base:'#d5a796'},
-  porkchop:      {en:'Pork chops',        aliases:['pork chop','boneless pork chops','pork loin chops'], shelf:5, fk:64, g:680, usd:6.49, estPrice:true, cat:'protein', plural:true, base:'#d8a493'},
-  steak:         {en:'Steak',             aliases:['ribeye','ribeye steak','sirloin','sirloin steak','beef steak','new york strip'], shelf:5, fk:40, g:454, usd:14.99, estPrice:true, cat:'protein', base:'#a8463a'},
-  rotisserie:    {en:'Rotisserie chicken', shelf:4, fk:141, g:1360, usd:4.99, cat:'cooked', base:'#c58a52'},
+  shrimp:        {en:'Shrimp',            aliases:['raw shrimp','prawns'], shelf:3, fk:151, g:907, usd:17.99, estPrice:true, cat:'protein', shape:'shrimp', base:'#d9a59a'},
+  groundturkey:  {en:'Ground turkey',     shelf:2, fk:115, g:454, usd:5.49, estPrice:true, cat:'protein', shape:'groundturkey', base:'#c99a8a'},
+  chickenthigh:  {en:'Chicken thighs',    aliases:['chicken thigh','chicken legs','chicken drumsticks'], shelf:2, fk:118, g:680, usd:5.99, estPrice:true, cat:'protein', plural:true, shape:'chickenthigh', base:'#d5a796'},
+  porkchop:      {en:'Pork chops',        aliases:['pork chop','boneless pork chops','pork loin chops'], shelf:5, fk:64, g:680, usd:6.49, estPrice:true, cat:'protein', plural:true, shape:'porkchop', base:'#d8a493'},
+  steak:         {en:'Steak',             aliases:['ribeye','ribeye steak','sirloin','sirloin steak','beef steak','new york strip'], shelf:5, fk:40, g:454, usd:14.99, estPrice:true, cat:'protein', shape:'steak', base:'#a8463a'},
+  rotisserie:    {en:'Rotisserie chicken', shelf:4, fk:141, g:1360, usd:4.99, cat:'cooked', shape:'rotisserie', base:'#c58a52'},
   // #181 is commercial (pasteurized) hummus; traditional (#183) is 7 days.
-  hummus:        {en:'Hummus',            shelf:90, fk:181, g:907, usd:7.99, estPrice:true, cat:'cooked', base:'#d8c08e'},
-  salsa:         {en:'Fresh salsa',       aliases:['pico de gallo','refrigerated salsa'], shelf:7, fk:572, g:454, usd:4.99, estPrice:true, cat:'cooked', base:'#d0573a'},
-  bread:         {en:'Bread',             aliases:['sliced bread','sandwich bread','loaf of bread'], shelf:18, fk:195, store:'pantry', g:1300, usd:8.99, estPrice:true, cat:'cooked', base:'#d6aa6c'},
+  hummus:        {en:'Hummus',            shelf:90, fk:181, g:907, usd:7.99, estPrice:true, cat:'cooked', shape:'hummus', base:'#d8c08e'},
+  salsa:         {en:'Fresh salsa',       aliases:['pico de gallo','refrigerated salsa'], shelf:7, fk:572, g:454, usd:4.99, estPrice:true, cat:'cooked', shape:'salsa', base:'#d0573a'},
+  bread:         {en:'Bread',             aliases:['sliced bread','sandwich bread','loaf of bread'], shelf:18, fk:195, store:'pantry', g:1300, usd:8.99, estPrice:true, cat:'cooked', shape:'bread', base:'#d6aa6c'},
   // FoodKeeper #196 gives flour tortillas only a pantry figure (3 months),
   // no refrigerator one, so the printed date governs. "Tortillas" alone
   // asks which of these two.
-  flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, base:'#e6d8b6'},
-  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, base:'#e2c97e'},
+  flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, shape:'flourtortilla', base:'#e6d8b6'},
+  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, shape:'corntortilla', base:'#e2c97e'},
   // Drinks (cat 'drinks'). Where they stand follows the shelf-life column,
   // as onCounter does for food, but never in the bowl: a drink counted by
   // a pantry figure (store:'pantry' -- spirits, unopened wine, cream
@@ -1537,7 +1537,7 @@ const FOODS = {
   // unfermented juice: a different product).
   beer:          {en:'Beer',              aliases:['beers','lager','ale','pale ale','ipa','pilsner','stout','bottle of beer','beer bottle','bottled beer'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the bottle', g:355, usd:1.99, estPrice:true, cat:'drinks', shape:'beer', base:'#7a4520'},
   cannedbeer:    {en:'Canned beer',       aliases:['beer can','beer cans','can of beer','cans of beer','tallboy','tallboys'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the can', g:355, usd:1.79, estPrice:true, cat:'drinks', shape:'beercan', base:'#c9a54c'},
-  hardcider:     {en:'Hard cider',        aliases:['hard ciders','alcoholic cider','cider can','cans of cider'], shelf:null, pkgDate:true, note:'No FoodKeeper entry (#662 Apple cider is fresh juice); the date printed on the can', g:355, usd:2.49, estPrice:true, cat:'drinks', shape:'cidercan', base:'#a9c27a'},
+  hardcider:     {en:'Hard cider',        aliases:['hard ciders','alcoholic cider','cider can','cans of cider'], shelf:null, pkgDate:true, note:'No FoodKeeper entry (#662 Apple cider is fresh juice); the date printed on the can', g:355, usd:2.49, estPrice:true, cat:'drinks', shape:'ciderbottle', base:'#a9c27a'},
   hardseltzer:   {en:'Hard seltzer',      aliases:['hard seltzers','spiked seltzer','spiked seltzers','alcoholic seltzer'], shelf:null, pkgDate:true, note:'No FoodKeeper entry; the date printed on the can', g:355, usd:2.29, estPrice:true, cat:'drinks', shape:'seltzercan', base:'#d5dddf'},
   // #462 Red wine and #463 White wine give no refrigerator figure for an
   // unopened bottle, only the pantry one (red 3-5 years, white 1-2): an
@@ -1581,8 +1581,8 @@ const FOODS = {
   gin:           {en:'Gin',               aliases:['bottle of gin','london dry gin'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'gin', base:'#d3e5e4'},
   rum:           {en:'Rum',               aliases:['bottle of rum','white rum','dark rum','spiced rum','gold rum'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:19.99, estPrice:true, cat:'drinks', shape:'rum', base:'#dbe6e8'},
   tequila:       {en:'Tequila',           aliases:['bottle of tequila','tequila blanco','reposado'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'agave', base:'#dbe6e8'},
-  mezcal:        {en:'Mezcal',            aliases:['mescal','bottle of mezcal'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:39.99, estPrice:true, cat:'drinks', shape:'agave', base:'#dbe6e8'},
-  baijiu:        {en:'Baijiu',            aliases:['bottle of baijiu'], shelf:null, keeps:true, fk:539, store:'pantry', g:500, usd:29.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'},
+  mezcal:        {en:'Mezcal',            aliases:['mescal','bottle of mezcal'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:39.99, estPrice:true, cat:'drinks', shape:'mezcal', base:'#dbe6e8'},
+  baijiu:        {en:'Baijiu',            aliases:['bottle of baijiu'], shelf:null, keeps:true, fk:539, store:'pantry', g:500, usd:29.99, estPrice:true, cat:'drinks', shape:'baijiu', base:'#dbe6e8'},
   liquor:        {en:'Liquor',            aliases:['liquors','spirits','spirit','hard liquor','hard liquors','bottle of liquor'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:24.99, estPrice:true, cat:'drinks', shape:'vodka', base:'#dbe6e8'},
   whiskey:       {en:'Whiskey',           aliases:['whisky','whiskeys','whiskies','rye whiskey','bottle of whiskey','bottle of whisky'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'whiskey', base:'#dbe6e8'},
   bourbon:       {en:'Bourbon',           aliases:['bourbon whiskey','bottle of bourbon'], shelf:null, keeps:true, fk:539, store:'pantry', g:750, usd:29.99, estPrice:true, cat:'drinks', shape:'whiskey', base:'#dbe6e8'},
@@ -3659,25 +3659,66 @@ function oklchLerp(hexA, hexB, t){
   if (dH < -Math.PI) dH += Math.PI * 2;
   return oklchToHex(L1 + (L2 - L1) * tt, C1 + (C2 - C1) * tt, H1 + dH * tt);
 }
+// Where a food's colour ends up. 100% decayed is darker and duller than
+// the food but keeps its own hue: lightness pulled down and squeezed
+// together (0.2 + 0.4 L, so a pale part still sits lighter than a dark
+// one and a cue drawn in a second colour stays visible), chroma cut to
+// about 60% (capped, and kept above a floor so the hue still shows), and
+// the hue turned a fifth of the way toward the shared decay brown. A
+// near-grey food (milk, a white tub) gets a little warm brown instead.
+// It must never read as an urgency colour (BUCKET_HEX): if it lands
+// within DECAY_URGENCY_DE of one (OKLab distance; the old shared brown
+// sat about 0.05-0.09 from them), only its lightness moves, to the
+// nearest value that clears them all. Cached per base colour.
+const DECAY_BROWN_HEX = '#6E6457', DECAY_URGENCY_DE = 0.085, DECAY_MID_DE = 0.054;
+const decayEnds = new Map();
+function oklabOf(hex){ const [L, C, H] = hexToOklch(hex); return [L, C * Math.cos(H), C * Math.sin(H)]; }
+function oklabDist(a, b){ const x = oklabOf(a), y = oklabOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); }
+function urgencyDist(hex){ return Math.min(...Object.values(BUCKET_HEX).map(u => oklabDist(hex, u))); }
+function decayEndsOf(baseHex){
+  let e = decayEnds.get(baseHex);
+  if (e) return e;
+  const [L, C, H] = hexToOklch(baseHex), BH = hexToOklch(DECAY_BROWN_HEX)[2];
+  let dH = BH - H;
+  if (dH > Math.PI) dH -= Math.PI * 2;
+  if (dH < -Math.PI) dH += Math.PI * 2;
+  const grey = C < 0.025;
+  const Lf = 0.2 + 0.4 * L, Cf = grey ? 0.03 : Math.max(0.04, Math.min(C * 0.6, 0.085)), Hf = grey ? BH : H + dH * 0.2;
+  let lf = Lf;
+  if (urgencyDist(oklchToHex(Lf, Cf, Hf)) < DECAY_URGENCY_DE){
+    for (let d = 0.005; d < 0.4; d += 0.005){
+      if (Lf - d > 0.2 && urgencyDist(oklchToHex(Lf - d, Cf, Hf)) >= DECAY_URGENCY_DE){ lf = Lf - d; break; }
+      if (Lf + d < 0.8 && urgencyDist(oklchToHex(Lf + d, Cf, Hf)) >= DECAY_URGENCY_DE){ lf = Lf + d; break; }
+    }
+  }
+  const end = oklchToHex(lf, Cf, Hf);
+  // the food's own brown (where it is at TURN): halfway from the shared
+  // brown to its end, drawn back toward the shared brown if that's closer
+  // to an urgency colour than the shared brown itself
+  let t = 0.5, mid = oklchLerp(DECAY_BROWN_HEX, end, t);
+  while (t > 0 && urgencyDist(mid) < DECAY_MID_DE){ t = Math.max(0, t - 0.05); mid = oklchLerp(DECAY_BROWN_HEX, end, t); }
+  e = {end, mid};
+  decayEnds.set(baseHex, e);
+  return e;
+}
 function natureColor(baseHex, fraction){
-  const BROWN = '#6E6457', ROT = '#3B2E22';
   // The food's own hue stays clearly visible through HOLD (only drifting
   // DRIFT of the way to brown by then, which is discoloration-spot
-  // territory, not a wholesale color change) -- then it closes out to
-  // brown by TURN. Past TURN it goes toward ROT, a deep brown, but mixed
-  // with a trace of the food's own base hue (HUE_TRACE) rather than all
-  // the way to black -- a rotten tomato reads dark red-brown, a rotten
-  // potato dark earth brown, never the same black lump. 100% decayed
-  // (frac=1, same call the gone drawer uses) lands on that tinted deep
-  // brown, not near-black -- shrinking/collapse/mold carry "gone" instead.
-  const HOLD = 0.6, TURN = 0.85, DRIFT = 0.18, HUE_TRACE = 0.22;
-  if (fraction <= HOLD) return oklchLerp(baseHex, BROWN, (fraction / HOLD) * DRIFT);
-  const rotHex = oklchLerp(ROT, baseHex, HUE_TRACE);
+  // territory, not a wholesale color change) -- then it closes out to its
+  // own brown by TURN, and past TURN goes darker to its end
+  // (decayEndsOf): never black and never one shared brown -- a rotten
+  // tomato reads dark brick red, a rotten lime dark olive green, a rotten
+  // blueberry dark slate violet. 100% decayed (frac=1, same call the gone
+  // drawer uses) lands on that end -- shrinking/collapse/mold carry
+  // "gone"; the colour keeps saying which food it was.
+  const HOLD = 0.6, TURN = 0.85, DRIFT = 0.18;
+  const {end, mid} = decayEndsOf(baseHex);
+  if (fraction <= HOLD) return oklchLerp(baseHex, mid, (fraction / HOLD) * DRIFT);
   if (fraction <= TURN){
-    const driftHex = oklchLerp(baseHex, BROWN, DRIFT);
-    return oklchLerp(driftHex, BROWN, (fraction - HOLD) / (TURN - HOLD));
+    const driftHex = oklchLerp(baseHex, mid, DRIFT);
+    return oklchLerp(driftHex, mid, (fraction - HOLD) / (TURN - HOLD));
   }
-  return oklchLerp(BROWN, rotHex, (fraction - TURN) / (1 - TURN));
+  return oklchLerp(mid, end, (fraction - TURN) / (1 - TURN));
 }
 function neutralWashColor(fraction){
   return hexLerp('#D7D2C6', '#1E1B18', fraction);
@@ -3902,29 +3943,6 @@ function cartonOutline(s){
   return [[0.30, 0.93], [0.70, 0.93], [0.70, 0.31], [0.53, 0.17], [0.53, 0.07], [0.47, 0.07],
     [0.47, 0.17], [0.30, 0.31]].map(([x, y]) => [x * s, y * s]);
 }
-// A loose bunch: four broad, round-tipped leaves of unequal length on
-// short stems from one gathered point -- spade-shaped spinach leaves, not
-// narrow pointed ones (five thin points fanned from one spot reads as a
-// different plant entirely). Notches between leaves are deep so each
-// reads as its own leaf. Sits left of centre, well inside the frame,
-// because leafy sag leans the top rightward as it wilts. Per leaf: notch,
-// left side, near-tip, tip, near-tip, right side; then the stem's two cut
-// ends. Leaf tips at 3, 9, 15, 21 (spinachRibs follows them); notches at
-// 0, 6, 12, 18, 24; stem ends at 25 and 26.
-function spinachOutline(s){
-  const gx = 0.44, gy = 0.70;
-  const leaves = [{a: -158, L: 0.40}, {a: -114, L: 0.58}, {a: -70, L: 0.52}, {a: -26, L: 0.42}];
-  const P = (deg, r) => [gx + Math.cos(deg * Math.PI / 180) * r, gy + Math.sin(deg * Math.PI / 180) * r];
-  const pts = [P(-186, 0.12)];
-  leaves.forEach((lf, i) => {
-    pts.push(P(lf.a - 21, lf.L * 0.55), P(lf.a - 10, lf.L * 0.93), P(lf.a, lf.L),
-      P(lf.a + 10, lf.L * 0.93), P(lf.a + 21, lf.L * 0.55));
-    const next = leaves[i + 1];
-    pts.push(next ? P((lf.a + next.a) / 2, Math.min(lf.L, next.L) * 0.26) : P(lf.a + 30, 0.12));
-  });
-  pts.push([gx + 0.05, 0.93], [gx - 0.03, 0.93]);
-  return pts.map(([x, y]) => [x * s, y * s]);
-}
 // Long and tapered, lying almost level: a rounded shoulder on the left
 // (where the tops grow from) narrowing to a fine root tip on the right.
 // Index 0 is the shoulder's top; points 0..6 run along the top edge,
@@ -4062,8 +4080,6 @@ const FRUIT_OUTLINES = {
   lemon: s => polarRing(s, 24, 0.5, 0.66, 0.29, 0.24, a => 1 + 0.1 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
   lime: s => polarRing(s, 24, 0.5, 0.69, 0.245, 0.215, a => 1 + 0.09 * (bell(a, 0, 0.16) + bell(a, Math.PI, 0.16))),
   orange: s => polarRing(s, 24, 0.5, 0.56, 0.37, 0.35, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.3)),
-  // Mandarin: flatter than an orange, sunk a little at both poles.
-  mandarin: s => polarRing(s, 24, 0.5, 0.63, 0.38, 0.27, a => 1 - 0.08 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)),
   grapefruit: s => polarRing(s, 24, 0.5, 0.57, 0.40, 0.35, a => 1 - 0.05 * bell(a, -Math.PI / 2, 0.35)),
   // Mango: a kidney-teardrop lying down -- the full shoulder on the left,
   // where the stem is, narrowing to a rounded tip low on the right, the
@@ -4112,9 +4128,6 @@ const FRUIT_OUTLINES = {
     const crown = [[0.43, 0.28], [0.38, 0.16], [0.45, 0.22], [0.50, 0.12], [0.55, 0.22], [0.62, 0.16], [0.57, 0.28]];
     return [...body, ...crown].map(([x, y]) => [x * s, y * s]);
   },
-  // Papaya: long, lying down, tapering toward the stem end on the right.
-  papaya: s => polarRing(s, 26, 0.5, 0.64, 0.42, 0.25, () => 1,
-    (x, y) => [x, 0.64 + (y - 0.64) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42))]),
   dragonfruit: s => polarRing(s, 24, 0.5, 0.60, 0.29, 0.32, a => 1 - 0.04 * bell(a, -Math.PI / 2, 0.4)),
   // Fig: a teardrop standing up, drawn to a short neck at the stem.
   fig: s => polarRing(s, 24, 0.5, 0.64, 0.3, 0.27, () => 1, neckIn(0.64, 0.27, 0.7, 0.13)),
@@ -4125,8 +4138,6 @@ const FRUIT_OUTLINES = {
   }),
   // Asian pear: round like an apple, not pear-shaped; no dimple.
   asianpear: s => polarRing(s, 24, 0.5, 0.58, 0.36, 0.33, a => 1 - 0.03 * bell(a, -Math.PI / 2, 0.3)),
-  // Lychee: round and finely knobbled, a little pointed at the bottom.
-  lychee: s => polarRing(s, 30, 0.5, 0.60, 0.33, 0.31, a => (1 + 0.025 * Math.cos(15 * a)) * (1 - 0.06 * bell(a, -Math.PI / 2, 0.3) + 0.05 * bell(a, Math.PI / 2, 0.3)))
 };
 function catOutlinePoints(shape, s){
   const cx = s / 2;
@@ -4143,7 +4154,6 @@ function catOutlinePoints(shape, s){
     case 'chicken':  return chickenOutline(s);
     case 'tofu':     return tofuOutline(s);
     case 'carton':   return cartonOutline(s);
-    case 'spinach':  return spinachOutline(s);
     case 'carrot':   return carrotOutline(s);
     case 'onion':    return onionOutline(s);
     case 'eggs':     return eggsOutline(s);
@@ -4151,7 +4161,7 @@ function catOutlinePoints(shape, s){
     case 'garlic':   return garlicOutline(s);
     case 'dairy':    return dairyOutline(s);
     case 'protein':  return proteinOutline(s);
-    default:         return FRUIT_OUTLINES[shape] ? FRUIT_OUTLINES[shape](s) : genericOutline(s);
+    default:         return PARTS[shape] ? partsRing(shape, s) : FRUIT_OUTLINES[shape] ? FRUIT_OUTLINES[shape](s) : genericOutline(s);
   }
 }
 const BOXY_SHAPES = {dairy:1, cooked:1, generic:1, tofu:1, carton:1, wedge:1};
@@ -4758,27 +4768,6 @@ function cartonPanels(deformed){
     <path d="${lineD([sideTop, rr])}"/><path d="${lineD([rl, rr])}"/>
     <path d="${polyD([labTL, [labBR[0], labTL[1]], labBR, [labTL[0], labBR[1]]])}"/>`;
 }
-// Spinach: a midrib from where the stems gather out into each leaf, the
-// edge of each leaf where it overlaps the one beside it (a short curve in
-// from each notch), and the stems down to their cut ends.
-function spinachRibs(deformed, size){
-  const stemTop = rfLerp(deformed[0], deformed[24], 0.5);
-  const gather = rfLerp(stemTop, rfLerp(deformed[25], deformed[26], 0.5), -0.15);
-  const ribs = [3, 9, 15, 21].map((i, k) => {
-    const tip = rfLerp(gather, deformed[i], 0.86);
-    const mid = rfLerp(gather, tip, 0.5);
-    const bow = (k - 1.5) * size * 0.014;
-    return `<path d="M ${f1(gather[0])} ${f1(gather[1])} Q ${f1(mid[0] + bow)} ${f1(mid[1])} ${f1(tip[0])} ${f1(tip[1])}"/>`;
-  }).join('');
-  const overlaps = [6, 12, 18].map(i => {
-    const notch = deformed[i], toward = rfLerp(notch, gather, 0.55);
-    const side = rfLerp(deformed[i - 1], deformed[i + 1], 0.5);
-    const ctrl = rfLerp(toward, side, 0.25);
-    return `<path d="M ${f1(notch[0])} ${f1(notch[1])} Q ${f1(ctrl[0])} ${f1(ctrl[1])} ${f1(toward[0])} ${f1(toward[1])}"/>`;
-  }).join('');
-  const stems = [0.3, 0.7].map(t => `<path d="${lineD([gather, rfLerp(deformed[26], deformed[25], t)])}"/>`).join('');
-  return ribs + overlaps + stems;
-}
 // Carrot: the green tops from its shoulder -- three stems, each carrying
 // a few leaflets that dry and droop on their own clock, like the
 // tomato's calyx -- and the faint rings across the root.
@@ -5047,13 +5036,6 @@ const FRUIT_CUES = {
     }).join('');
     return pores(R, size, seed, 22) + ringAt(nav, size * 0.026, size * 0.014) + creases + inkDot(R.edge(-Math.PI / 2), size * 0.013, 0.8);
   },
-  // Mandarin: flat, with a short stem and one leaf still on it.
-  mandarin: (d, size, seed, fraction) => {
-    const R = fruitRider('mandarin', d, size), top = R.edge(-Math.PI / 2);
-    const tip = [top[0] + size * 0.02, top[1] - size * 0.05];
-    const curl = Math.min(1, (fraction || 0) / 0.5) * 0.6;
-    return pores(R, size, seed, 14) + `<path d="${lineD([top, tip])}"/>` + leafPath(tip, -0.35 + curl, size * (0.17 - 0.05 * curl), size * 0.045, dryLeaf(fraction), size);
-  },
   // Grapefruit: more pores, and the stem scar as a ring on the flat top.
   grapefruit: (d, size, seed) => {
     const R = fruitRider('grapefruit', d, size), scar = R.at(0.5, 0.27);
@@ -5256,20 +5238,6 @@ const FRUIT_CUES = {
     const sheen = [R.at(0.27, 0.6), R.at(0.3, 0.47), R.at(0.38, 0.39)];
     return `<path d="${lineD([crown[0], crown[6]])}"/>` + sepals + `<path d="${smoothOpenPath(sheen)}" stroke-opacity="0.35"/>`;
   },
-  // Papaya: faint streaks along its length, the stem end at the right.
-  papaya: (d, size) => {
-    const R = fruitRider('papaya', d, size);
-    const streaks = [-0.45, 0, 0.45].map(v => {
-      const run = [];
-      for (let x = 0.16; x <= 0.84; x += 0.06){
-        const e = Math.sqrt(Math.max(0, 1 - ((x - 0.5) / 0.42) ** 2)) * (1 - 0.35 * Math.max(0, (x - 0.5) / 0.42));
-        run.push(R.at(x, 0.64 + v * 0.25 * e));
-      }
-      return `<path d="${smoothOpenPath(run)}" stroke-opacity="0.4"/>`;
-    }).join('');
-    const end = R.edge(0);
-    return streaks + `<path d="${lineD([end, [end[0] + size * 0.035, end[1] - size * 0.01]])}" stroke-width="${f1(Math.max(1.5, size * 0.016))}"/>`;
-  },
   // Dragon fruit: scales that flick up and out like flames, green at the
   // tips, and a tuft of them at the top.
   dragonfruit: (d, size, seed, fraction) => {
@@ -5301,12 +5269,6 @@ const FRUIT_CUES = {
     const R = fruitRider('asianpear', d, size);
     return pores(R, size, seed, 34, 0.4, 0.006) + stalk(R.edge(-Math.PI / 2), size, 0.08, 0.008);
   },
-  // Lychee: the knobbled shell, and its short stalk.
-  lychee: (d, size, seed) => {
-    const R = fruitRider('lychee', d, size), rand = seededRand(seed + 97), k = size * 0.016;
-    const knobs = R.scatter(rand, 26, 0.1).map(p => `<path d="${lineD([[p[0] - k, p[1] + k * 0.6], [p[0], p[1] - k * 0.6], [p[0] + k, p[1] + k * 0.6]])}" stroke-opacity="0.5"/>`).join('');
-    return knobs + stalk(R.edge(-Math.PI / 2), size, 0.06, 0.02);
-  }
 };
 
 // Washes: second natural tones laid on a fruit's body, under its brown
@@ -5374,9 +5336,1354 @@ const FRUIT_WASH = {
   }
 };
 
+// ---- Drawn in parts: a food that isn't one outline -- a bunch of greens,
+// a head of leaves, stalks, pods, florets -- is a list of parts in the
+// unit square (PARTS[shape]()), back to front: filled leaves and stalks,
+// each with its own natural colour, and ink lines over them. Its outline
+// ring (partsRing) is the parts' radial hull, so deformPoints, the frost,
+// Tonight's dash and the cling film work on it as on any outline; every
+// part rides the ring's decay (warpOf), so a bunch wilts, leans and
+// shrivels with the shared mechanics, spots and mold growing only on the
+// parts. fewer: Used some takes whole pieces (stalks, sprigs, leaves --
+// a part's g) instead of cutting.
+// A point at angle a (0 right, -PI/2 up), r away from b.
+const polarPt = (b, a, r) => [b[0] + Math.cos(a) * r, b[1] + Math.sin(a) * r];
+// A quadratic curve from p0 to p1, bowed sideways by bend (in units).
+function bentPts(p0, p1, bend = 0, n = 10){
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1], l = Math.hypot(dx, dy) || 1;
+  const c = [(p0[0] + p1[0]) / 2 - dy / l * bend, (p0[1] + p1[1]) / 2 + dx / l * bend];
+  return Array.from({length: n + 1}, (_, i) => { const t = i / n, u = 1 - t; return [u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]]; });
+}
+// A ribbon along a centreline, half-width hw(t) from t=0 to 1.
+function ribbon(cl, hw){
+  const L = [], R = [];
+  cl.forEach((p, i) => {
+    const a = cl[Math.max(0, i - 1)], b = cl[Math.min(cl.length - 1, i + 1)];
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, w = hw(i / (cl.length - 1));
+    L.push([p[0] - dy / l * w, p[1] + dx / l * w]); R.push([p[0] + dy / l * w, p[1] - dx / l * w]);
+  });
+  return [...L, ...R.reverse()];
+}
+// Leaf outlines by their half-width along the midrib, base (0) to tip (1).
+const LEAF_PROF = {
+  ovate: t => Math.sin(Math.PI * Math.pow(t, 0.8)),
+  spade: t => t < 0.3 ? Math.pow(Math.sin(t / 0.3 * Math.PI / 2), 0.6) : Math.pow(Math.cos((t - 0.3) / 0.7 * Math.PI / 2), 0.55),
+  lance: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 0.7)), 1.1),
+  spoon: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 1.5)), 0.7),
+  fan: t => Math.pow(Math.sin(Math.PI * Math.pow(t, 1.3)), 0.5),
+  strap: t => t < 0.06 ? 0.6 + t / 0.06 * 0.4 : t > 0.86 ? Math.sqrt(Math.max(0, 1 - ((t - 0.86) / 0.14) ** 2)) : 1,
+  arrow: t => t < 0.25 ? 0.5 + t * 2 : Math.pow(Math.cos((t - 0.25) / 0.75 * Math.PI / 2), 0.9)
+};
+// A leaf from base b at angle a: len long, wd its widest half-width; edge(t)
+// scales the width (ruffles, lobes); bend bows the midrib.
+function leafPts(b, a, len, wd, prof = 'ovate', edge = null, bend = 0, n = 18){
+  return ribbon(bentPts(b, polarPt(b, a, len), bend * len, n), t => wd * LEAF_PROF[prof](t) * (edge ? edge(t) : 1));
+}
+const ruffle = (k, amp) => t => 1 + amp * Math.sin(k * Math.PI * t);
+// An arrowhead (sagittate) leaf, water spinach's: a long pointed blade
+// whose two basal lobes point back past the stalk, a notch between them.
+function arrowLeafPts(b, a, len, wd){
+  const half = [[1, 0], [0.62, 0.62], [0.3, 0.95], [0.08, 1], [-0.12, 1.08], [-0.24, 1.02], [-0.18, 0.62], [-0.05, 0.22], [0, 0.07]];
+  const P = ([x, y]) => [b[0] + Math.cos(a) * x * len - Math.sin(a) * y * wd, b[1] + Math.sin(a) * x * len + Math.cos(a) * y * wd];
+  return [...half.map(P), ...half.slice().reverse().map(([x, y]) => P([x, -y]))];
+}
+// Cilantro's leaflet edge: cut into three broad lobes (two side notches)
+// and finely toothed along every lobe.
+const cilantroEdge = t => (1 - 0.5 * Math.exp(-(((t - 0.5) / 0.06) ** 2)) - 0.42 * Math.exp(-(((t - 0.78) / 0.05) ** 2)))
+  * (0.92 + 0.08 * Math.abs(Math.sin(7 * Math.PI * t))) * (t < 0.15 ? 0.4 + t / 0.15 * 0.6 : 1);
+// Curly kale's edge: deep ruffles with smaller ruffles on them.
+const kaleEdge = t => (0.6 + 0.4 * Math.pow(Math.abs(Math.sin(10 * Math.PI * t)), 0.6) + 0.1 * Math.abs(Math.sin(33 * Math.PI * t))) * (t < 0.1 ? t / 0.1 : 1);
+// A blob of radius r, its edge rippled k times (curly parsley, florets).
+const cloudPts = (c, rx, ry, k, amp, n = 30, ph = 0) => Array.from({length: n}, (_, i) => {
+  const a = i / n * Math.PI * 2, r = 1 + amp * Math.abs(Math.sin(k * a / 2 + ph));
+  return [c[0] + Math.cos(a) * rx * r, c[1] + Math.sin(a) * ry * r];
+});
+const ovalPts = (c, rx, ry, rot = 0, n = 22) => Array.from({length: n}, (_, i) => {
+  const a = i / n * Math.PI * 2, x = Math.cos(a) * rx, y = Math.sin(a) * ry;
+  return [c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)];
+});
+// A tapered stalk along a bowed line.
+const stalkPts = (p0, p1, w0, w1, bend = 0, n = 10) => ribbon(bentPts(p0, p1, bend, n), t => w0 + (w1 - w0) * t);
+// Part makers: fill (a hex, decaying through natureColor), g (the piece it
+// belongs to, for fewer), op/w (ink opacity and weight), open (a line).
+const PF = (p, fill, g, o = {}) => Object.assign({p, fill, g}, o);
+const PL = (p, op = 0.55, o = {}) => Object.assign({p, open: true, op}, o);
+// A leaf with its midrib and a few veins, as parts.
+function leafParts(b, a, len, wd, fill, g, o = {}){
+  const prof = o.prof || 'ovate', bend = o.bend || 0;
+  const out = [PF(leafPts(b, a, len, wd, prof, o.edge, bend, o.n || 18), fill, g)];
+  const rib = bentPts(b, polarPt(b, a, len * 0.9), bend * len * 0.9, 8);
+  if (o.rib !== false) out.push(o.ribFill
+    ? PF(ribbon(rib, t => wd * (o.ribW || 0.12) * (1 - t * 0.7)), o.ribFill, g, {op: 0.5})
+    : PL(rib, o.ribOp || 0.5, {g}));
+  (o.veins || []).forEach(t => {
+    const i = Math.round(t * 8), p = rib[i], q = rib[Math.min(8, i + 1)], da = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    const w = wd * LEAF_PROF[prof](t) * 0.85;
+    [-1, 1].forEach(sd => out.push(PL(bentPts(p, polarPt(p, da + sd * 0.75, w), sd * w * 0.12, 3), (o.ribOp || 0.5) * 0.7, {g, w: 0.7})));
+  });
+  return out;
+}
+// The outer edge of closed polygons, seen from c: along each of n rays,
+// the furthest crossing (circleUnion's rule, for any shapes).
+function radialHull(polys, c, n = 64){
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a);
+    let best = 0.02;
+    for (const P of polys) for (let k = 0; k < P.length; k++){
+      const A = P[k], B = P[(k + 1) % P.length], ex = B[0] - A[0], ey = B[1] - A[1];
+      const den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-12) continue;
+      const ax = A[0] - c[0], ay = A[1] - c[1];
+      const t = (ax * ey - ay * ex) / den, u = (ax * dy - ay * dx) / den;
+      if (t > best && u >= 0 && u <= 1) best = t;
+    }
+    pts.push([c[0] + dx * best, c[1] + dy * best]);
+  }
+  return pts;
+}
+const PARTS_CACHE = {};
+function partsSpec(shape){
+  if (!PARTS_CACHE[shape]){
+    const spec = PARTS[shape]();
+    const closed = spec.parts.filter(p => !p.open).map(p => p.p);
+    const all = closed.flat();
+    const c = spec.c || [all.reduce((t, p) => t + p[0], 0) / all.length, all.reduce((t, p) => t + p[1], 0) / all.length];
+    spec.ring = radialHull(closed, c);
+    spec.groups = 1 + Math.max(0, ...spec.parts.map(p => p.g || 0));
+    PARTS_CACHE[shape] = spec;
+  }
+  return PARTS_CACHE[shape];
+}
+const partsRing = (shape, s) => partsSpec(shape).ring.map(([x, y]) => [x * s, y * s]);
+// Any point carried by the ring's decay: the ring's own displacements,
+// weighted toward the nearest (inverse distance, fourth power).
+function warpOf(raw, def){
+  const D = raw.map((p, i) => [def[i][0] - p[0], def[i][1] - p[1]]);
+  if (D.every(d => !d[0] && !d[1])) return p => p;
+  return ([x, y]) => {
+    let sx = 0, sy = 0, sw = 0;
+    for (let i = 0; i < raw.length; i++){
+      const d2 = (raw[i][0] - x) ** 2 + (raw[i][1] - y) ** 2 + 1, w = 1 / (d2 * d2);
+      sx += D[i][0] * w; sy += D[i][1] * w; sw += w;
+    }
+    return [x + sx / sw, y + sy / sw];
+  };
+}
+// A part's colour as it decays: natureColor, except that a pale part (a
+// white stalk, a pale rib, a cut face) keeps some of its lightness, turning
+// a light tan rather than the leaves' deep brown, so a rotten bok choy
+// still shows its white stems against its leaves.
+function partFill(hex, fraction){
+  const nc = natureColor(hex, fraction), L = hexToOklch(hex)[0];
+  if (L < 0.8 || fraction <= 0.6) return nc;
+  return oklchLerp(nc, '#c2b394', Math.min(1, (L - 0.8) / 0.12) * 0.6 * Math.min(1, (fraction - 0.6) / 0.25));
+}
+// The parts drawn: painted back to front, spots and mold on the parts only.
+function partsSvg(shape, raw, deformed, color, fraction, moldW, size, seed, some, key, wrap){
+  // a drawing that fills its square leans out of it as it wilts: moved back in
+  const b = polyBox(deformed), m = size * 0.02;
+  const dx = Math.min(0, size - m - b.x1) + Math.max(0, m - b.x0), dy = Math.min(0, size - m - b.y1) + Math.max(0, m - b.y0);
+  if (dx || dy) deformed = deformed.map(([x, y]) => [x + dx, y + dy]);
+  const spec = partsSpec(shape), warp = warpOf(raw, deformed);
+  const uid = 'fpart' + (fridgeShapeCounter++), sw = Math.max(1, size * 0.008);
+  const fewer = some != null && spec.fewer;
+  let parts = spec.parts;
+  // a package's film (film:true) comes off when it's opened, peeled back;
+  // in a dish (no wrap) the food is out of its package altogether
+  // opened:true parts (a lid ajar, a torn corner) show only once it's opened
+  if (some != null && spec.pkg) parts = parts.filter(p => !p.film && (wrap || !p.rigid));
+  else parts = parts.filter(p => !p.opened);
+  if (fewer){ const k = Math.max(1, Math.round(spec.groups * some)); parts = parts.filter(p => p.g == null || p.g < k); }
+  const P = parts.map(p => Object.assign({}, p, {q: p.p.map(([x, y]) => p.rigid ? [x * size, y * size] : warp([x * size, y * size]))}));
+  const foodD = P.filter(p => !p.open && !p.rigid).map(p => p.sharp ? polyD(p.q) : smoothClosedPath(p.q));
+  const closedD = P.filter(p => !p.open).map(p => p.sharp ? polyD(p.q) : smoothClosedPath(p.q));
+  const paint = P.map(p => p.open
+    ? `<path d="${smoothOpenPath(p.q)}" fill="none" stroke="${p.stroke ? natureColor(p.stroke, fraction) : INK_HEX}" stroke-opacity="${p.op}" stroke-width="${f1(sw * (p.w || 0.8))}" stroke-linecap="round"/>`
+    : `<path d="${p.sharp ? polyD(p.q) : smoothClosedPath(p.q)}" fill="${p.fill === 'base' ? color : p.fade ? hexLerp(p.fill, '#d8d6cc', fraction * 0.8) : p.rigid ? p.fill : partFill(p.fill, fraction)}" stroke="${INK_HEX}" stroke-opacity="${p.op == null ? 1 : p.op}" stroke-width="${f1(sw * (p.w || 1))}" stroke-linejoin="round"/>`).join('');
+  // the label: the spec's own box (spec.lab, unit square) or its largest fade part
+  const lab = spec.lab ? spec.lab.map(v => v * size) : P.filter(p => p.fade && !p.open).map(p => ptsBox(p.q)).sort((a, b) => (b[2] - b[0]) * (b[3] - b[1]) - (a[2] - a[0]) * (a[3] - a[1]))[0];
+  const labWord = lab ? labelWordSvg(...lab, Math.max(0, Math.min(1, fraction * 0.8))) : '';
+  const spots = genericDiscolorationSpots(deformed, fraction, size, seed), mold = genericMoldMarkup(deformed, fraction, moldW, size, seed);
+  const hullD = smoothClosedPath(deformed);
+  const defs = `<clipPath id="${uid}-clip"><path d="${hullD}"/></clipPath><clipPath id="${uid}-parts">${closedD.map(d => `<path d="${d}"/>`).join('')}</clipPath><clipPath id="${uid}-food">${(foodD.length ? foodD : closedD).map(d => `<path d="${d}"/>`).join('')}</clipPath>`;
+  const body = `${paint}${labWord}<g clip-path="url(#${uid}-food)">${spots}${mold}</g>`;
+  const svg = inner => `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${inner}</svg>`;
+  if (some == null || (fewer && !wrap)) return svg(`<defs>${defs}</defs>${body}`);
+  // a package is opened, never wrapped: its film peeled back from a corner
+  if (spec.pkg){
+    const peel = (spec.peel || []).map(([x, y]) => [x * size, y * size]);
+    return svg(`<defs>${defs}</defs>${body}${peel.length && wrap ? `<path d="${polyD(peel)}" fill="#ffffff" fill-opacity="0.45" stroke="${INK_HEX}" stroke-opacity="0.45" stroke-width="${f1(sw * 0.8)}" stroke-linejoin="round"/>` : ''}`);
+  }
+  if (fewer){
+    const film = clingFilmMarkup(P.filter(p => !p.open).flatMap(p => p.q), size, seed);
+    return svg(`<defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath>${defs}</defs>${body}${film.markup}`);
+  }
+  const cut = cutShape(shape, key, raw, deformed, color, fraction, size, seed, some);
+  const outline = cut.outline ? `<path d="${cut.outline}" fill="none" stroke="${INK_HEX}" stroke-width="${f1(sw)}"/>` : '';
+  const cutDefs = `<clipPath id="${uid}-cut"><path d="${cut.clip}"/></clipPath>`;
+  if (!wrap) return svg(`<defs>${defs}${cutDefs}</defs><g clip-path="url(#${uid}-cut)">${body}</g>${outline}${cut.face}`);
+  const film = clingFilmMarkup(cut.film, size, seed);
+  return svg(`<defs><clipPath id="${uid}-film"><path d="${film.d}"/></clipPath>${defs}${cutDefs}</defs><g clip-path="url(#${uid}-cut)">${body}</g>${outline}${cut.face}${film.markup}`);
+}
+
+// Leafy greens. Real relative sizes: a head of cabbage or lettuce fills its
+// square, a bunch of herbs is about two thirds of it, scallions and chives
+// lie down as a slim bundle.
+const STEM_HEX = '#86ad66', PALE_STEM_HEX = '#e6ecd6', BAND_HEX = '#c9a77a';
+// A bunch's band: a short wrapped tie across its stems at y.
+const bandPart = (x0, x1, y, h = 0.035, g = null) => PF([[x0, y - h / 2], [x1, y - h / 2], [x1, y + h / 2], [x0, y + h / 2]], BAND_HEX, g, {sharp: true});
+// Stems from one gathered point out to each leaf's base.
+function fanBunch(G, specs, mk){
+  const out = [];
+  specs.forEach(([a, sl], i) => out.push(PF(stalkPts(G, polarPt(G, a, sl), 0.012, 0.009, (a + Math.PI / 2) * 0.02), STEM_HEX, i)));
+  specs.forEach(([a, sl, ll, lw], i) => out.push(...mk(polarPt(G, a, sl * 0.96), a, ll, lw, i)));
+  return out;
+}
+const UP = -Math.PI / 2;
+const PARTS = {
+  // Spinach: a bunch of broad, rounded, dark leaves on long stems, tied,
+  // with the pink crown of roots below the tie.
+  spinach: () => {
+    const G = [0.5, 0.8], specs = [[UP - 1.05, 0.2, 0.3, 0.12], [UP + 1.05, 0.2, 0.3, 0.12], [UP - 0.6, 0.24, 0.34, 0.135],
+      [UP + 0.6, 0.24, 0.34, 0.135], [UP - 0.2, 0.27, 0.36, 0.14], [UP + 0.22, 0.26, 0.35, 0.14]];
+    const parts = fanBunch(G, specs, (b, a, l, w, i) => leafParts(b, a, l, w, i < 2 ? '#245f30' : '#297037', i,
+      {prof: 'spade', bend: (i % 2 ? -0.08 : 0.08), veins: [0.3, 0.55], ribFill: '#8fb36e', ribW: 0.1}));
+    parts.push(PF(ovalPts([0.5, 0.86], 0.045, 0.03), '#c46a5a', null), bandPart(0.465, 0.535, 0.81));
+    [-0.03, 0, 0.03].forEach(dx => parts.push(PL([[0.5 + dx, 0.88], [0.5 + dx * 1.6, 0.94]], 0.6, {stroke: '#a8705a', w: 0.7})));
+    return {parts, fewer: true};
+  },
+  // Basil: three sprigs of glossy, cupped, pointed leaves in opposite
+  // pairs up a square stem, a cluster at each tip.
+  basil: () => {
+    const parts = [];
+    [[0.36, -0.28], [0.64, 0.28], [0.5, 0]].forEach(([x, lean], g) => {
+      const base = [0.5 + (x - 0.5) * 0.3, 0.88], top = [x + lean * 0.12, 0.3 + Math.abs(lean) * 0.12];
+      const stem = bentPts(base, top, lean * 0.05, 10);
+      parts.push(PF(ribbon(stem, () => 0.009), '#6f9a45', g));
+      [[0.35, 0.15, 0.065], [0.65, 0.13, 0.058]].forEach(([t, l, w]) => {
+        const p = stem[Math.round(t * 10)];
+        [-1, 1].forEach(sd => parts.push(...leafParts(p, UP + lean + sd * 1.15, l, w, '#3d8c45', g, {bend: -sd * 0.18, ribOp: 0.45, veins: [0.45]})));
+      });
+      const tip = stem[10];
+      [-0.55, 0.55, 0].forEach(da => parts.push(...leafParts(tip, UP + lean + da, da ? 0.085 : 0.1, da ? 0.035 : 0.04, '#4a9a4c', g, {bend: -da * 0.2, ribOp: 0.4})));
+    });
+    parts.push(bandPart(0.45, 0.55, 0.8));
+    return {parts, fewer: true};
+  },
+  // Cilantro: thin stems fanning out to flat, rounded, scalloped leaflets in
+  // threes, the bunch's white roots left on below the tie.
+  cilantro: () => {
+    // Cilantro: a dense bunch of long, thin, bare stems, each branching at
+    // its top into flat, bright, broadly three-lobed leaflets with toothed
+    // edges (not the small round leaflets of watercress), the white roots
+    // left on below the tie.
+    const G = [0.5, 0.82], parts = [];
+    const ends = [[UP - 0.95, 0.3], [UP - 0.55, 0.4], [UP - 0.18, 0.46], [UP + 0.18, 0.45], [UP + 0.55, 0.39], [UP + 0.95, 0.3], [UP - 0.02, 0.3]];
+    ends.forEach(([a, l], g) => {
+      const e = polarPt(G, a, l);
+      parts.push(PF(stalkPts(G, e, 0.005, 0.0035, 0.008), '#93c071', g));
+      // a branched top: a terminal leaflet and two on short side stalks
+      [[0, 0.115, 0.085], [-1.0, 0.095, 0.07], [1.0, 0.095, 0.07]].forEach(([da, ll, lw], k) => {
+        const b = k ? polarPt(e, a + da * 0.7, 0.025) : e;
+        if (k) parts.push(PF(stalkPts(e, b, 0.003, 0.0025), '#93c071', g, {w: 0.6}));
+        parts.push(...leafParts(b, a + da, ll, lw, (g + k) % 2 ? '#4aa13e' : '#3f9437', g,
+          {prof: 'fan', edge: cilantroEdge, ribOp: 0.35, n: 40, veins: [0.55]}));
+      });
+    });
+    parts.push(PF(ovalPts([0.5, 0.875], 0.04, 0.028), '#ecebdc', null), bandPart(0.465, 0.535, 0.83));
+    [-0.035, -0.012, 0.012, 0.035].forEach(dx => parts.push(PL([[0.5 + dx * 0.6, 0.895], [0.5 + dx * 1.4, 0.97]], 0.55, {w: 0.6})));
+    return {parts, fewer: true};
+  },
+  // Parsley: curly, the tight ruffled clusters on thin stems, tied.
+  parsley: () => {
+    // Curly parsley: many thin stems, branching, each ending in a small,
+    // tightly crimped tuft.
+    const G = [0.5, 0.88], parts = [];
+    const ends = [[UP - 0.8, 0.4, 0.06], [UP - 0.55, 0.5, 0.065], [UP - 0.3, 0.58, 0.07], [UP - 0.08, 0.52, 0.06], [UP + 0.12, 0.6, 0.068], [UP + 0.35, 0.53, 0.066], [UP + 0.6, 0.47, 0.062], [UP + 0.85, 0.38, 0.058], [UP + 0.02, 0.38, 0.056]];
+    ends.forEach(([a, l, r], g) => {
+      const e = polarPt(G, a, l), m = polarPt(G, a + (g % 2 ? 0.1 : -0.1), l * 0.6);
+      parts.push(PF(stalkPts(G, e, 0.006, 0.004, 0.012), '#86b466', g));
+      parts.push(PF(stalkPts(m, polarPt(m, a + (g % 2 ? -0.7 : 0.7), r * 1.6), 0.004, 0.003), '#86b466', g));
+      parts.push(PF(cloudPts(polarPt(m, a + (g % 2 ? -0.7 : 0.7), r * 1.7), r * 0.55, r * 0.5, 11, 0.3, 36, g + 1), '#3a8a43', g));
+      parts.push(PF(cloudPts(e, r, r * 0.88, 14, 0.3, 48, g), g % 2 ? '#2f7d3a' : '#3f9148', g));
+      for (let k = 0; k < 5; k++){
+        const c = polarPt(e, k * 1.3 + g, r * 0.5);
+        parts.push(PL(Array.from({length: 7}, (_, i) => polarPt(c, i * 1.1, r * 0.2 * (1 - i * 0.09))), 0.5, {g, w: 0.6}));
+      }
+    });
+    parts.push(bandPart(0.47, 0.53, 0.82));
+    return {parts, fewer: true};
+  },
+  // Arugula: a loose bunch of narrow, deeply lobed leaves, a rounder lobe
+  // at each tip.
+  arugula: () => {
+    const G = [0.5, 0.86], parts = [];
+    const lobed = t => t > 0.72 ? 1.25 : 0.3 + 0.7 * Math.pow(Math.abs(Math.sin(3.5 * Math.PI * t)), 0.6);
+    [[UP - 0.75, 0.5], [UP + 0.75, 0.5], [UP - 0.4, 0.6], [UP + 0.4, 0.58], [UP - 0.1, 0.64], [UP + 0.15, 0.62]].forEach(([a, l], g) => {
+      parts.push(PF(stalkPts(G, polarPt(G, a, l * 0.3), 0.007, 0.006), '#8ab868', g));
+      parts.push(...leafParts(polarPt(G, a, l * 0.28), a, l * 0.72, 0.065, g % 2 ? '#4f9a52' : '#428a46', g, {prof: 'lance', edge: lobed, bend: (g % 2 ? 0.08 : -0.08), n: 30, ribOp: 0.45}));
+    });
+    parts.push(bandPart(0.465, 0.535, 0.82));
+    return {parts, fewer: true};
+  },
+  // Kale: curly -- long, dark blue-green leaves frilled all along their
+  // edges, on thick pale ribs.
+  kale: () => {
+    // Curly kale: a tied bunch of long stalks, each leaf's edge deeply
+    // ruffled into tight curls with smaller curls on them, a thick pale
+    // rib running up its centre, curled crinkles all over the blade.
+    const G = [0.5, 0.93], parts = [];
+    [[UP - 0.45, 0.8], [UP + 0.45, 0.78], [UP - 0.15, 0.87], [UP + 0.17, 0.85]].forEach(([a, l], g) => {
+      const s0 = polarPt(G, a, 0.04), s1 = polarPt(G, a, 0.28), bend = g % 2 ? 0.06 : -0.06, len = l - 0.28;
+      parts.push(PF(stalkPts(s0, s1, 0.02, 0.016), '#c6d9ae', g));
+      parts.push(PF(leafPts(s1, a, len, 0.19, 'ovate', kaleEdge, bend, 160), g < 2 ? '#3d6f53' : '#46795b', g));
+      const rib = bentPts(s1, polarPt(s1, a, len * 0.92), bend * len, 12);
+      parts.push(PF(ribbon(rib, t => 0.022 * (1 - t * 0.75)), '#c6d9ae', g, {w: 0.7}));
+      // the curls: tight rounded frills heaped along both sides of the rib,
+      // a shade lighter, so the whole blade reads ruffled, not just its edge
+      const fill2 = g < 2 ? '#4a7e5f' : '#548766';
+      for (let i = 2; i <= 10; i++){
+        const w = 0.19 * LEAF_PROF.ovate(i / 12) * 0.55;
+        [-1, 1].forEach((sd, j) => parts.push(PF(cloudPts(polarPt(rib[i], a + sd * 1.57, w), 0.03, 0.026, 7, 0.32, 28, i + j), fill2, g, {w: 0.6})));
+      }
+      parts.push(PF(ribbon(rib, t => 0.022 * (1 - t * 0.75)), '#c6d9ae', g, {w: 0.7}));
+    });
+    parts.push(bandPart(0.44, 0.56, 0.84));
+    return {parts, fewer: true};
+  },
+  // Leaf lettuce: a loose, open head of broad leaves frilled at the edge,
+  // paler toward the heart, pale ribs fanning from the base.
+  leaflettuce: () => {
+    const G = [0.5, 0.88], parts = [];
+    const fr = ruffle(13, 0.09);
+    [[UP - 1.2, 0.46, 0.2, '#6fae73'], [UP + 1.2, 0.46, 0.2, '#6fae73'], [UP - 0.75, 0.6, 0.22, '#78b57b'], [UP + 0.75, 0.6, 0.22, '#78b57b'],
+      [UP - 0.3, 0.7, 0.21, '#81bb85'], [UP + 0.32, 0.68, 0.21, '#81bb85'], [UP, 0.56, 0.17, '#a2cd94']].forEach(([a, l, w, fill], g) => {
+      parts.push(...leafParts(G, a, l, w, fill, g, {prof: 'spoon', edge: fr, n: 40, ribFill: '#e3edcf', ribW: 0.1, veins: [0.4, 0.62, 0.8], ribOp: 0.4}));
+    });
+    return {parts, fewer: true};
+  },
+  // Romaine: a tall, upright head -- long leaves overlapping, dark at the
+  // tips, a broad pale rib up each.
+  romaine: () => {
+    const parts = [];
+    [[0.36, -0.2, '#5d9c62'], [0.64, 0.2, '#5d9c62'], [0.42, -0.07, '#6aa86f'], [0.58, 0.07, '#6aa86f'], [0.5, 0, '#78b47a']].forEach(([x, lean, fill], g) => {
+      const b = [x, 0.9];
+      parts.push(...leafParts(b, UP + lean, 0.8, 0.12, fill, g, {prof: 'spoon', edge: ruffle(7, 0.05), n: 30, bend: lean * 0.1, ribFill: '#e4ecc9', ribW: 0.32, veins: [0.5, 0.7]}));
+    });
+    return {parts, fewer: true};
+  },
+  // Cabbage: a firm round head, its leaves wrapped round it -- a midrib and
+  // veins across the front leaf, two outer leaves cupping it from below.
+  cabbage: () => {
+    const parts = [PF(ovalPts([0.5, 0.52], 0.37, 0.34, 0, 40), '#b5d0a3', 0)];
+    parts.push(PF(ribbon(bentPts([0.24, 0.3], [0.62, 0.84], 0.1, 12), t => 0.008 + 0.022 * t), '#e3ecd0', 0, {op: 0.55}));
+    const rib = bentPts([0.24, 0.3], [0.62, 0.84], 0.1, 12);
+    [3, 5, 7, 9].forEach((i, k) => { const p = rib[i]; parts.push(PL(bentPts(p, [p[0] + 0.24 - k * 0.02, p[1] - 0.12 + k * 0.02], 0.03, 4), 0.4)); parts.push(PL(bentPts(p, [p[0] - 0.14, p[1] + 0.1], -0.02, 4), 0.35)); });
+    parts.push(PL(bentPts([0.2, 0.55], [0.5, 0.18], -0.12, 8), 0.4));
+    parts.push(PF(leafPts([0.5, 0.9], UP - 1.25, 0.4, 0.15, 'spoon', ruffle(6, 0.06)), '#9fc28e', 0));
+    parts.push(PF(leafPts([0.5, 0.9], UP + 1.25, 0.4, 0.15, 'spoon', ruffle(6, 0.06)), '#9fc28e', 0));
+    parts.push(PL(bentPts([0.5, 0.9], polarPt([0.5, 0.9], UP - 1.25, 0.34), 0.02, 6), 0.4), PL(bentPts([0.5, 0.9], polarPt([0.5, 0.9], UP + 1.25, 0.34), -0.02, 6), 0.4));
+    return {parts, fewer: false};
+  },
+  // Napa cabbage: a tall, barrel-shaped head; broad white ribs below,
+  // crinkled pale green leaf above.
+  napacabbage: () => {
+    const parts = [];
+    [[0.37, -0.12], [0.63, 0.12], [0.5, 0]].forEach(([x, lean], g) => {
+      const b = [x, 0.9], top = polarPt(b, UP + lean, 0.8);
+      parts.push(PF(leafPts(b, UP + lean, 0.8, 0.16, 'spoon', ruffle(9, 0.06), 0, 30), '#bcd59a', g));
+      parts.push(PF(ribbon(bentPts(b, polarPt(b, UP + lean, 0.52), 0, 10), t => 0.1 * (1 - t * 0.55) * (t < 0.04 ? 0.8 : 1)), '#f0f2e4', g, {op: 0.55}));
+      for (let k = 0; k < 4; k++){
+        const y0 = 0.62 - k * 0.1, c = polarPt(b, UP + lean, 0.55 + k * 0.06);
+        parts.push(PL([[c[0] - 0.08, c[1] + 0.02], [c[0] - 0.04, c[1] - 0.01], [c[0], c[1] + 0.015], [c[0] + 0.04, c[1] - 0.01], [c[0] + 0.08, c[1] + 0.02]], 0.35, {g, w: 0.6}));
+      }
+      parts.push(PL([top, polarPt(b, UP + lean, 0.5)], 0.3, {g}));
+    });
+    return {parts, fewer: false};
+  },
+  // Bok choy: thick white spoon-shaped stalks swelling to a bulb at the
+  // base, dark round leaves at their tops.
+  bokchoy: () => {
+    const parts = [], B = [0.5, 0.88];
+    [[-0.38, '#3a7741'], [0.38, '#3a7741'], [-0.14, '#3f7f45'], [0.16, '#3f7f45']].forEach(([lean, leaf], g) => {
+      const top = polarPt(B, UP + lean, 0.46);
+      parts.push(PF(ribbon(bentPts(B, top, -lean * 0.06, 12), t => 0.07 + 0.03 * Math.sin(Math.PI * Math.min(1, t * 1.4)) - 0.04 * t), '#e9eedb', g));
+      parts.push(...leafParts(polarPt(B, UP + lean, 0.4), UP + lean * 1.15, 0.4, 0.15, leaf, g, {prof: 'spoon', ribFill: '#dfe8cb', ribW: 0.16, veins: [0.35, 0.6]}));
+      parts.push(PL(bentPts(polarPt(B, UP + lean, 0.08), polarPt(B, UP + lean, 0.4), -lean * 0.03, 5), 0.3, {g}));
+    });
+    parts.push(PF(ovalPts([0.5, 0.86], 0.12, 0.045), '#e2e9d2', 0));
+    return {parts, fewer: true};
+  },
+  // Choy sum: slender green stems, long oval leaves, and the small yellow
+  // flowers it's picked in.
+  choysum: () => {
+    const G = [0.5, 0.9], parts = [];
+    [[UP - 0.42, 0.72], [UP + 0.42, 0.7], [UP - 0.14, 0.8], [UP + 0.16, 0.78]].forEach(([a, l], g) => {
+      const e = polarPt(G, a, l), stem = bentPts(G, e, (g % 2 ? 0.02 : -0.02), 10);
+      parts.push(PF(ribbon(stem, () => 0.013), '#9fc77f', g));
+      [[0.35, -1], [0.55, 1], [0.72, -1]].forEach(([t, sd]) => parts.push(...leafParts(stem[Math.round(t * 10)], a + sd * 0.55, 0.22, 0.06, '#489953', g, {bend: sd * -0.1, ribOp: 0.45})));
+      for (let k = 0; k < 5; k++) parts.push(PF(ovalPts(polarPt(e, k * 1.26, k ? 0.025 : 0), 0.016, 0.016, 0, 10), '#e8d84a', g, {w: 0.6}));
+    });
+    parts.push(bandPart(0.47, 0.53, 0.82));
+    return {parts, fewer: true};
+  },
+  // Gai lan: thick, round, blue-green stems cut square at the base, broad
+  // flat leaves, and a tight head of white flower buds.
+  gailan: () => {
+    const G = [0.5, 0.9], parts = [];
+    [[UP - 0.36, 0.66], [UP + 0.36, 0.64], [UP - 0.05, 0.72]].forEach(([a, l], g) => {
+      const e = polarPt(G, a, l), stem = bentPts(polarPt(G, a, 0.02), e, 0, 10);
+      parts.push(PF(ribbon(stem, t => 0.026 - 0.008 * t), '#6f9f62', g));
+      parts.push(PL(bentPts(stem[1], stem[9], 0, 4), 0.3, {g}));
+      [[0.35, -1, 0.3], [0.55, 1, 0.3]].forEach(([t, sd, ll]) => parts.push(...leafParts(stem[Math.round(t * 10)], a + sd * 0.75, ll, 0.13, '#3a7a4a', g, {veins: [0.4, 0.65], ribOp: 0.45})));
+      for (let k = 0; k < 6; k++) parts.push(PF(ovalPts(polarPt(e, k * 1.05, k ? 0.025 : 0), 0.016, 0.014, 0, 10), '#eeeddf', g, {w: 0.6}));
+      parts.push(PF(ovalPts(stem[0], 0.024, 0.01, 0, 12), '#d7e3c3', g));
+    });
+    return {parts, fewer: true};
+  },
+  // Celery: a bunch of long ribbed stalks joined at the base, feathery
+  // leaves at the top.
+  celery: () => {
+    const parts = [];
+    [[0.37, -0.12], [0.63, 0.12], [0.44, -0.04], [0.56, 0.04], [0.5, 0]].forEach(([x, lean], g) => {
+      const b = [0.5 + (x - 0.5) * 0.6, 0.9], top = polarPt(b, UP + lean, 0.62);
+      const cl = bentPts(b, top, 0, 12);
+      parts.push(PF(ribbon(cl, t => 0.05 - 0.02 * t), g === 4 ? '#b6d69a' : '#9cc58a', g));
+      [-0.4, 0, 0.4].forEach(k => parts.push(PL(cl.map((p, i) => [p[0] + k * (0.05 - 0.02 * i / 12), p[1]]).slice(1, 11), 0.35, {g, w: 0.6})));
+      [-0.6, 0, 0.6].forEach(da => parts.push(...leafParts(top, UP + lean + da, 0.12, 0.045, '#6fae5a', g, {edge: t => 0.65 + 0.35 * Math.abs(Math.sin(3 * Math.PI * t)), n: 20, ribOp: 0.35})));
+    });
+    return {parts, fewer: true};
+  },
+  // Scallions: a slim bundle lying down -- white bulbs and roots on the
+  // left, hollow green leaves running out to the right.
+  scallion: () => {
+    const parts = [];
+    [[0.5, -0.05], [0.56, 0.02], [0.6, 0.08], [0.53, 0.12], [0.58, -0.1]].forEach(([y, fan], g) => {
+      const p0 = [0.14, y], p1 = [0.93, y + fan * 0.9];
+      const cl = bentPts(p0, p1, fan * 0.05, 14);
+      parts.push(PF(ribbon(cl, t => (t < 0.06 ? 0.022 + t * 0.2 : 0.034 - 0.012 * t)), '#54ab60', g));
+      parts.push(PF(ribbon(cl.slice(0, 6), t => (t < 0.15 ? 0.022 + t * 0.6 : 0.034 - 0.004 * t)), '#eef0e2', g));
+      parts.push(PF(ribbon(cl.slice(5, 7), () => 0.03), '#b8dba0', g, {op: 0}));
+      [-0.02, 0, 0.02].forEach(dy => parts.push(PL([[0.14, y + dy * 0.6], [0.08, y + dy * 1.6]], 0.55, {g, w: 0.6})));
+    });
+    return {parts, fewer: true};
+  },
+  // Leeks: two, lying down -- a thick white shaft, the root plate and
+  // roots at the left, broad flat blue-green leaves fanning to the right.
+  leek: () => {
+    const parts = [];
+    [[0.44, -1], [0.58, 1]].forEach(([y, sd], g) => {
+      [-0.07, 0.07, 0].forEach((fan, k) => parts.push(PF(ribbon(bentPts([0.55, y], [0.95, y + fan + sd * 0.03], fan * 0.08, 10), t => 0.045 - 0.01 * t), k === 2 ? '#7f9f86' : '#6f9278', g)));
+      const shaft = bentPts([0.1, y], [0.6, y], 0, 10);
+      parts.push(PF(ribbon(shaft, t => t < 0.04 ? 0.05 : 0.06 - 0.008 * t), '#eef0e0', g));
+      parts.push(PF(ribbon(shaft.slice(6), () => 0.054), '#c9dcb8', g, {op: 0.4}));
+      [-0.025, 0.02].forEach(dy => parts.push(PL([[0.14, y + dy], [0.56, y + dy * 0.8]], 0.3, {g, w: 0.6})));
+      [-0.04, -0.015, 0.015, 0.04].forEach(dy => parts.push(PL([[0.1, y + dy], [0.05, y + dy * 1.5]], 0.55, {g, w: 0.6})));
+    });
+    return {parts, fewer: true};
+  },
+  // Garlic chives: a flat bundle of thin, flat green blades, cut square at
+  // one end, tied, a few with a pale closed flower bud at the tip.
+  garlicchives: () => {
+    const parts = [];
+    for (let g = 0; g < 7; g++){
+      const y = 0.48 + g * 0.018, fan = (g - 3) * 0.025;
+      const cl = bentPts([0.1, y], [0.9, y + fan], fan * 0.15, 12);
+      parts.push(PF(ribbon(cl, () => 0.011), g % 2 ? '#3a8a4b' : '#429453', g, {w: 0.7}));
+      if (g % 3 === 1) parts.push(PF(leafPts(cl[12], fan * 2, 0.05, 0.016, 'ovate'), '#eeeddf', g, {w: 0.6}));
+    }
+    parts.push(bandPart(0.39, 0.43, 0.535, 0.14));
+    return {parts, fewer: true};
+  },
+  // Water spinach: a bundle of long hollow stems lying down, their cut ends
+  // open at the left, narrow arrow-shaped leaves at the right.
+  waterspinach: () => {
+    // Water spinach: long hollow stems lying in a tied bundle, each cut end
+    // an open ring, with narrow arrowhead leaves -- two lobes pointing back
+    // past their stalk -- standing up off them, the leaves what the eye
+    // finds first.
+    const parts = [];
+    [[0.6, -0.04], [0.64, 0.0], [0.68, 0.05], [0.72, 0.09]].forEach(([y, fan], g) => {
+      const cl = bentPts([0.04, y], [0.6, y + fan * 0.5 - 0.03], -0.02, 12);
+      parts.push(PF(ribbon(cl, () => 0.012), '#a6cf8c', g));
+      parts.push(PF(ovalPts(cl[0], 0.008, 0.012, 0, 12), '#eef5e2', g, {w: 0.6}), PF(ovalPts(cl[0], 0.0045, 0.007, 0, 10), '#4d6a40', g, {w: 0.4}));
+      [3, 6, 9].forEach(i => parts.push(PL([[cl[i][0], cl[i][1] - 0.009], [cl[i][0], cl[i][1] + 0.009]], 0.45, {g, w: 0.5})));
+      [[0.3 + g * 0.05, UP - 0.3], [0.62 + g * 0.06, UP + 0.32]].forEach(([t, a]) => {
+        const p = cl[Math.round(t * 12)], e = polarPt(p, a, 0.09);
+        parts.push(PF(stalkPts(p, e, 0.005, 0.004), '#a6cf8c', g, {w: 0.6}));
+        parts.push(PF(arrowLeafPts(e, a, 0.19, 0.075), g % 2 ? '#3f8f4a' : '#478f45', g));
+        parts.push(PL(bentPts(e, polarPt(e, a, 0.18), 0, 6), 0.45, {g, w: 0.7}));
+      });
+    });
+    parts.push(bandPart(0.22, 0.27, 0.66, 0.14));
+    return {parts, fewer: true};
+  }
+};
+
+// Vegetables. Lying-down produce rests on y ~0.85; upright on 0.9.
+// A round-ish body as a polar ring in the unit square (rx, ry, wobble).
+const blobPts = (c, rx, ry, rf = () => 1, rot = 0, n = 30) => Array.from({length: n}, (_, i) => {
+  const a = i / n * Math.PI * 2, r = rf(a), x = Math.cos(a) * rx * r, y = Math.sin(a) * ry * r;
+  return [c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)];
+});
+// A long body lying along p0 -> p1, half-width hw(t).
+const podPts = (p0, p1, hw, bend = 0, n = 16) => ribbon(bentPts(p0, p1, bend, n), hw);
+// Lines along a long body: a few runs at fractions k of its half-width.
+function alongLines(p0, p1, hw, bend, ks, op = 0.35, g = 0, t0 = 0.12, t1 = 0.88){
+  const cl = bentPts(p0, p1, bend, 16);
+  return ks.map(k => PL(cl.map((p, i) => {
+    const a = cl[Math.max(0, i - 1)], b = cl[Math.min(16, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    const w = hw(i / 16) * k;
+    return [p[0] - dy / l * w, p[1] + dx / l * w];
+  }).filter((_, i) => i / 16 >= t0 && i / 16 <= t1), op, {g, w: 0.7}));
+}
+const dotPart = (c, r, fill, g, op = 1) => PF(ovalPts(c, r, r, 0, 10), fill, g, {w: 0.6, op});
+// Florets: a crown of bumpy rounds, each with a few curls of bud texture.
+function floretParts(centres, fill, g, curl = 0.45){
+  const out = [];
+  centres.forEach(([x, y, r], i) => {
+    out.push(PF(cloudPts([x, y], r, r * 0.9, 7, 0.12, 30, i), fill, g));
+    [[-0.35, -0.2], [0.3, -0.25], [0, 0.2], [-0.3, 0.3], [0.35, 0.25]].forEach(([u, v]) =>
+      out.push(PL(Array.from({length: 5}, (_, k) => polarPt([x + u * r, y + v * r], k * 1.2 + i, r * 0.16)), curl, {g, w: 0.6})));
+  });
+  return out;
+}
+Object.assign(PARTS, {
+  // Asparagus: a tied bunch of upright spears, their tips closed in small
+  // scales, the cut ends pale at the foot.
+  asparagus: () => {
+    const parts = [];
+    [-0.12, 0.12, -0.06, 0.06, -0.15, 0.15, 0].forEach((dx, g) => {
+      const b = [0.5 + dx * 0.6, 0.9], t = [0.5 + dx * 1.15, 0.12 + Math.abs(dx) * 0.3 + (g % 2) * 0.03];
+      parts.push(PF(podPts(b, t, u => 0.025 * (u > 0.82 ? Math.sqrt(Math.max(0, 1 - ((u - 0.82) / 0.18) ** 2)) * 1.1 : 1 - 0.15 * u), dx * 0.03, 14), g % 3 ? '#6a9a4c' : '#5f8f43', g));
+      const cl = bentPts(b, t, dx * 0.03, 14);
+      [0.45, 0.62, 0.78, 0.9].forEach((u, k) => { const p = cl[Math.round(u * 14)]; parts.push(PL([[p[0] - 0.02, p[1] + 0.012], [p[0], p[1] - 0.008], [p[0] + 0.02, p[1] + 0.012]], 0.5, {g, w: 0.6})); });
+      parts.push(PF(ovalPts(b, 0.024, 0.008, 0, 10), '#dbe6c6', g, {w: 0.6}));
+    });
+    parts.push(bandPart(0.39, 0.61, 0.66, 0.045), bandPart(0.4, 0.6, 0.8, 0.04));
+    return {parts, fewer: true};
+  },
+  // Bamboo shoot: a whole shoot, a pointed cone in overlapping husk
+  // sheaths, and a half beside it, cut lengthwise to its comb of chambers.
+  bambooshoots: () => {
+    const parts = [], c = [0.38, 0.6];
+    const cone = podPts([0.38, 0.88], [0.32, 0.12], u => 0.2 * Math.pow(1 - u, 0.8) * (u < 0.05 ? 0.9 : 1), -0.04, 18);
+    parts.push(PF(cone, '#c9b27e', 0));
+    for (let k = 0; k < 6; k++){ const y = 0.82 - k * 0.12, w = 0.19 * Math.pow(1 - (0.88 - y) / 0.76, 0.8);
+      parts.push(PL([[0.38 - w * 0.95, y], [0.36, y - 0.07], [0.38 + w * 0.6, y - 0.02]], 0.5, {g: 0, w: 0.7})); }
+    for (let k = 0; k < 9; k++) parts.push(dotPart([0.3 + (k * 0.37 % 1) * 0.16, 0.35 + (k * 0.53 % 1) * 0.45], 0.007, '#6b5438', 0, 0.7));
+    const half = podPts([0.7, 0.9], [0.68, 0.36], u => 0.13 * Math.pow(1 - u, 0.7), 0.02, 14);
+    parts.push(PF(half, '#efe8cf', 1));
+    for (let k = 0; k < 5; k++){ const y = 0.84 - k * 0.1, w = 0.12 * Math.pow(1 - (0.9 - y) / 0.54, 0.7);
+      parts.push(PL([[0.69 - w * 0.8, y], [0.69, y - 0.05], [0.69 + w * 0.8, y]], 0.4, {g: 1, w: 0.6})); }
+    parts.push(PL([[0.69, 0.88], [0.685, 0.42]], 0.35, {g: 1, w: 0.6}));
+    return {parts, fewer: true};
+  },
+  // Bean sprouts: a loose heap of thin white sprouts, each with its small
+  // yellow bean head and a fine tail.
+  beansprouts: () => {
+    const parts = [], R = seededRand(5);
+    for (let g = 0; g < 16; g++){
+      const x = 0.18 + R() * 0.64, y = 0.5 + R() * 0.32, a = R() * Math.PI, l = 0.2 + R() * 0.12;
+      const p0 = polarPt([x, y], a, -l / 2), p1 = polarPt([x, y], a, l / 2);
+      parts.push(PF(podPts(p0, p1, () => 0.012, (R() - 0.5) * 0.08, 10), '#f1efe6', g, {w: 0.7}));
+      parts.push(PF(ovalPts(p0, 0.022, 0.015, a, 12), '#e6d98c', g, {w: 0.7}));
+      parts.push(PL([p1, polarPt(p1, a + 0.4, 0.05)], 0.5, {g, w: 0.5}));
+    }
+    return {parts, fewer: true};
+  },
+  // Beets: two round roots with their thin tap roots, red stems and the
+  // leaves still on, red-veined.
+  beets: () => {
+    // A whole beet with its red stems and leaves, and a half in front, cut
+    // across to its dark flesh ringed in paler concentric bands.
+    const parts = [], x = 0.38, y = 0.6, r = 0.2;
+    [-0.35, 0, 0.35].forEach((da, k) => {
+      const s0 = [x, y - r * 0.85], e = polarPt(s0, UP + da - 0.15, 0.28 - k * 0.03);
+      parts.push(PF(stalkPts(s0, e, 0.012, 0.008, 0.02), '#a83a3c', 0));
+      parts.push(...leafParts(e, UP + da * 1.4 - 0.15, 0.17, 0.07, '#4c7a3e', 0, {ribFill: '#b8474a', ribW: 0.14, veins: [0.4, 0.65]}));
+    });
+    parts.push(PF(blobPts([x, y], r, r * 0.95, a => 1 + 0.22 * bell(a, Math.PI / 2, 0.35)), '#a8243a', 0));
+    parts.push(PL([[x, y + r * 1.2], [x + 0.03, y + r * 1.75]], 0.8));
+    const R = seededRand(41);
+    for (let k = 0; k < 7; k++){ const a = R() * 6.28, d = r * (0.3 + R() * 0.5); const c = [x + Math.cos(a) * d, y + Math.sin(a) * d]; parts.push(PL([polarPt(c, 0, -0.025), polarPt(c, 0.2, 0.025)], 0.4, {w: 0.6})); }
+    const H = [0.68, 0.74], hr = 0.17;
+    parts.push(PF(ovalPts(H, hr, hr * 0.92, 0, 30), '#a8243a', 1));
+    parts.push(PF(ovalPts(H, hr * 0.9, hr * 0.82, 0, 30), '#9c2246', 1));
+    [0.72, 0.52, 0.32].forEach((k, i) => parts.push(PF(ovalPts(H, hr * k, hr * k * 0.91, 0, 26), i % 2 ? '#9c2246' : '#c45475', 1, {op: 0.35})));
+    return {parts, fewer: true};
+  },
+  // Broccoli: a crown of dark florets over a thick, pale, branching stalk.
+  broccoli: () => {
+    const parts = [PF(podPts([0.5, 0.9], [0.5, 0.48], u => 0.08 - 0.02 * u, 0, 10), '#8fb06a', 0)];
+    [[-0.17, 0.42], [0.17, 0.42]].forEach(([dx]) => parts.push(PF(stalkPts([0.5, 0.66], [0.5 + dx, 0.44], 0.035, 0.03), '#8fb06a', 0)));
+    parts.push(PF(ovalPts([0.5, 0.9], 0.075, 0.016, 0, 12), '#d7e3bf', 0, {w: 0.7}));
+    parts.push(...floretParts([[0.28, 0.38, 0.15], [0.72, 0.38, 0.15], [0.4, 0.27, 0.16], [0.62, 0.26, 0.16], [0.5, 0.4, 0.15]], '#2f7a3e', 0));
+    parts.push(PL([[0.47, 0.86], [0.47, 0.6]], 0.3), PL([[0.53, 0.86], [0.535, 0.62]], 0.3));
+    return {parts, fewer: false};
+  },
+  // Brussels sprouts: small tight heads, leaves wrapped in arcs round them,
+  // each with its pale cut stem end.
+  brussels: () => {
+    const parts = [];
+    [[0.3, 0.72, 0.15], [0.66, 0.74, 0.14], [0.48, 0.52, 0.15], [0.48, 0.78, 0.13]].forEach(([x, y, r], g) => {
+      parts.push(PF(blobPts([x, y], r, r * 0.95, a => 1 + 0.05 * Math.cos(5 * a)), g % 2 ? '#5f9c48' : '#6aa851', g));
+      [[-0.75, 0.55], [0.75, 0.6], [-0.3, 0.85], [0.35, 0.85]].forEach(([u, h]) =>
+        parts.push(PL(bentPts([x + u * r * 0.4, y + r * 0.75], [x + u * r * 0.95, y - r * h * 0.7], u * r * 0.25, 6), 0.55, {g, w: 0.8})));
+      parts.push(PF(ovalPts([x, y + r * 0.86], r * 0.28, r * 0.12, 0, 12), '#dfe9c5', g, {w: 0.7}));
+    });
+    return {parts, fewer: true};
+  },
+  // Butternut squash: a long neck rising to a stem, swelling to a round
+  // bulb at the foot, tan with faint ribs.
+  butternut: () => {
+    // Bulb at the foot (u 0), neck rising to the stem (u 1).
+    const hw = u => Math.max(0.2 * Math.sqrt(Math.max(0, 1 - ((u - 0.22) / 0.25) ** 2)),
+      0.105 * Math.min(1, Math.max(0, (u - 0.18) / 0.2)) * (u > 0.9 ? Math.sqrt(Math.max(0, 1 - ((u - 0.9) / 0.1) ** 2)) * 0.7 + 0.3 : 1));
+    const p0 = [0.5, 0.92], p1 = [0.47, 0.13];
+    const parts = [PF(podPts(p0, p1, hw, -0.02, 30), '#e0a457', 0)];
+    parts.push(...alongLines(p0, p1, hw, -0.02, [-0.5, 0.5], 0.25, 0, 0.1, 0.9));
+    parts.push(PF(stalkPts([0.47, 0.15], [0.48, 0.06], 0.022, 0.018), '#8a7a4a', 0));
+    parts.push(PL(bentPts([0.36, 0.62], [0.6, 0.62], 0.03, 4), 0.25), dotPart([0.5, 0.89], 0.012, '#9a7a4a', 0, 0.8));
+    return {parts, fewer: false};
+  },
+  // Cauliflower: a white curd, its rounded lumps, cupped from below by
+  // green wrapper leaves.
+  cauliflower: () => {
+    const parts = [];
+    [[-1, 0.42], [1, 0.42]].forEach(([sd]) => parts.push(...leafParts([0.5, 0.9], UP + sd * 1.05, 0.46, 0.17, '#5f9c55', 0, {prof: 'spoon', ribFill: '#dfe9cf', ribW: 0.12, veins: [0.4, 0.65]})));
+    parts.push(PF(cloudPts([0.5, 0.5], 0.33, 0.27, 9, 0.07, 44), '#ecebe2', 0));
+    [[0.36, 0.42, 0.09], [0.52, 0.36, 0.1], [0.66, 0.45, 0.09], [0.44, 0.56, 0.09], [0.6, 0.58, 0.08], [0.3, 0.56, 0.07], [0.72, 0.57, 0.06]].forEach(([x, y, r]) =>
+      parts.push(PL(Array.from({length: 9}, (_, k) => polarPt([x, y], Math.PI * (0.95 + k * 0.14), r)), 0.4, {w: 0.7})));
+    parts.push(...leafParts([0.5, 0.92], UP + 0.25, 0.2, 0.1, '#6aa85f', 0, {prof: 'spoon', ribOp: 0.4}));
+    parts.push(...leafParts([0.5, 0.92], UP - 0.3, 0.22, 0.1, '#6aa85f', 0, {prof: 'spoon', ribOp: 0.4}));
+    return {parts, fewer: false};
+  },
+  // Corn: an ear lying down, its husk pulled back from rows of kernels, the
+  // silk at the tip.
+  corn: () => {
+    const p0 = [0.34, 0.62], p1 = [0.93, 0.4], hw = u => 0.12 * (u < 0.1 ? 0.75 + u * 2.5 : u > 0.8 ? Math.sqrt(Math.max(0, 1 - ((u - 0.8) / 0.2) ** 2)) * 0.95 + 0.05 : 1);
+    const parts = [PF(podPts(p0, p1, hw, 0, 20), '#e8d36a', 0)];
+    const cl = bentPts(p0, p1, 0, 20), ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+    for (let i = 3; i < 19; i++) for (const k of [-0.75, -0.4, -0.05, 0.3, 0.65]){
+      const p = cl[i], w = hw(i / 20) * k;
+      parts.push(PF(ovalPts([p[0] - Math.sin(ang) * -w, p[1] + Math.cos(ang) * w], 0.015, 0.02, ang, 8), '#ecd879', 0, {w: 0.5, op: 0.55}));
+    }
+    [[-1, 0.32], [1, 0.3], [-1, 0.22]].forEach(([sd, l], k) =>
+      parts.push(PF(leafPts(cl[2], ang + Math.PI + sd * (0.35 + k * 0.1), l, 0.08, 'lance', null, sd * 0.15), k ? '#9cc173' : '#8ab563', 0)));
+    for (let k = 0; k < 5; k++) parts.push(PL(bentPts(cl[20], polarPt(cl[20], ang + (k - 2) * 0.3, 0.08), 0.01, 3), 0.7, {stroke: '#b98a4a', w: 0.7}));
+    return {parts, fewer: false};
+  },
+  // Daikon: a long, white, tapering root lying down, a green shoulder and
+  // short leaf stubs at its crown, fine root lines.
+  daikon: () => {
+    const p0 = [0.12, 0.6], p1 = [0.92, 0.7], hw = u => 0.105 * Math.pow(Math.max(0, 1 - u), 0.55) * (u < 0.03 ? 0.85 : 1);
+    const parts = [];
+    [-0.5, -0.15, 0.2].forEach((da, k) => parts.push(...leafParts([0.13, 0.58], Math.PI + da, 0.13, 0.04, '#5c9a50', 0, {ribOp: 0.4})));
+    parts.push(PF(podPts(p0, p1, hw, 0.02, 18), '#eceee6', 0));
+    parts.push(PF(podPts(p0, [0.3, 0.62], u => 0.103 * (u < 0.1 ? 0.85 : 1), 0, 6).slice(0), '#d4e3bd', 0, {op: 0.25}));
+    const cl = bentPts(p0, p1, 0.02, 18);
+    [5, 8, 11, 13].forEach(i => { const p = cl[i], w = hw(i / 18); parts.push(PL([[p[0] - 0.01, p[1] - w * 0.6], [p[0] + 0.01, p[1] - w * 0.25]], 0.35, {w: 0.6})); parts.push(PL([[p[0] + 0.02, p[1] + w * 0.3], [p[0] + 0.03, p[1] + w * 0.7]], 0.35, {w: 0.6})); });
+    return {parts, fewer: false};
+  },
+  // Edamame: fuzzy green pods, each swelling over its two or three beans.
+  edamame: () => {
+    const parts = [];
+    [[0.18, 0.5, 0.78, 0.38], [0.22, 0.7, 0.8, 0.62], [0.16, 0.86, 0.72, 0.84], [0.3, 0.3, 0.84, 0.22]].forEach(([x0, y0, x1, y1], g) => {
+      const n = g % 2 ? 3 : 2, hw = u => 0.07 * (0.55 + 0.45 * Math.abs(Math.sin(n * Math.PI * u))) * Math.min(1, u * 8, (1 - u) * 8);
+      parts.push(PF(podPts([x0, y0], [x1, y1], hw, (g % 2 ? 0.03 : -0.03), 24), g % 2 ? '#5aa851' : '#46a44a', g));
+      const cl = bentPts([x0, y0], [x1, y1], (g % 2 ? 0.03 : -0.03), 24);
+      for (let k = 0; k < n - 1; k++){ const p = cl[Math.round((k + 1) / n * 24)]; parts.push(PL([[p[0], p[1] - 0.035], [p[0] + 0.005, p[1] + 0.035]], 0.4, {g, w: 0.6})); }
+      cl.filter((_, i) => i % 3 === 1).forEach((p, i) => parts.push(PL([[p[0], p[1] - hw(i * 3 / 24) - 0.004], [p[0] + 0.008, p[1] - hw(i * 3 / 24) - 0.016]], 0.45, {g, w: 0.5})));
+      parts.push(PL([cl[0], polarPt(cl[0], Math.PI + 0.3, 0.035)], 0.8, {g}));
+    });
+    return {parts, fewer: true};
+  },
+  // Ginger: a knobbly hand of rhizome, its fingers ringed at the nodes, a
+  // pale cut end.
+  ginger: () => {
+    const lobes = [[0.42, 0.66, 0.2, 0.11, -0.1], [0.66, 0.6, 0.13, 0.08, -0.6], [0.24, 0.6, 0.1, 0.08, 0.5], [0.6, 0.76, 0.13, 0.07, 0.3], [0.8, 0.5, 0.08, 0.06, -0.9], [0.32, 0.5, 0.07, 0.06, 1.2]];
+    const parts = lobes.map(([x, y, rx, ry, rot]) => PF(ovalPts([x, y], rx, ry, rot, 22), '#c9a57f', 0));
+    lobes.forEach(([x, y, rx, ry, rot]) => [-0.4, 0.35].forEach(k => {
+      const c = [x + Math.cos(rot) * rx * k, y + Math.sin(rot) * rx * k];
+      parts.push(PL(bentPts(polarPt(c, rot + Math.PI / 2, ry * 0.8), polarPt(c, rot - Math.PI / 2, ry * 0.8), rx * 0.1, 4), 0.45, {w: 0.7}));
+    }));
+    parts.push(PF(ovalPts([0.86, 0.47], 0.03, 0.035, -0.9, 12), '#ecd88a', 0, {w: 0.7}));
+    return {parts, fewer: false};
+  },
+  // Green beans: a loose handful of long, slim, round beans, a stem cap at
+  // one end and a fine tip at the other.
+  greenbeans: () => {
+    const parts = [];
+    [[0.1, 0.42, 0.9, 0.3, 0.04], [0.12, 0.56, 0.92, 0.5, -0.05], [0.08, 0.7, 0.88, 0.62, 0.05], [0.15, 0.82, 0.9, 0.8, -0.03], [0.2, 0.32, 0.86, 0.68, 0.02]].forEach(([x0, y0, x1, y1, bend], g) => {
+      const hw = u => 0.026 * Math.min(1, u * 9, (1 - u) * 6) * (1 + 0.08 * Math.sin(u * 18));
+      parts.push(PF(podPts([x0, y0], [x1, y1], hw, bend, 20), g % 2 ? '#4d9a45' : '#58a64e', g));
+      const cl = bentPts([x0, y0], [x1, y1], bend, 20);
+      parts.push(PL(cl.slice(3, 17), 0.3, {g, w: 0.6}));
+      parts.push(PF(ovalPts(cl[0], 0.012, 0.018, Math.atan2(y1 - y0, x1 - x0), 10), '#86ad5a', g, {w: 0.6}));
+      parts.push(PL([cl[20], polarPt(cl[20], Math.atan2(y1 - y0, x1 - x0) + 0.4, 0.03)], 0.7, {g, w: 0.6}));
+    });
+    return {parts, fewer: true};
+  },
+  // Lotus root: two linked segments of root lying down, and a slice cut
+  // from it in front: its ring of round holes.
+  lotusroot: () => {
+    const parts = [];
+    [[0.12, 0.5, 0.48, 0.42], [0.46, 0.42, 0.9, 0.34]].forEach(([x0, y0, x1, y1]) =>
+      parts.push(PF(podPts([x0, y0], [x1, y1], u => 0.12 * Math.pow(Math.sin(Math.PI * Math.min(0.999, 0.06 + u * 0.88)), 0.4), 0, 16), '#d9c7b4', 0)));
+    parts.push(...alongLines([0.12, 0.5], [0.48, 0.42], () => 0.12, 0, [-0.5, 0.4], 0.25, 0), ...alongLines([0.46, 0.42], [0.9, 0.34], () => 0.12, 0, [-0.5, 0.4], 0.25, 0));
+    parts.push(PF(ovalPts([0.47, 0.42], 0.025, 0.1, 0.18, 14), '#bfa892', 0, {op: 0.6}));
+    const S = [0.52, 0.7];
+    parts.push(PF(ovalPts(S, 0.24, 0.2, 0, 32), '#e2d6c9', 1), PF(ovalPts(S, 0.215, 0.175, 0, 32), '#f1ebe0', 1, {op: 0.5}));
+    parts.push(PF(ovalPts(S, 0.04, 0.035, 0, 12), '#9a8e84', 1, {w: 0.7}));
+    for (let k = 0; k < 7; k++){ const a = k / 7 * Math.PI * 2 + 0.2; parts.push(PF(ovalPts(polarPt(S, a, 0), 0, 0), '#000', 1)); parts.pop();
+      parts.push(PF(ovalPts([S[0] + Math.cos(a) * 0.13, S[1] + Math.sin(a) * 0.105], 0.04, 0.034, a, 14), '#9a8e84', 1, {w: 0.7})); }
+    return {parts, fewer: true};
+  },
+  // Snow peas: flat pods, the small peas just showing through as bumps
+  // along one edge, a stem cap and a curled tip.
+  snowpeas: () => {
+    const parts = [];
+    [[0.14, 0.4, 0.86, 0.3, 0.06], [0.12, 0.6, 0.88, 0.56, -0.05], [0.16, 0.8, 0.84, 0.78, 0.05]].forEach(([x0, y0, x1, y1, bend], g) => {
+      const hw = u => 0.08 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.03 + u * 0.95)), 0.6);
+      parts.push(PF(podPts([x0, y0], [x1, y1], hw, bend, 22), g % 2 ? '#6db866' : '#5bae61', g));
+      const cl = bentPts([x0, y0], [x1, y1], bend, 22), ang = Math.atan2(y1 - y0, x1 - x0);
+      [0.25, 0.4, 0.55, 0.7].forEach(u => { const p = cl[Math.round(u * 22)]; parts.push(PL(Array.from({length: 7}, (_, k) => polarPt([p[0] - Math.sin(ang) * 0.02, p[1] + Math.cos(ang) * 0.02], Math.PI * k / 6 + ang, 0.028)), 0.35, {g, w: 0.6})); });
+      parts.push(PL(cl.slice(1, 21).map(p => [p[0] + Math.sin(ang) * 0.045, p[1] - Math.cos(ang) * 0.045]), 0.4, {g, w: 0.6}));
+      parts.push(PF(leafPts(cl[0], ang + Math.PI, 0.05, 0.025), '#4c7a3e', g, {w: 0.6}));
+      parts.push(PL(bentPts(cl[22], polarPt(cl[22], ang - 0.6, 0.06), 0.02, 4), 0.7, {g, w: 0.6}));
+    });
+    return {parts, fewer: true};
+  },
+  // Sweet potato: long and tapered to a point at both ends, coppery skin
+  // with long shallow grooves and a few rootlets.
+  sweetpotato: () => {
+    const parts = [];
+    [[[0.08, 0.62], [0.9, 0.5], 0.13, 0.06], [[0.2, 0.82], [0.86, 0.8], 0.1, -0.04]].forEach(([p0, p1, w, bend], g) => {
+      const hw = u => w * Math.pow(Math.sin(Math.PI * u), 0.75) * (1 + 0.06 * Math.sin(u * 11 + g));
+      parts.push(PF(podPts(p0, p1, hw, bend, 22), g ? '#b8652f' : '#c9733d', g));
+      parts.push(...alongLines(p0, p1, hw, bend, [-0.45, 0.15, 0.6], 0.3, g, 0.2, 0.8));
+      [0.04, 0.96].forEach(u => { const p = bentPts(p0, p1, bend, 22)[Math.round(u * 22)]; parts.push(PL([p, polarPt(p, u < 0.5 ? Math.PI : 0, 0.04)], 0.7, {g, w: 0.6})); });
+    });
+    return {parts, fewer: true};
+  },
+  // Taro: a hairy brown corm ringed with fibrous bands, its pink-white bud
+  // at the top.
+  taro: () => {
+    const parts = [PF(blobPts([0.5, 0.58], 0.24, 0.3, a => 1 - 0.12 * bell(a, -Math.PI / 2, 0.6)), '#8f6f55', 0)];
+    for (let k = 0; k < 6; k++){ const y = 0.36 + k * 0.085, w = 0.24 * Math.sqrt(Math.max(0, 1 - ((y - 0.58) / 0.3) ** 2)) * (y < 0.58 ? 0.92 : 1);
+      parts.push(PL(bentPts([0.5 - w * 0.97, y], [0.5 + w * 0.97, y], -0.03, 8), 0.55, {w: 0.8}));
+      for (let j = -3; j <= 3; j++) parts.push(PL([[0.5 + j * w * 0.28, y], [0.5 + j * w * 0.3 + 0.008, y + 0.025]], 0.35, {w: 0.5})); }
+    parts.push(PF(leafPts([0.5, 0.32], UP, 0.08, 0.035), '#e7c9c4', 0, {w: 0.7}));
+    return {parts, fewer: false};
+  },
+  // Winter melon: sold cut, a thick wedge of it -- dark green rind with its
+  // waxy bloom, deep white flesh, a pocket of flat pale seeds.
+  wintermelon: () => {
+    // A whole winter melon lying down, big and oblong, its dull green rind
+    // chalky with waxy white bloom; the near end cut off to show thick white
+    // flesh round a ring of flat pale seeds.
+    const C = [0.46, 0.58], RX = 0.4, RY = 0.25;
+    const parts = [PF(ovalPts(C, RX, RY, -0.05, 44), '#5f8266', 0)];
+    const R = seededRand(23);
+    for (let k = 0; k < 90; k++){ const a = R() * 6.28, d = Math.sqrt(R()) * 0.9, c = [C[0] + Math.cos(a) * RX * d * 0.92, C[1] + Math.sin(a) * RY * d];
+      parts.push(PF(ovalPts(c, 0.008 + R() * 0.01, 0.006 + R() * 0.006, 0, 8), '#c4cfc2', 0, {op: 0})); }
+    [-0.5, 0, 0.5].forEach(k => parts.push(PL(bentPts([C[0] - RX * 0.85, C[1] + k * RY * 0.8], [C[0] + RX * 0.5, C[1] + k * RY * 0.8 - 0.02], k * 0.03, 8), 0.25)));
+    parts.push(PF(stalkPts([C[0] - RX + 0.01, C[1] + 0.01], [C[0] - RX - 0.05, C[1] - 0.01], 0.016, 0.012), '#7a7a4a', 0));
+    const F = [C[0] + RX * 0.82, C[1] - 0.02];
+    parts.push(PF(ovalPts(F, 0.1, 0.23, -0.05, 36), '#4f7556', 0));
+    parts.push(PF(ovalPts(F, 0.088, 0.215, -0.05, 36), '#f1f2e2', 0));
+    parts.push(PF(ovalPts(F, 0.045, 0.11, -0.05, 26), '#e3e2c2', 0, {op: 0.6}));
+    for (let k = 0; k < 9; k++){ const a = k / 9 * Math.PI * 2; parts.push(PF(ovalPts([F[0] + Math.cos(a) * 0.035, F[1] + Math.sin(a) * 0.09], 0.008, 0.016, a, 8), '#f8f4dc', 0, {w: 0.5})); }
+    return {parts, fewer: false};
+  },
+  // Baby carrots: a heap of short peeled carrots, round at both ends.
+  babycarrot: () => {
+    const parts = [], R = seededRand(9);
+    [[0.2, 0.78, 0.1], [0.42, 0.8, -0.05], [0.64, 0.79, 0.08], [0.3, 0.66, -0.3], [0.54, 0.66, 0.25], [0.78, 0.7, -0.2], [0.42, 0.55, 0.05]].forEach(([x, y, a], g) => {
+      const p0 = polarPt([x, y], a, -0.11), p1 = polarPt([x, y], a, 0.11);
+      parts.push(PF(podPts(p0, p1, u => 0.042 * Math.pow(Math.sin(Math.PI * Math.min(0.98, 0.05 + u * 0.92)), 0.35) * (1 - 0.25 * u), 0, 12), g % 2 ? '#e8873e' : '#ef9145', g));
+      [0.3, 0.55].forEach(u => { const c = rfLerp(p0, p1, u); parts.push(PL([polarPt(c, a + 1.57, 0.02), polarPt(c, a + 1.57, -0.01)], 0.4, {g, w: 0.6})); });
+    });
+    return {parts, fewer: true};
+  },
+  // Cherry tomatoes: small, round and red, on their green vine.
+  cherrytomato: () => {
+    const parts = [PF(stalkPts([0.12, 0.3], [0.88, 0.34], 0.012, 0.01, -0.04, 12), '#5f8f3a', 0)];
+    const T = [[0.22, 0.58, 0.13], [0.46, 0.64, 0.14], [0.72, 0.6, 0.13], [0.34, 0.8, 0.12], [0.6, 0.82, 0.12]];
+    T.forEach(([x, y, r], g) => {
+      const top = [x, y - r * 0.92];
+      parts.push(PF(stalkPts(bentPts([0.12, 0.3], [0.88, 0.34], -0.04, 12)[Math.round((x - 0.12) / 0.76 * 12)], top, 0.007, 0.006), '#5f8f3a', g));
+    });
+    T.forEach(([x, y, r], g) => {
+      parts.push(PF(blobPts([x, y], r, r * 0.93), '#d4482b', g));
+      const top = [x, y - r * 0.92];
+      for (let k = 0; k < 5; k++) parts.push(PF(leafPts(top, -Math.PI / 2 + (k - 2) * 1.1, r * 0.55, r * 0.14), '#4c7a3e', g, {w: 0.6}));
+      parts.push(PL(bentPts([x - r * 0.55, y - r * 0.1], [x - r * 0.25, y - r * 0.55], -r * 0.15, 4), 0.35, {g, stroke: '#ffffff', w: 1.2}));
+    });
+    return {parts, fewer: true};
+  },
+  // Cucumber: long, even and round-ended, darker than a zucchini's gloss,
+  // pale stripes and small spines down it, the flower end a little pale.
+  cucumber: () => {
+    const p0 = [0.08, 0.66], p1 = [0.92, 0.56], hw = u => 0.1 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.015 + u * 0.97)), 0.28);
+    const parts = [PF(podPts(p0, p1, hw, -0.03, 20), '#3f8a45', 0)];
+    parts.push(...alongLines(p0, p1, hw, -0.03, [-0.55, 0.05, 0.6], 0.6, 0, 0.06, 0.94).map(p => Object.assign(p, {stroke: '#8cc27e', w: 2, op: 0.7})));
+    const R = seededRand(3), cl = bentPts(p0, p1, -0.03, 20);
+    for (let k = 0; k < 22; k++){ const i = 2 + Math.floor(R() * 17), p = cl[i], w = hw(i / 20) * (R() * 1.6 - 0.8); parts.push(dotPart([p[0], p[1] + w], 0.006, '#e9f0d8', 0, 0.9)); }
+    parts.push(PF(ovalPts(cl[20], 0.018, 0.04, -0.1, 10), '#a8c98a', 0, {w: 0.6}), PL([cl[0], polarPt(cl[0], Math.PI - 0.1, 0.03)], 0.9, {w: 1.6}));
+    return {parts, fewer: false};
+  },
+  // Bell pepper: blocky, its three lobes showing as folds down the sides,
+  // a thick green stem in a cap on its sunken top.
+  pepper: () => {
+    const body = blobPts([0.5, 0.56], 0.33, 0.33, a => {
+      const sq = 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)), 3) + Math.pow(Math.abs(Math.sin(a)), 3), 1 / 3);
+      return sq * (1 - 0.1 * bell(a, -Math.PI / 2, 0.35)) * (1 + 0.06 * Math.cos(3 * (a - Math.PI / 2))) * 0.92;
+    }, 0, 44);
+    const parts = [PF(body, '#c65539', 0)];
+    [-0.12, 0.13].forEach(dx => parts.push(PL(bentPts([0.5 + dx, 0.3], [0.5 + dx * 1.5, 0.86], dx * 0.2, 8), 0.55)));
+    parts.push(PL(bentPts([0.24, 0.42], [0.3, 0.8], -0.03, 6), 0.3), PL(bentPts([0.38, 0.36], [0.35, 0.6], 0.02, 4), 0.35, {stroke: '#ffffff', w: 1.4}));
+    parts.push(PF(cloudPts([0.5, 0.28], 0.09, 0.035, 5, 0.25, 20), '#4c7a3e', 0, {w: 0.7}));
+    parts.push(PF(stalkPts([0.5, 0.28], [0.56, 0.14], 0.026, 0.018, -0.02), '#5f8f3a', 0));
+    return {parts, fewer: false};
+  },
+  // Zucchini: long, glossy, dark green flecked with pale, widening a little
+  // to its flower end; a thick, ridged stem at the other.
+  zucchini: () => {
+    const p0 = [0.14, 0.6], p1 = [0.92, 0.68], hw = u => (0.065 + 0.04 * u) * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.25);
+    const parts = [PF(podPts(p0, p1, hw, 0.02, 20), '#2f7a3a', 0)];
+    const R = seededRand(7), cl = bentPts(p0, p1, 0.02, 20);
+    for (let k = 0; k < 26; k++){ const i = 2 + Math.floor(R() * 17), p = cl[i], w = hw(i / 20) * (R() * 1.6 - 0.8); parts.push(PF(ovalPts([p[0], p[1] + w], 0.016, 0.005, 0.1, 8), '#9fc98e', 0, {op: 0})); }
+    parts.push(...alongLines(p0, p1, hw, 0.02, [-0.5], 0.7, 0, 0.1, 0.9).map(p => Object.assign(p, {stroke: '#9fd08e', w: 1.6})));
+    parts.push(PF(stalkPts([0.15, 0.6], [0.04, 0.55], 0.035, 0.025, 0.01), '#7a9a52', 0), PL([[0.14, 0.59], [0.05, 0.55]], 0.5, {w: 0.6}));
+    parts.push(dotPart(cl[20], 0.014, '#c9d3a0', 0));
+    return {parts, fewer: false};
+  },
+  // Chinese eggplant: long, slender and gently curved, glossy purple, its
+  // green calyx closed over the stem end in pointed sepals.
+  chineseeggplant: () => {
+    const p0 = [0.16, 0.42], p1 = [0.92, 0.72], hw = u => 0.072 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.3) * (0.85 + 0.25 * u);
+    const parts = [PF(podPts(p0, p1, hw, 0.08, 20), '#7e4592', 0)];
+    parts.push(...alongLines(p0, p1, hw, 0.08, [-0.45], 0.6, 0, 0.25, 0.8).map(p => Object.assign(p, {stroke: '#d9c4e3', w: 1.6})));
+    const ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+    [-0.55, -0.2, 0.2, 0.55].forEach(k => parts.push(PF(leafPts(polarPt(p0, ang + Math.PI, 0.03), ang + k * 0.6, 0.15, 0.04, 'lance'), '#5f8f3a', 0, {w: 0.7})));
+    parts.push(PF(stalkPts(polarPt(p0, ang + Math.PI, 0.02), polarPt(p0, ang + Math.PI, 0.1), 0.02, 0.016), '#5f8f3a', 0));
+    return {parts, fewer: false};
+  },
+  // Enoki: a clump of long, thin, white stems with tiny caps, held together
+  // at their root.
+  enoki: () => {
+    const parts = [];
+    for (let g = 0; g < 11; g++){
+      const sp = (g - 5) / 5, b = [0.5 + sp * 0.05, 0.84], t = [0.5 + sp * 0.3, 0.16 + Math.abs(sp) * 0.14 + (g % 2) * 0.04];
+      parts.push(PF(podPts(b, t, () => 0.009, sp * 0.03, 10), '#f1eee4', g, {w: 0.7}));
+      parts.push(PF(ovalPts(t, 0.022, 0.016, 0, 12), '#ece5d4', g, {w: 0.7}));
+    }
+    parts.push(PF(podPts([0.5, 0.94], [0.5, 0.76], u => 0.08 - 0.03 * u, 0, 6), '#d9cbb0', null));
+    parts.push(PL([[0.43, 0.88], [0.57, 0.88]], 0.4, {w: 0.6}));
+    return {parts, fewer: true};
+  },
+  // Shiitake: two -- one cap up, brown with pale cracks and a curled-under
+  // rim; one turned over to its white gills and short stem.
+  shiitake: () => {
+    const parts = [];
+    parts.push(PF(blobPts([0.66, 0.64], 0.25, 0.14, a => 1 + 0.03 * Math.sin(6 * a), -0.15), '#efe6d6', 1));
+    for (let k = 0; k < 14; k++) parts.push(PL([polarPt([0.66, 0.64], k / 14 * Math.PI * 2, 0.04), polarPt([0.66, 0.64], k / 14 * Math.PI * 2, 0.2)].map(([x, y]) => [x, 0.64 + (y - 0.64) * 0.56]), 0.35, {g: 1, w: 0.6}));
+    parts.push(PF(ovalPts([0.66, 0.64], 0.05, 0.035, 0, 12), '#e2d7c0', 1, {w: 0.7}));
+    parts.push(PF(blobPts([0.38, 0.5], 0.3, 0.17, a => 1 + 0.025 * Math.sin(7 * a), 0.08), '#8a6040', 0));
+    parts.push(PF(blobPts([0.38, 0.47], 0.24, 0.12, a => 1, 0.08), '#a07352', 0, {op: 0.3}));
+    const R = seededRand(11);
+    for (let k = 0; k < 9; k++){ const c = [0.24 + R() * 0.28, 0.4 + R() * 0.16]; parts.push(PL([polarPt(c, R() * 3, 0.03), c, polarPt(c, 2 + R() * 3, 0.025)], 0.75, {stroke: '#efe2c8', w: 1.2})); }
+    parts.push(PL(bentPts([0.1, 0.55], [0.66, 0.6], 0.04, 10), 0.45));
+    return {parts, fewer: true};
+  }
+});
+
+Object.assign(PARTS, {
+  // Papaya: a whole one lying behind, long and slightly pear-shaped, green
+  // streaks at the stem end; in front, a half cut lengthwise -- deep orange
+  // flesh round a hollow packed with round black seeds.
+  papaya: () => {
+    const parts = [];
+    const hwW = u => 0.16 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.55) * (0.8 + 0.3 * u);
+    parts.push(PF(podPts([0.16, 0.36], [0.9, 0.3], hwW, 0.02, 24), '#d9c24e', 1));
+    parts.push(...alongLines([0.16, 0.36], [0.9, 0.3], hwW, 0.02, [-0.5, 0, 0.5], 0.5, 1, 0.03, 0.4).map(p => Object.assign(p, {stroke: '#7fa04a', w: 1.6})));
+    parts.push(PF(stalkPts([0.17, 0.36], [0.1, 0.37], 0.02, 0.016), '#8a9a52', 1));
+    const C = [0.5, 0.66], hw = u => 0.2 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.02 + u * 0.97)), 0.55) * (0.8 + 0.3 * u);
+    parts.push(PF(podPts([0.12, 0.68], [0.9, 0.64], hw, 0, 24), '#d9c24e', 0));
+    parts.push(PF(podPts([0.14, 0.68], [0.88, 0.64], u => hw(u) * 0.86, 0, 24), '#f08a4a', 0));
+    parts.push(PF(podPts([0.36, 0.67], [0.82, 0.645], u => 0.085 * Math.pow(Math.sin(Math.PI * u), 0.6) * (0.7 + 0.4 * u), 0, 16), '#c96a3a', 0));
+    const R = seededRand(13);
+    for (let k = 0; k < 26; k++){
+      const u = 0.1 + R() * 0.8, x = 0.36 + u * 0.46, w = 0.07 * Math.pow(Math.sin(Math.PI * u), 0.6) * (0.7 + 0.4 * u);
+      parts.push(dotPart([x, 0.66 + (R() * 2 - 1) * w * 0.8], 0.013, '#2a2320', 0, 0.9));
+    }
+    return {parts, fewer: true};
+  },
+  // Lychees: a sprig of round fruit on their thin twig, the red skin tiled
+  // with small pointed bumps; one peeled, its white flesh showing.
+  lychee: () => {
+    const parts = [PF(stalkPts([0.5, 0.08], [0.5, 0.3], 0.01, 0.008, 0.02), '#7a6a44', null)];
+    parts.push(...leafParts([0.5, 0.12], -0.4, 0.26, 0.06, '#4c7a3e', null, {prof: 'lance', ribOp: 0.45}));
+    const F = [[0.3, 0.6, 0.17], [0.66, 0.56, 0.18], [0.48, 0.8, 0.15]];
+    F.forEach(([x, y, r], g) => parts.push(PF(stalkPts([0.5, 0.28], [x, y - r * 0.9], 0.006, 0.005, (x - 0.5) * 0.1), '#7a6a44', g)));
+    F.forEach(([x, y, r], g) => {
+      const peeled = g === 2;
+      parts.push(PF(blobPts([x, y], r, r * 0.97, a => 1 + (peeled ? 0 : 0.03 * Math.cos(14 * a))), peeled ? '#f3eedf' : '#cf5848', g));
+      if (peeled){
+        parts.push(PF(blobPts([x, y + r * 0.55], r * 1.02, r * 0.5, a => a > 0 && a < Math.PI ? 1 : 0.35), '#cf5848', g));
+        parts.push(PL(bentPts([x - r * 0.5, y - r * 0.3], [x - r * 0.1, y - r * 0.6], -r * 0.1, 4), 0.6, {g, stroke: '#ffffff', w: 1.3}));
+        return;
+      }
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++){
+        const p = [x + i * r * 0.36 + (j % 2) * r * 0.18, y + j * r * 0.34];
+        if (Math.hypot(p[0] - x, p[1] - y) > r * 0.82) continue;
+        parts.push(PL([[p[0] - r * 0.12, p[1] + r * 0.06], [p[0], p[1] - r * 0.1], [p[0] + r * 0.12, p[1] + r * 0.06]], 0.6, {g, w: 0.7}));
+      }
+    });
+    return {parts, fewer: true};
+  },
+  // Mandarins: small and flattened, a loose peel, one still with its stem
+  // and two leaves -- the way they're sold, unlike an orange.
+  mandarin: () => {
+    const parts = [];
+    const M = [[0.3, 0.7, 0.2], [0.7, 0.72, 0.19], [0.5, 0.52, 0.2]];
+    M.forEach(([x, y, r], g) => {
+      parts.push(PF(blobPts([x, y], r, r * 0.8, a => 1 - 0.07 * bell(a, -Math.PI / 2, 0.35) - 0.04 * bell(a, Math.PI / 2, 0.4)), g === 2 ? '#ef7f28' : '#ec7a26', g));
+      const R = seededRand(30 + g);
+      for (let k = 0; k < 10; k++){ const a = R() * 6.28, d = R() * r * 0.7; parts.push(dotPart([x + Math.cos(a) * d, y + Math.sin(a) * d * 0.8], 0.006, '#b85a1c', g, 0.6)); }
+      parts.push(PL(bentPts([x - r * 0.6, y - r * 0.15], [x - r * 0.25, y - r * 0.55], -r * 0.1, 4), 0.45, {g, stroke: '#ffffff', w: 1.2}));
+      parts.push(dotPart([x, y - r * 0.76], 0.012, '#6b7a3a', g));
+    });
+    const top = [0.5, 0.52 - 0.2 * 0.78];
+    parts.push(PF(stalkPts(top, [0.53, top[1] - 0.06], 0.008, 0.006), '#5f7a3a', 2));
+    parts.push(...leafParts([0.53, top[1] - 0.05], -0.35, 0.24, 0.07, '#3f7a40', 2, {ribOp: 0.5, veins: [0.4, 0.65]}));
+    parts.push(...leafParts([0.53, top[1] - 0.05], Math.PI + 0.5, 0.18, 0.055, '#4a8748', 2, {ribOp: 0.5}));
+    return {parts, fewer: true};
+  }
+});
+
+// Raw meat and fish come on a foam tray under clear film. The tray and film
+// are the package: rigid (they don't wilt or brown), the film's highlights
+// coming off when it's opened (pkg, film:true; peel: the corner turned back).
+const MEAT_TRAY_HEX = '#e9ece6', MEAT_TRAY_IN_HEX = '#dde2db';
+function trayParts(x0 = 0.07, y0 = 0.36, x1 = 0.93, y1 = 0.86){
+  const r = 0.05, rr = (a, b, c, d, rad) => {
+    const out = [];
+    [[c - rad, b + rad, -Math.PI / 2], [c - rad, d - rad, 0], [a + rad, d - rad, Math.PI / 2], [a + rad, b + rad, Math.PI]].forEach(([cx, cy, a0]) => {
+      for (let i = 0; i <= 4; i++) out.push(polarPt([cx, cy], a0 + i / 4 * Math.PI / 2, rad));
+    });
+    return out;
+  };
+  return [PF(rr(x0, y0, x1, y1, r), MEAT_TRAY_HEX, null, {rigid: true, sharp: true}),
+    PF(rr(x0 + 0.04, y0 + 0.035, x1 - 0.04, y1 - 0.035, r * 0.6), MEAT_TRAY_IN_HEX, null, {rigid: true, sharp: true, op: 0.45, w: 0.7})];
+}
+// The film over it: a few pale highlights, and its edge just inside the rim.
+const filmParts = (x0 = 0.07, y0 = 0.36, x1 = 0.93, y1 = 0.86) => [
+  PL([[x0 + 0.1, y0 + 0.08], [x0 + 0.3, y0 + 0.05]], 0.8, {stroke: '#ffffff', w: 2.2, rigid: true, film: true}),
+  PL([[x1 - 0.28, y1 - 0.06], [x1 - 0.1, y1 - 0.1]], 0.7, {stroke: '#ffffff', w: 1.8, rigid: true, film: true}),
+  PL([[x0 + 0.13, y1 - 0.08], [x0 + 0.2, y0 + 0.2]], 0.5, {stroke: '#ffffff', w: 1.2, rigid: true, film: true}),
+  // the printed sticker on the film, in the corner away from the peel: the
+  // meat's plain name (labelWord), no brand, no price. It stays when the
+  // film is peeled back; in a dish it goes with the tray.
+  PKG([[x0 + 0.05, y1 - 0.15], [x0 + 0.37, y1 - 0.15], [x0 + 0.37, y1 - 0.03], [x0 + 0.05, y1 - 0.03]], '#f6f4ee', {sharp: true, fade: true, w: 0.6})];
+const PEEL = [[0.93, 0.36], [0.93, 0.56], [0.78, 0.44], [0.72, 0.3]];
+// Ground meat: a heaped block, its surface all short curled strands of mince.
+function minceParts(fill, fleck){
+  // one block packed edge to edge in the tray, heaped in the middle (two
+  // halves, so Used some leaves one), its top all short strands of mince
+  const parts = [], R = seededRand(fill.length * 7);
+  const half = (x0, x1, l) => {
+    const pts = [];
+    for (let i = 0; i <= 12; i++) pts.push([x0 + (x1 - x0) * i / 12, 0.45 - 0.035 * Math.sin(Math.PI * (l ? i / 12 * 0.5 : 0.5 + i / 12 * 0.5)) + 0.006 * Math.sin(i * 2.3)]);
+    for (let i = 12; i >= 0; i--) pts.push([x0 + (x1 - x0) * i / 12, 0.79 + 0.006 * Math.sin(i * 1.7)]);
+    return pts;
+  };
+  [[0.14, 0.5, 1], [0.5, 0.86, 0]].forEach(([x0, x1, l], g) => {
+    parts.push(PF(half(x0, x1, l), fill, g, {sharp: false}));
+    for (let k = 0; k < 70; k++){
+      const c = [x0 + 0.02 + R() * (x1 - x0 - 0.04), 0.47 + R() * 0.3];
+      parts.push(PL(Array.from({length: 4}, (_, i) => polarPt(c, k + i * 1.2, 0.011)), 0.5, {g, w: 0.6}));
+      if (k % 3 === 0) parts.push(dotPart(polarPt(c, k, 0.012), 0.006, fleck, g, 0));
+    }
+  });
+  return parts;
+}
+
+Object.assign(PARTS, {
+  // Chicken breasts: two pale-pink teardrop fillets, the grain of the muscle
+  // running along them, a tenderloin tucked beside.
+  chickenbreast: () => {
+    const parts = trayParts();
+    [[[0.16, 0.5], [0.56, 0.74], -0.04], [[0.48, 0.48], [0.86, 0.72], 0.04]].forEach(([p0, p1, bend], g) => {
+      const hw = u => 0.13 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.03 + u * 0.95)), 0.7) * (1.15 - 0.5 * u);
+      parts.push(PF(podPts(p0, p1, hw, bend, 20), '#e9b8a6', g));
+      parts.push(...alongLines(p0, p1, hw, bend, [-0.45, 0, 0.45], 0.28, g, 0.15, 0.85));
+      parts.push(PL(bentPts(rfLerp(p0, p1, 0.2), rfLerp(p0, p1, 0.6), -0.03, 4), 0.6, {g, stroke: '#ffffff', w: 1.2}));
+    });
+    parts.push(...filmParts());
+    return {parts, fewer: true, pkg: true, peel: PEEL};
+  },
+  // Ground beef: deep red mince heaped in the tray, flecked with fat.
+  beef: () => ({parts: [...trayParts(), ...minceParts('#b5473c', '#f2e2d2'), ...filmParts()], fewer: true, pkg: true, peel: PEEL}),
+  // Ground turkey: the same pale mince, pink-beige.
+  groundturkey: () => ({parts: [...trayParts(), ...minceParts('#ecccbc', '#faf3ec'), ...filmParts()], fewer: true, pkg: true, peel: PEEL}),
+  // Bacon: long wavy strips laid side by side in a flat pack, each banded
+  // red lean and white fat along its length.
+  bacon: () => {
+    const parts = trayParts(0.06, 0.3, 0.94, 0.88);
+    for (let g = 0; g < 5; g++){
+      const y = 0.38 + g * 0.1, wave = (t, k) => [0.13 + t * 0.74, y + 0.018 * Math.sin(t * 14 + g) + k];
+      const strip = (k0, k1) => [...Array.from({length: 25}, (_, i) => wave(i / 24, k0)), ...Array.from({length: 25}, (_, i) => wave(1 - i / 24, k1))];
+      parts.push(PF(strip(-0.045, 0.045), '#c4564c', g));
+      parts.push(PF(strip(-0.045, -0.018), '#f3e4d6', g, {w: 0.6}));
+      parts.push(PF(strip(0.008, 0.024), '#f3e4d6', g, {w: 0.5, op: 0.6}));
+    }
+    parts.push(...filmParts(0.06, 0.3, 0.94, 0.88));
+    return {parts, fewer: true, pkg: true, peel: [[0.94, 0.3], [0.94, 0.52], [0.78, 0.4], [0.72, 0.26]]};
+  },
+  // Salmon: a thick fillet, coral-orange with its white lines of fat in
+  // chevrons, the silver skin showing along one edge.
+  salmon: () => {
+    const parts = trayParts();
+    const p0 = [0.14, 0.62], p1 = [0.88, 0.58], hw = u => 0.17 * Math.pow(Math.sin(Math.PI * Math.min(0.99, 0.04 + u * 0.93)), 0.5) * (1.1 - 0.5 * u);
+    parts.push(PF(podPts(p0, [p1[0], p1[1] + 0.03], u => hw(u) * 1.05, 0, 20), '#9aa3a6', 0));
+    parts.push(PF(podPts(p0, p1, hw, 0, 20), '#ec8a5e', 0));
+    const cl = bentPts(p0, p1, 0, 20);
+    for (let i = 3; i < 19; i += 2){ const p = cl[i], w = hw(i / 20) * 0.9;
+      parts.push(PL([[p[0] - 0.02, p[1] - w], [p[0] + 0.015, p[1]], [p[0] - 0.02, p[1] + w]], 0.85, {stroke: '#fbe6d6', w: 1.5})); }
+    parts.push(...filmParts());
+    return {parts, fewer: false, pkg: true, peel: PEEL};
+  },
+  // Shrimp: a heap of curled shrimp, each a C of tapering shell segments
+  // ending in a fanned tail.
+  shrimp: () => {
+    const parts = trayParts();
+    [[0.3, 0.58, 0.3], [0.62, 0.56, -0.4], [0.46, 0.72, 2.6], [0.75, 0.72, 1.4], [0.24, 0.74, -1.2]].forEach(([x, y, rot], g) => {
+      const R = 0.085, n = 14, a0 = rot - 2.3, a1 = rot + 1.4;
+      const cl = Array.from({length: n + 1}, (_, i) => polarPt([x, y], a0 + (a1 - a0) * i / n, R));
+      parts.push(PF(ribbon(cl, t => 0.045 * (1 - 0.65 * t)), '#ee9c80', g));
+      for (let i = 2; i < n; i += 2){ const c = cl[i], w = 0.045 * (1 - 0.65 * i / n);
+        parts.push(PL([polarPt(c, a0 + (a1 - a0) * i / n, -w * 0.9), polarPt(c, a0 + (a1 - a0) * i / n, w * 0.9)], 0.5, {g, w: 0.6})); }
+      const e = cl[n], ta = a1 + Math.PI / 2;
+      [-0.5, 0, 0.5].forEach(d => parts.push(PF(leafPts(e, ta + d, 0.05, 0.016), '#e2735a', g, {w: 0.6})));
+      parts.push(PL(cl.slice(1, n - 1).map(c => polarPt(c, 0, 0)).map(([px, py], i) => polarPt([x, y], a0 + (a1 - a0) * (i + 1) / n, R - 0.02)), 0.45, {g, stroke: '#f8d8c8', w: 1.2}));
+    });
+    parts.push(...filmParts());
+    return {parts, fewer: true, pkg: true, peel: PEEL};
+  },
+  // Chicken thighs: bone-in, skin-on -- rounded lumps of pale, puckered skin.
+  chickenthigh: () => {
+    const parts = trayParts();
+    [[0.3, 0.58, 0.17, -0.3], [0.68, 0.56, 0.17, 0.4], [0.5, 0.74, 0.16, 0.1]].forEach(([x, y, r], g) => {
+      parts.push(PF(cloudPts([x, y], r, r * 0.72, 6, 0.08, 36, g), '#ecc7a2', g));
+      const R = seededRand(60 + g);
+      for (let k = 0; k < 12; k++){ const c = [x + (R() - 0.5) * r * 1.3, y + (R() - 0.5) * r * 0.9]; parts.push(PL(Array.from({length: 3}, (_, i) => polarPt(c, k + i * 1.4, 0.01)), 0.4, {g, w: 0.6})); }
+      parts.push(PL(bentPts([x - r * 0.6, y - r * 0.2], [x + r * 0.5, y - r * 0.45], -0.02, 6), 0.4, {g}));
+      const be = polarPt([x, y], g === 1 ? -0.3 : Math.PI + 0.3, r * 0.95);
+      parts.push(PF(ovalPts(be, 0.022, 0.017, 0, 12), '#f2eadc', g, {w: 0.8}), PF(ovalPts(be, 0.009, 0.007, 0, 8), '#c9a48a', g, {w: 0.5}));
+    });
+    parts.push(...filmParts());
+    return {parts, fewer: true, pkg: true, peel: PEEL};
+  },
+  // Pork chops: pale pink, a rim of white fat round the outside, the bone
+  // along one side.
+  porkchop: () => {
+    const parts = trayParts();
+    [[0.32, 0.6, -0.25], [0.68, 0.62, 0.25]].forEach(([x, y, rot], g) => {
+      const outline = blobPts([x, y], 0.2, 0.15, a => 1 + 0.15 * bell(a, Math.PI * 0.85, 0.5) - 0.08 * bell(a, -0.2, 0.4), rot, 36);
+      parts.push(PF(outline, '#f3e7da', g));
+      parts.push(PF(blobPts([x, y], 0.165, 0.118, a => 1 + 0.15 * bell(a, Math.PI * 0.85, 0.5) - 0.08 * bell(a, -0.2, 0.4), rot, 36), '#e6aa98', g));
+      parts.push(PF(stalkPts(polarPt([x, y], rot - 0.4, 0.12), polarPt([x, y], rot + 0.5, 0.13), 0.022, 0.016, 0.01), '#efe6d2', g, {w: 0.8}));
+      parts.push(PL(bentPts(polarPt([x, y], rot + Math.PI, 0.1), polarPt([x, y], rot + 2.4, 0.08), 0.02, 4), 0.3, {g}));
+    });
+    parts.push(...filmParts());
+    return {parts, fewer: true, pkg: true, peel: PEEL};
+  },
+  // Steak: a thick boneless steak, deep red and marbled with fine white fat,
+  // a cap of fat along one edge.
+  steak: () => {
+    const parts = trayParts();
+    const body = blobPts([0.5, 0.6], 0.32, 0.19, a => 1 + 0.06 * Math.cos(2 * a + 0.5) - 0.07 * bell(a, -1.2, 0.5), 0.05, 40);
+    parts.push(PF(blobPts([0.5, 0.6], 0.34, 0.21, a => 1 + 0.06 * Math.cos(2 * a + 0.5) - 0.07 * bell(a, -1.2, 0.5), 0.05, 40), '#f1e1cc', 0));
+    parts.push(PF(body, '#ae3d35', 0));
+    const R = seededRand(77);
+    for (let k = 0; k < 16; k++){ const c = [0.28 + R() * 0.44, 0.5 + R() * 0.2]; parts.push(PL(bentPts(c, polarPt(c, R() * 6.28, 0.04 + R() * 0.05), 0.01, 4), 0.8, {stroke: '#f6e6d8', w: 1})); }
+    parts.push(PF(ovalPts([0.42, 0.58], 0.06, 0.04, 0.3, 14), '#f1e1cc', 0, {op: 0.5, w: 0.6}));
+    parts.push(...filmParts());
+    return {parts, fewer: false, pkg: true, peel: PEEL};
+  }
+});
+
+// Dairy packages, front-on with a little of the top showing: plastic tubs
+// and cups, gable-top cartons, a foil brick, a clear zip bag. The package
+// is rigid and keeps its colour; a blank label (fade) bleaches as it ages;
+// where the package is clear the food shows, and it is the food that
+// decays. opened:true parts appear only once it's opened (Used some).
+const TUB_PLASTIC_HEX = '#f1f1ec', SILVER_FOIL_HEX = '#cfd3d3';
+const PKG = (p, fill, o = {}) => PF(p, fill, null, Object.assign({rigid: true}, o));
+// A tub or cup: tapered body from y0 (top, half-width w0) to y1 (w1), a
+// lid of rim height rh.
+function tubParts(cx, y0, y1, w0, w1, rh, lidHex, band){
+  const ry = w0 * 0.22, out = [];
+  out.push(PKG([[cx - w0, y0], [cx + w0, y0], [cx + w1, y1], ...ovalPts([cx, y1], w1, ry * 0.8, 0, 16).slice(1, 8), [cx - w1, y1]], TUB_PLASTIC_HEX, {sharp: true}));
+  if (band){ const t0 = 0.3, t1 = 0.75, at = t => [w0 + (w1 - w0) * t, y0 + (y1 - y0) * t];
+    const [a0, b0] = at(t0), [a1, b1] = at(t1);
+    out.push(PKG([[cx - a0, b0], [cx + a0, b0], [cx + a1, b1], [cx - a1, b1]], band, {sharp: true, fade: true, w: 0.6})); }
+  out.push(PKG(ovalPts([cx, y0 - rh * 0.5], w0 * 1.04, ry, 0, 24), lidHex, {w: 0.9}));
+  out.push(PKG([[cx - w0 * 1.04, y0 - rh * 0.5], [cx + w0 * 1.04, y0 - rh * 0.5], [cx + w0 * 1.04, y0 + rh * 0.4], [cx - w0 * 1.04, y0 + rh * 0.4]], lidHex, {sharp: true, w: 0.9}));
+  return out;
+}
+// A gable-top carton, front face and a sliver of side, the roof and fin.
+function cartonPartsD(cx, y1, w, h, band){
+  const y0 = y1 - h, roof = w * 0.55, sd = w * 0.28, out = [];
+  out.push(PKG([[cx + w / 2, y0], [cx + w / 2 + sd, y0 - sd * 0.4], [cx + w / 2 + sd, y1 - sd * 0.4], [cx + w / 2, y1]], '#dcdcd4', {sharp: true}));
+  out.push(PKG([[cx - w / 2, y0], [cx + w / 2, y0], [cx + w / 2, y1], [cx - w / 2, y1]], TUB_PLASTIC_HEX, {sharp: true}));
+  out.push(PKG([[cx - w / 2, y0], [cx, y0 - roof], [cx + w / 2, y0]], '#e8e8e1', {sharp: true}));
+  out.push(PKG([[cx + w / 2, y0], [cx, y0 - roof], [cx + sd * 0.6, y0 - roof - sd * 0.25], [cx + w / 2 + sd, y0 - sd * 0.4]], '#d6d6ce', {sharp: true}));
+  out.push(PKG([[cx - w * 0.08, y0 - roof - w * 0.02], [cx + sd * 0.6 + w * 0.02, y0 - roof - sd * 0.25 - w * 0.02], [cx + sd * 0.6 + w * 0.02, y0 - roof - sd * 0.25 - w * 0.13], [cx - w * 0.08, y0 - roof - w * 0.13]], '#ecece6', {sharp: true, w: 0.8}));
+  out.push(PKG([[cx - w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.7], [cx - w / 2, y0 + h * 0.7]], band, {sharp: true, fade: true, w: 0.6}));
+  out.push(PKG(ovalPts([cx + w * 0.18, y0 - roof * 0.45], w * 0.07, w * 0.07, 0, 12), '#f6f6f2', {opened: true, w: 0.8}));
+  return out;
+}
+const cartonPkg = (w, h, band) => ({parts: cartonPartsD(0.45, 0.92, w, h, band), fewer: false, pkg: true});
+Object.assign(PARTS, {
+  // Yogurt: single cups, tall and tapered, sealed with foil and a tab.
+  yogurt: () => {
+    // a multipack: three squat cups joined at their foil lids, one torn
+    // off and opened (white yogurt)
+    const parts = [];
+    [0.24, 0.5, 0.76].forEach((cx, k) => {
+      parts.push(...tubParts(cx, 0.56, 0.86, 0.12, 0.095, 0.025, SILVER_FOIL_HEX, k === 1 ? '#d9e3ea' : '#cfdde6'));
+    });
+    parts.push(PKG([[0.12, 0.53], [0.88, 0.53], [0.88, 0.56], [0.12, 0.56]], SILVER_FOIL_HEX, {sharp: true, w: 0.8}));
+    [0.37, 0.63].forEach(x => parts.push(PL([[x, 0.53], [x, 0.56]], 0.6, {rigid: true, w: 0.6})));
+    parts.push(PKG([[0.85, 0.53], [0.93, 0.47], [0.94, 0.53]], SILVER_FOIL_HEX, {sharp: true, w: 0.7}));
+    parts.push(PKG(ovalPts([0.24, 0.53], 0.11, 0.025, 0, 20), '#f7f5ee', {opened: true}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Sour cream: one wide, low tub, its lid clear enough to show the white
+  // cream piled to a swirled peak.
+  sourcream: () => {
+    const parts = tubParts(0.5, 0.52, 0.88, 0.36, 0.31, 0.06, '#e6eae6', '#d5e3cf');
+    parts.push(PF(cloudPts([0.5, 0.46], 0.28, 0.05, 3, 0.15, 30), '#f7f6f0', 0, {w: 0.7}));
+    parts.push(PL(Array.from({length: 12}, (_, i) => polarPt([0.5, 0.45], i * 0.9, 0.02 + i * 0.012).map((v, j) => j ? 0.45 + (v - 0.45) * 0.3 : v)), 0.5, {w: 0.7}));
+    parts.push(PKG([[0.38, 0.44], [0.56, 0.43]], '#ffffff', {open: true, op: 0.8, stroke: '#ffffff', w: 1.6}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Cottage cheese: a deeper tub, the lumpy curds showing through its lid.
+  cottagecheese: () => {
+    const parts = tubParts(0.5, 0.44, 0.9, 0.33, 0.28, 0.06, '#e6eae6', '#e3dcc6');
+    parts.push(PF(cloudPts([0.5, 0.39], 0.3, 0.055, 9, 0.2, 40), '#f8f6ee', 0, {w: 0.7}));
+    // try 3: fewer, rounder, whiter curds heaped higher, a spoon in them
+    const R = seededRand(5);
+    [[0.3,0.37],[0.4,0.33],[0.5,0.31],[0.6,0.33],[0.7,0.37],[0.35,0.4],[0.47,0.37],[0.58,0.38],[0.66,0.41]].forEach(([x, y], k) =>
+      parts.push(PF(cloudPts([x + (R() - 0.5) * 0.01, y], 0.048, 0.034, 6, 0.12, 16, k), '#ffffff', 0, {w: 0.7})));
+    parts.push(PF([[0.62, 0.32], [0.82, 0.12], [0.85, 0.14], [0.66, 0.34]], '#c9ccc9', null, {rigid: true, sharp: true, w: 0.7}));
+    parts.push(PF(ovalPts([0.86, 0.11], 0.035, 0.02, -0.8, 12), '#c9ccc9', null, {rigid: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Cream cheese: a foil-wrapped brick, seen at an angle, a blank paper
+  // band round it; opened, the foil turned back from a white end.
+  creamcheese: () => {
+    const x0 = 0.14, x1 = 0.74, y0 = 0.5, y1 = 0.82, dx = 0.14, dy = 0.12, parts = [];
+    parts.push(PKG([[x1, y0], [x1 + dx, y0 - dy], [x1 + dx, y1 - dy], [x1, y1]], '#bfc4c4', {sharp: true}));
+    parts.push(PKG([[x0, y0], [x0 + dx, y0 - dy], [x1 + dx, y0 - dy], [x1, y0]], '#dde0e0', {sharp: true}));
+    parts.push(PKG([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], SILVER_FOIL_HEX, {sharp: true}));
+    parts.push(PKG([[0.3, y0], [0.3 + dx, y0 - dy], [0.52 + dx, y0 - dy], [0.52, y0], [0.52, y1], [0.3, y1]], '#e8edf0', {sharp: true, fade: true, w: 0.7}));
+    [[0.2, 0.56, 0.26, 0.76], [0.62, 0.55, 0.68, 0.78], [0.18, 0.47, 0.3, 0.42]].forEach(([a, b, c, d]) => parts.push(PL([[a, b], [c, d]], 0.4, {rigid: true, w: 0.6})));
+    parts.push(PKG([[x1, y0], [x1 + dx, y0 - dy], [x1 + dx, y1 - dy], [x1, y1]], '#f4f1e6', {sharp: true, opened: true}));
+    parts.push(PKG([[x1 + dx, y0 - dy], [x1 + dx + 0.06, y0 - dy - 0.05], [x1 + dx + 0.07, y1 - dy - 0.02], [x1 + dx, y1 - dy]], SILVER_FOIL_HEX, {sharp: true, opened: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Heavy cream: a small (half-pint) gable-top carton.
+  heavycream: () => cartonPkg(0.3, 0.42, '#e7dcc0'),
+  // Half and half: a pint carton, a little taller and wider.
+  // Half-and-half: the carton band split half white, half cream, a
+  // coffee cup on it (what it's for); try 3.
+  halfandhalf: () => {
+    const sp = cartonPkg(0.36, 0.52, '#f3f1e8'), cx = 0.45, w = 0.36, y0 = 0.92 - 0.52, h = 0.52;
+    sp.parts.push(PKG([[cx, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.3], [cx + w / 2, y0 + h * 0.7], [cx, y0 + h * 0.7]], '#d8c69c', {sharp: true, fade: true, w: 0.6}));
+    const cy = y0 + h * 0.5;
+    sp.parts.push(PKG([[cx - 0.07, cy - 0.05], [cx + 0.07, cy - 0.05], [cx + 0.055, cy + 0.06], [cx - 0.055, cy + 0.06]], '#8a6a4c', {sharp: true, fade: true, w: 0.7}));
+    sp.parts.push(PL(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(7, 14).concat(ovalPts([cx + 0.085, cy], 0.03, 0.03, 0, 10).slice(0, 2)), 0.9, {w: 0.7, rigid: true}));
+    sp.parts.push(PL([[cx - 0.02, cy - 0.08], [cx - 0.01, cy - 0.11], [cx - 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
+    sp.parts.push(PL([[cx + 0.02, cy - 0.08], [cx + 0.03, cy - 0.11], [cx + 0.02, cy - 0.14]], 0.6, {w: 0.6, rigid: true}));
+    // its name in the strip of band under the cup
+    sp.lab = [cx - w / 2, cy + 0.06, cx + w / 2, y0 + h * 0.7];
+    return sp;
+  },
+  // Shredded cheese: a clear zip bag full of short orange-gold shreds.
+  shreddedcheese: () => {
+    const parts = [PKG([[0.16, 0.24], [0.84, 0.24], [0.85, 0.5], [0.87, 0.86], [0.84, 0.9], [0.16, 0.9], [0.13, 0.86], [0.15, 0.5]], '#f2f2ec', {sharp: true})];
+    parts.push(PKG([[0.16, 0.24], [0.84, 0.24], [0.84, 0.3], [0.16, 0.3]], '#dfe3e3', {sharp: true, w: 0.8}));
+    const R = seededRand(19);
+    for (let k = 0; k < 90; k++){
+      const c = [0.21 + R() * 0.58, 0.36 + R() * 0.5], a = R() * 3.14;
+      parts.push(PF(ovalPts(c, 0.032, 0.008, a, 8), R() < 0.5 ? '#e9b648' : '#f0d27a', 0, {w: 0.4}));
+    }
+    parts.push(PKG([[0.34, 0.5], [0.66, 0.5], [0.66, 0.64], [0.34, 0.64]], '#f6f4ee', {sharp: true, fade: true, w: 0.6}));
+    parts.push(PL([[0.22, 0.36], [0.24, 0.84]], 0.8, {rigid: true, film: true, stroke: '#ffffff', w: 2}));
+    parts.push(PKG([[0.16, 0.24], [0.3, 0.12], [0.36, 0.24]], '#e6eaea', {sharp: true, opened: true, w: 0.7}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Soft cheese: a round of brie, its white bloomy rind, a wedge cut out
+  // and lying in front to show the pale creamy inside.
+  softcheese: () => {
+    const C = [0.5, 0.5], RX = 0.38, RY = 0.15, H = 0.14, a0 = -0.25, a1 = 0.55, parts = [];
+    const rim = (a, dy = 0) => [C[0] + Math.cos(a) * RX, C[1] + Math.sin(a) * RY + dy];
+    const arc = (b0, b1, dy, n = 16) => Array.from({length: n + 1}, (_, i) => rim(b0 + (b1 - b0) * i / n, dy));
+    parts.push(PF([...arc(0, Math.PI, 0), ...arc(Math.PI, 0, H)], '#f1ede0', 0));
+    parts.push(PF([C, ...arc(a1, a0 + Math.PI * 2, 0, 30)], '#f5f2e8', 0));
+    parts.push(PF([C, rim(a0), rim(a0, H), [C[0], C[1] + H]], '#f1dfa6', 0, {sharp: true}));
+    parts.push(PF([C, rim(a1), rim(a1, H), [C[0], C[1] + H]], '#ecd794', 0, {sharp: true}));
+    const W = [0.62, 0.8];
+    parts.push(PF([W, [W[0] + 0.24, W[1] - 0.03], [W[0] + 0.24, W[1] + 0.06], [W[0], W[1] + 0.09]], '#f1dfa6', 1, {sharp: true}));
+    parts.push(PF([W, [W[0] - 0.1, W[1] - 0.06], [W[0] + 0.14, W[1] - 0.09], [W[0] + 0.24, W[1] - 0.03]], '#f5f2e8', 1, {sharp: true}));
+    return {parts, fewer: true};
+  },
+  // String cheese: three white sticks in their clear wrappers, crimped at
+  // the ends; one opened, peeled into strings.
+  stringcheese: () => {
+    const parts = [];
+    [[0.3, 0.84, 0.36], [0.5, 0.86, 0.52], [0.72, 0.84, 0.66]].forEach(([x0, y0, x1], g) => {
+      const top = [x1, 0.16 + g * 0.03];
+      parts.push(PKG(podPts([x0, y0], top, () => 0.055, 0, 10), '#eef0ee', {w: 0.6}));
+      parts.push(PF(podPts([x0, y0 - 0.04], [top[0], top[1] + 0.04], u => 0.04 * Math.min(1, u * 20, (1 - u) * 20), 0, 10), '#f4efdc', g));
+      parts.push(PL(Array.from({length: 7}, (_, i) => [top[0] - 0.05 + i * 0.0167, top[1] - 0.012 * (i % 2)]), 0.6, {rigid: true, w: 0.6}));
+      parts.push(PL([[x0 + 0.01 + (x1 - x0) * 0.2, y0 - 0.1], [x0 + (x1 - x0) * 0.85, 0.3 + g * 0.03]], 0.7, {rigid: true, stroke: '#ffffff', w: 1.4}));
+    });
+    return {parts, fewer: true};
+  }
+});
+
+// Cooked and deli. Each is drawn as it comes home or sits in the fridge:
+// rice heaped in a grey bowl under cling film, a rotisserie chicken in its
+// clear dome on a black base, a sliced loaf in its bag, flour tortillas
+// stacked in a clear bag, corn tortillas in a paper wrap, fresh salsa in a
+// clear deli tub. The food decays; bowl, dome, bag and tub are rigid.
+const DELI_CLEAR_HEX = '#e4ebea', BAG_CLEAR_HEX = '#eef1ee';
+Object.assign(PARTS, {
+  // Cooked rice: a heap of short oval grains in a grey glazed bowl.
+  cookedrice: () => {
+    const parts = [], R = seededRand(41);
+    parts.push(PKG([[0.16, 0.5], [0.84, 0.5], ...ovalPts([0.5, 0.5], 0.34, 0.36, 0, 24).slice(1, 12), [0.16, 0.5]], '#c9cfcc', {w: 1}));
+    parts.push(PKG(ovalPts([0.5, 0.5], 0.34, 0.05, 0, 24), '#b9c0bd', {w: 0.8}));
+    parts.push(PF([...cloudPts([0.5, 0.44], 0.31, 0.12, 7, 0.07, 36).filter(p => p[1] < 0.5), [0.19, 0.51], [0.81, 0.51]].sort((a, b) => Math.atan2(a[1] - 0.48, a[0] - 0.5) - Math.atan2(b[1] - 0.48, b[0] - 0.5)), '#f4f2ea', 0));
+    for (let k = 0; k < 46; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R());
+      const c = [0.5 + Math.cos(a) * rr * 0.26, 0.43 + Math.sin(a) * rr * 0.06 - (1 - rr) * 0.06];
+      parts.push(PF(ovalPts(c, 0.017, 0.008, R() * Math.PI, 8), '#fbfaf5', 0, {w: 0.5, op: 0.9}));
+    }
+    parts.push(PL([[0.27, 0.66], [0.33, 0.78]], 0.35, {w: 0.7, rigid: true}));
+    parts.push(PL([[0.22, 0.4], [0.4, 0.36]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    parts.push(PL([[0.62, 0.38], [0.76, 0.42]], 0.7, {stroke: '#ffffff', w: 1.6, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.84, 0.5], [0.84, 0.36], [0.7, 0.4], [0.68, 0.5]]};
+  },
+  // Rotisserie chicken: the whole roast bird, breast up, drumsticks
+  // toward us, under a clear dome on a black base.
+  rotisserie: () => {
+    const parts = [];
+    parts.push(PKG([[0.08, 0.78], [0.92, 0.78], [0.88, 0.88], [0.12, 0.88]], '#3a3b3a', {sharp: true}));
+    parts.push(PKG([[0.1, 0.78], ...ovalPts([0.5, 0.78], 0.4, 0.46, 0, 40).slice(21, 40), [0.9, 0.78]], DELI_CLEAR_HEX, {op: 0.35, w: 0.9}));
+    parts.push(PF(blobPts([0.5, 0.6], 0.27, 0.17, a => 1 + 0.06 * Math.cos(2 * a), 0, 34), '#c88a4e', 0));
+    parts.push(PF(ovalPts([0.32, 0.68], 0.1, 0.06, 0.5, 18), '#bd7c42', 0));
+    parts.push(PF(ovalPts([0.68, 0.68], 0.1, 0.06, -0.5, 18), '#bd7c42', 0));
+    parts.push(PF(ovalPts([0.25, 0.73], 0.025, 0.02, 0, 10), '#ecdcc0', 0, {w: 0.7}));
+    parts.push(PF(ovalPts([0.75, 0.73], 0.025, 0.02, 0, 10), '#ecdcc0', 0, {w: 0.7}));
+    parts.push(PF(ovalPts([0.25, 0.56], 0.06, 0.035, -0.3, 14), '#b9773e', 0));
+    parts.push(PF(ovalPts([0.75, 0.56], 0.06, 0.035, 0.3, 14), '#b9773e', 0));
+    parts.push(PL([[0.5, 0.45], [0.5, 0.62]], 0.45, {w: 0.8}));
+    parts.push(PL([[0.38, 0.5], [0.44, 0.58]], 0.3));
+    parts.push(PL([[0.62, 0.5], [0.56, 0.58]], 0.3));
+    parts.push(PL([[0.2, 0.42], [0.3, 0.28]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.9, 0.78], [0.86, 0.5], [0.7, 0.36], [0.62, 0.5]]};
+  },
+  // Bread: a sliced sandwich loaf lying in its bag, domed crust, slice
+  // lines down its side, the bag gathered with a twist tie at the end.
+  bread: () => {
+    const parts = [], x0 = 0.12, x1 = 0.76, y1 = 0.84, y0 = 0.5;
+    parts.push(PKG([[0.08, 0.4], [0.8, 0.4], [0.86, 0.55], [0.94, 0.5], [0.94, 0.74], [0.86, 0.7], [0.8, 0.88], [0.08, 0.88]], BAG_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.8}));
+    const loaf = [[x0, y1], [x0, y0 + 0.04]];
+    for (let i = 0; i <= 14; i++) loaf.push([x0 + (x1 - x0) * i / 14, y0 - 0.07 * Math.sin(Math.PI * i / 14) + 0.01]);
+    loaf.push([x1, y1]);
+    parts.push(PF(loaf, '#c99a5e', 0));
+    // the cut end toward us: a pale slice face, square below, domed above
+    const face = [[x0 + 0.015, y1 - 0.015]];
+    for (let i = 0; i <= 8; i++) face.push(polarPt([x0 + 0.11, y0 + 0.08], Math.PI + i / 8 * Math.PI, 0.095).map((v, j) => j ? y0 + 0.08 + (v - y0 - 0.08) * 0.75 : v));
+    face.push([x0 + 0.205, y1 - 0.015]);
+    parts.push(PF(face, '#efe2c2', 0, {w: 0.7}));
+    for (let i = 3; i < 9; i++) parts.push(PL([[x0 + (x1 - x0) * i / 9, y0 + 0.01 - 0.07 * Math.sin(Math.PI * i / 9)], [x0 + (x1 - x0) * i / 9, y1]], 0.4, {w: 0.7}));
+    parts.push(PKG([[0.86, 0.58], [0.89, 0.56], [0.89, 0.69], [0.86, 0.67]], '#c9b98a', {sharp: true, w: 0.7}));
+    parts.push(PL([[0.14, 0.44], [0.36, 0.42]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.94, 0.5], [0.94, 0.74], [0.8, 0.8], [0.8, 0.44]]};
+  },
+  // Flour tortillas: a stack of thin pale rounds, the top one freckled
+  // with brown griddle spots, in a clear zip bag.
+  flourtortilla: () => {
+    const parts = [], R = seededRand(77);
+    parts.push(PKG([[0.06, 0.34], [0.94, 0.34], [0.94, 0.88], [0.06, 0.88]], BAG_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.8}));
+    parts.push(PKG([[0.06, 0.38], [0.94, 0.38]], '#ffffff', {open: true, op: 0.7, stroke: '#b5bfbb', w: 1.4}));
+    for (let k = 5; k >= 0; k--) parts.push(PF(ovalPts([0.5, 0.6 + k * 0.03], 0.38, 0.17, 0, 30), k ? '#e2d2ac' : '#ecdfbf', 0, {w: k ? 0.7 : 1}));
+    for (let k = 0; k < 16; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R()) * 0.85;
+      parts.push(PF(blobPts([0.5 + Math.cos(a) * rr * 0.38, 0.6 + Math.sin(a) * rr * 0.17], 0.012 + R() * 0.012, 0.007 + R() * 0.006, b => 1 + 0.25 * Math.sin(3 * b + k), R(), 10), '#b9864e', 0, {w: 0.4, op: 0.9}));
+    }
+    parts.push(PL([[0.14, 0.44], [0.32, 0.4]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.94, 0.34], [0.94, 0.52], [0.8, 0.42], [0.76, 0.34]]};
+  },
+  // Corn tortillas: a smaller, thicker stack of yellow rounds with their
+  // fine dimpled surface, wrapped in white paper folded back at the top.
+  corntortilla: () => {
+    const parts = [], R = seededRand(19);
+    parts.push(PKG([[0.12, 0.5], [0.88, 0.5], [0.84, 0.88], [0.16, 0.88]], '#f3f1ea', {sharp: true}));
+    for (let k = 9; k >= 0; k--) parts.push(PF(ovalPts([0.5, 0.46 + k * 0.025], 0.29, 0.12, 0, 28), k ? '#d8bd72' : '#e2c97e', 0, {w: k ? 0.6 : 1}));
+    for (let k = 0; k < 22; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R()) * 0.85;
+      parts.push(dotPart([0.5 + Math.cos(a) * rr * 0.29, 0.46 + Math.sin(a) * rr * 0.12], 0.006, '#c4a55c', 0, 0.8));
+    }
+    parts.push(PKG([[0.1, 0.62], [0.9, 0.62], [0.84, 0.88], [0.16, 0.88]], '#f3f1ea', {sharp: true}));
+    parts.push(PKG([[0.1, 0.62], [0.24, 0.7], [0.42, 0.66], [0.6, 0.71], [0.78, 0.65], [0.9, 0.62]], '#f3f1ea', {open: true, op: 0.5, w: 0.8}));
+    return {parts, fewer: false, pkg: true, peel: [[0.88, 0.5], [0.88, 0.62], [0.74, 0.6], [0.72, 0.5]]};
+  },
+  // Fresh salsa: a clear deli tub full of diced tomato, white onion and
+  // cilantro, the chunks showing through its sides and under the lid.
+  salsa: () => {
+    const parts = [], R = seededRand(23);
+    parts.push(PF([[0.18, 0.44], [0.82, 0.44], [0.77, 0.86], [0.23, 0.86]], '#cf5a3c', 0, {sharp: true}));
+    const chunk = (c, s, fill, rot) => PF([[-1, -1], [1, -0.8], [0.9, 1], [-0.8, 0.9]].map(([x, y]) => [c[0] + (x * Math.cos(rot) - y * Math.sin(rot)) * s, c[1] + (x * Math.sin(rot) + y * Math.cos(rot)) * s]), fill, 0, {w: 0.5, sharp: true});
+    for (let k = 0; k < 44; k++){
+      const t = R(), y = 0.47 + R() * 0.36, half = 0.32 - (y - 0.44) * 0.12;
+      const c = [0.5 + (t - 0.5) * 2 * (half - 0.04), y], v = R();
+      parts.push(chunk(c, 0.022 + R() * 0.01, v < 0.45 ? '#d8452e' : v < 0.75 ? '#f3efe2' : '#5f8f3e', R() * 3));
+    }
+    parts.push(PKG(ovalPts([0.5, 0.42], 0.34, 0.06, 0, 24), DELI_CLEAR_HEX, {op: 0.55, w: 0.9}));
+    parts.push(PKG([[0.16, 0.42], [0.84, 0.42], [0.84, 0.46], [0.16, 0.46]], DELI_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.9}));
+    parts.push(PL([[0.26, 0.52], [0.29, 0.78]], 0.8, {stroke: '#ffffff', w: 1.8, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Hummus: a round tub, lid off beside it, seen from a little above: the
+  // pale swirl with a well of olive oil, a dusting of paprika and a few
+  // whole chickpeas in the middle.
+  hummus: () => {
+    const parts = [], R = seededRand(31);
+    parts.push(PKG([[0.16, 0.5], [0.84, 0.5], [0.79, 0.86], [0.21, 0.86]], TUB_PLASTIC_HEX, {sharp: true}));
+    parts.push(PKG([[0.16, 0.62], [0.84, 0.62], [0.82, 0.76], [0.18, 0.76]], '#d9cfb4', {sharp: true, fade: true, w: 0.6}));
+    parts.push(PKG(ovalPts([0.5, 0.5], 0.34, 0.15, 0, 30), TUB_PLASTIC_HEX, {w: 0.9}));
+    parts.push(PF(ovalPts([0.5, 0.5], 0.31, 0.13, 0, 30), '#d8c08e', 0));
+    parts.push(PL(Array.from({length: 22}, (_, i) => { const a = i * 0.62, r = 0.04 + i * 0.011; return [0.5 + Math.cos(a) * r, 0.5 + Math.sin(a) * r * 0.42]; }), 0.45, {w: 0.8}));
+    parts.push(PF(blobPts([0.5, 0.5], 0.09, 0.035, a => 1 + 0.12 * Math.sin(3 * a), 0, 20), '#c9a63a', 0, {w: 0.6, op: 0.85}));
+    for (let k = 0; k < 18; k++){ const a = R() * 6.28, r = 0.1 + R() * 0.16; parts.push(dotPart([0.5 + Math.cos(a) * r, 0.5 + Math.sin(a) * r * 0.42], 0.006, '#b4512a', 0, 0)); }
+    [[0.47, 0.49], [0.53, 0.51], [0.5, 0.47]].forEach(c => parts.push(PF(ovalPts(c, 0.016, 0.012, 0, 10), '#e0c58c', 0, {w: 0.6})));
+    return {parts, fewer: false, pkg: true};
+  },
+});
+
 const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: tubBand, protein: wrappedTray,
   cooked: containerLid, generic: packetSeal, potato: potatoEyes, apple: appleStem, banana: bananaRidge, tomato: tomatoCalyx,
-  chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, spinach: spinachRibs, carrot: carrotTops,
+  chicken: chickenFillet, tofu: tofuBlock, carton: cartonPanels, carrot: carrotTops,
   onion: onionSkin, eggs: eggCartonCups, wedge: wedgeFaces, garlic: garlicCloves, ...FRUIT_CUES};
 // Packaging behind the food, drawn before its body (see the note above
 // chickenOutline). Kept in its own group so the body outline stays the
@@ -5409,7 +6716,7 @@ function bulgedOutline(shape, pts, fraction, size){
 function packageSigns(shape, pts, fraction, size, seed){
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const op = (0.55 * (1 - 0.75 * fade)).toFixed(2), lineOp = (0.7 * (1 - 0.6 * fade)).toFixed(2);
-  const panel = q => `<path d="${polyD(q)}" fill="${LABEL_HEX}" fill-opacity="${op}" stroke="${INK_HEX}" stroke-opacity="${lineOp}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>`;
+  const panel = q => `<path d="${polyD(q)}" fill="${LABEL_HEX}" fill-opacity="${op}" stroke="${INK_HEX}" stroke-opacity="${lineOp}" stroke-width="${Math.max(0.6, size * 0.005).toFixed(2)}"/>` + labelWordSvg(...ptsBox(q), fade);
   const band = (a, b, c, d, t0, t1) => [rfLerp(a, b, t0), rfLerp(c, d, t0), rfLerp(c, d, t1), rfLerp(a, b, t1)];
   let label = '', seam = null;
   if (shape === 'dairy'){
@@ -5477,7 +6784,25 @@ const BOTTLE_PROFILES = {
   // a narrow sauce bottle: long neck, small screw cap
   sauce:     {rows: [[0.12, 0.032], [0.16, 0.034], [0.36, 0.038], [0.52, 0.102], [0.93, 0.102]], label: [0.67, 0.83], cap: 'screw'},
   // a glass jar: a short neck under a wide metal lid
-  jar:       {rows: [[0.42, 0.165], [0.465, 0.188], [0.93, 0.188]], label: [0.63, 0.80], cap: 'lid'}
+  jar:       {rows: [[0.42, 0.165], [0.465, 0.188], [0.93, 0.188]], label: [0.63, 0.80], cap: 'lid'},
+  // a dressing bottle: tall, a short neck under a flip-top
+  dressing:  {rows: [[0.2, 0.05], [0.26, 0.056], [0.4, 0.112], [0.93, 0.112]], label: [0.62, 0.8], cap: 'flip'},
+  // a hot-sauce bottle: slim, a long thin neck, a small cap
+  woozy:     {rows: [[0.18, 0.024], [0.22, 0.026], [0.48, 0.03], [0.62, 0.072], [0.93, 0.072]], label: [0.72, 0.86], cap: 'screw'},
+  // a table soy dispenser: a squat flask, a short pouring neck
+  dispenser: {rows: [[0.4, 0.03], [0.44, 0.034], [0.5, 0.05], [0.62, 0.118], [0.93, 0.118]], label: [0.74, 0.86], cap: 'screw'},
+  // a squat sauce bottle: broad shoulders, a medium neck
+  squat:     {rows: [[0.3, 0.038], [0.35, 0.04], [0.44, 0.046], [0.6, 0.138], [0.93, 0.138]], label: [0.7, 0.86], cap: 'screw'},
+  // a small jar and a tall one
+  smalljar:  {rows: [[0.54, 0.128], [0.575, 0.142], [0.93, 0.142]], label: [0.74, 0.86], cap: 'lid'},
+  talljar:   {rows: [[0.24, 0.15], [0.28, 0.168], [0.93, 0.168]], label: [0.8, 0.88], cap: 'lid'},
+  // a brandy or cognac bottle: a short neck, a full round body wider at
+  // the shoulder than the foot, a wooden-headed stopper
+  decanter:  {rows: [[0.3, 0.038], [0.37, 0.04], [0.52, 0.168], [0.72, 0.16], [0.93, 0.13]], label: [0.62, 0.8], cap: 'bar'},
+  // a baijiu bottle: opaque white porcelain, a rounded shoulder
+  porcelain: {rows: [[0.22, 0.04], [0.28, 0.046], [0.42, 0.13], [0.93, 0.122]], label: [0.52, 0.72], cap: 'screw'},
+  // a tequila bottle: a tall neck, a straight body on a wide heavy foot
+  tequila:   {rows: [[0.14, 0.04], [0.3, 0.042], [0.4, 0.11], [0.84, 0.11], [0.93, 0.135]], label: [0.5, 0.74], cap: 'bar'}
 };
 // Each drawn drink: its form (p), and what shows through the glass --
 // liquid colour and level (an opened wine has been poured from), or a
@@ -5495,24 +6820,33 @@ const BOTTLES = {
   whitewine:     {p: 'wine', liquid: '#dcc45a', level: 0.40},
   whitewineOpen: {p: 'wine', liquid: '#dcc45a', level: 0.62, open: true},
   vodka:         {p: 'spirit', clear: true, level: 0.25},
-  gin:           {p: 'spirit', clear: true, level: 0.25},
-  agave:         {p: 'spirit', clear: true, liquid: '#ece0a6', level: 0.25},
+  // gin in a blue-green tinted glass
+  gin:           {p: 'spirit', clear: true, glass: '#9cc8c0', level: 0.25},
+  // baijiu in its white porcelain bottle under a red cap
+  baijiu:        {p: 'porcelain', glass: '#f1efe8', capHex: '#c4532c', labHex: '#c4532c'},
+  agave:         {p: 'tequila', clear: true, liquid: '#f1ecd2', level: 0.3},
+  // mezcal: the agave worm lying at the bottom of the bottle
+  mezcal:        {p: 'spirit', clear: true, liquid: '#e6dca8', level: 0.25, inside: ['worm']},
   rum:           {p: 'spirit', clear: true, liquid: '#b87a32', level: 0.25},
   whiskey:       {p: 'square', clear: true, liquid: AMBER, level: 0.46},
   scotch:        {p: 'square', clear: true, liquid: '#c98d3a', level: 0.46},
-  brandy:        {p: 'square', clear: true, liquid: '#8f4a1c', level: 0.46},
-  creamliqueur:  {p: 'square'},
+  brandy:        {p: 'decanter', clear: true, liquid: '#8f4a1c', level: 0.5},
+  // cream liqueur: the milky caramel liqueur showing through clear glass
+  creamliqueur:  {p: 'square', clear: true, liquid: '#e2d2b4', level: 0.46, solid: true},
+  // hard cider: a clear long-neck of hazy gold cider, bubbles rising
+  ciderbottle:   {p: 'longneck', clear: true, glass: '#7fa864', liquid: '#e2c050', level: 0.3, inside: ['bubbles']},
   // Drinks FoodKeeper doesn't list (FOODS cites the source for each, or
   // asks the printed date): sparkling wine, rosé and vermouth open, and
   // darken once opened, as wine does; sake's brown glass and soju's small
   // green bottle show nothing.
-  sparkling:     {p: 'sparkling', liquid: '#e0cf7a', level: 0.45, glass: '#2a4d36'},
-  sparklingOpen: {p: 'sparkling', liquid: '#e0cf7a', level: 0.62, glass: '#2a4d36', open: true},
+  sparkling:     {p: 'sparkling', clear: true, liquid: '#e0cf7a', level: 0.45, glass: '#4f7a52', inside: ['bubbles']},
+  sparklingOpen: {p: 'sparkling', clear: true, liquid: '#e0cf7a', level: 0.62, glass: '#4f7a52', open: true, inside: ['bubbles']},
   rose:          {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.40},
   roseOpen:      {p: 'wine', clear: true, liquid: '#ec9a7c', level: 0.62, open: true},
   vermouth:      {p: 'wine', clear: true, liquid: '#a8502a', level: 0.40},
   vermouthOpen:  {p: 'wine', clear: true, liquid: '#a8502a', level: 0.62, open: true},
-  sake:          {p: 'sake', glass: '#5d4128'},
+  // sake: a frosted pale bottle, the clear sake showing faintly
+  sake:          {p: 'sake', clear: true, glass: '#cfd8d4', liquid: '#eeeedd', level: 0.3},
   smallgreen:    {p: 'small', clear: true, glass: '#7fbf8e', level: 0.6}
 };
 // Condiments: the form and what shows through the clear plastic or glass
@@ -5521,21 +6855,138 @@ const BOTTLES = {
 // as the opened jar's time runs out -- the same sign as an opened wine.
 // Natural colours, leaning away from the urgency palette: the reds toward
 // orange, mustard toward lemon, the greens toward leaf.
-const CONDIMENT_LOOKS = {
-  ketchup: ['squeeze', '#b8361f'], mayonnaise: ['squeeze', '#efe7c6'], mustard: ['squeeze', '#dcc33c'],
-  bbqsauce: ['squeeze', '#6e2c18'],
-  soysauce: ['sauce', '#3b2317'], teriyaki: ['sauce', '#4a2a17'], oystersauce: ['sauce', '#4c2e1e'],
-  hotsauce: ['sauce', '#c8431f'], dressing: ['sauce', '#e3d6a8'], creamydressing: ['sauce', '#eee9d6'],
-  vinaigrette: ['sauce', '#d9bf55'],
-  jam: ['jar', '#ad3127'], hoisin: ['jar', '#4b2219'], pickles: ['jar', '#86a640'], jarredsalsa: ['jar', '#c4512b'],
-  tahini: ['jar', '#cfb07e'], horseradish: ['jar', '#ece6d4'], pesto: ['jar', '#4f8c3c'], relish: ['jar', '#6f9c3a']
+// Inside a clear condiment, the identity cue on top of the contents:
+// pickle spears, herb or chili flecks, seeds, a separated oil layer.
+// Pieces darken with the contents once it's opened (natureColor).
+const BOTTLE_INSIDES = {
+  flecks: (c, hex, n = 26, r = 0.007) => c.dots(n, hex, r),
+  seeds: (c, hex) => c.dots(22, hex, 0.008, 1.8),
+  oil: (c, hex) => `<rect x="0" y="${c.X(c.level)}" width="${c.s}" height="${c.X(0.05)}" fill="${c.col(hex)}" fill-opacity=".85" clip-path="url(#${c.uid}-clip)"/>`
+    + `<line x1="0" y1="${c.X(c.level + 0.05)}" x2="${c.s}" y2="${c.X(c.level + 0.05)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`,
+  pickles: c => {
+    let out = '';
+    [-0.1, -0.035, 0.035, 0.1].forEach((dx, k) => {
+      const x = 0.5 + dx, y0 = c.level + 0.05 + (k % 2) * 0.03, y1 = c.baseY - 0.04, w = 0.028;
+      out += `<rect x="${c.X(x - w)}" y="${c.X(y0)}" width="${c.X(2 * w)}" height="${c.X(y1 - y0)}" rx="${c.X(w)}" fill="${c.col('#6f8a34')}" stroke="${INK_HEX}" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+      for (let j = 0; j < 4; j++) out += `<circle cx="${c.X(x + (j % 2 ? 0.01 : -0.01))}" cy="${c.X(y0 + 0.04 + j * (y1 - y0 - 0.06) / 4)}" r="${c.X(0.004)}" fill="${INK_HEX}" fill-opacity=".45"/>`;
+    });
+    return out;
+  },
+  // thick sauce clinging to the glass above its level, a few runs down
+  clings: (c, hex) => [0.42, 0.5, 0.57].map((x, k) => `<path d="M ${c.X(x - 0.012)} ${c.X(c.level)} L ${c.X(x - 0.012)} ${c.X(c.level - 0.05 - k * 0.025)} Q ${c.X(x)} ${c.X(c.level - 0.07 - k * 0.025)} ${c.X(x + 0.012)} ${c.X(c.level - 0.05 - k * 0.025)} L ${c.X(x + 0.012)} ${c.X(c.level)} Z" fill="${c.col(hex)}" fill-opacity=".85" stroke="${INK_HEX}" stroke-opacity=".4" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`).join(''),
+  // diced pieces (relish, salsa): small squares
+  dice: (c, hex, n = 24, r = 0.012) => {
+    const R = seededRand(n * 7 + hex.length); let out = '';
+    for (let k = 0; k < n; k++){
+      const x = 0.5 + (R() - 0.5) * c.bh * 1.7, y = c.level + 0.02 + R() * (c.baseY - c.level - 0.05);
+      out += `<rect x="${c.X(x - r)}" y="${c.X(y - r)}" width="${c.X(2 * r)}" height="${c.X(2 * r)}" transform="rotate(${Math.round(R() * 80)} ${c.X(x)} ${c.X(y)})" fill="${c.col(hex)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${(c.thin * 0.7).toFixed(2)}" clip-path="url(#${c.uid}-clip)"/>`;
+    }
+    return out;
+  },
+  shreds: (c, hex) => {
+    const R = seededRand(9); let out = '';
+    for (let k = 0; k < 26; k++){
+      const x = 0.5 + (R() - 0.5) * c.bh * 1.7, y = c.level + 0.02 + R() * (c.baseY - c.level - 0.06), a = R() * 3;
+      out += `<line x1="${c.X(x)}" y1="${c.X(y)}" x2="${c.X(x + Math.cos(a) * 0.022)}" y2="${c.X(y + Math.sin(a) * 0.012)}" stroke="${c.col(hex)}" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+    }
+    return out;
+  }
 };
-const CONDIMENT_LEVEL = {squeeze: 0.31, sauce: 0.40, jar: 0.48};
-Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid]]) => {
-  BOTTLES[k] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p], solid: true};
-  BOTTLES[k + 'Open'] = {p, clear: true, liquid, level: CONDIMENT_LEVEL[p] + 0.12, solid: true, open: true};
+BOTTLE_INSIDES.bubbles = c => {
+  const R = seededRand(5); let out = '';
+  for (let k = 0; k < 18; k++){
+    const x = 0.5 + (R() - 0.5) * c.bh * 1.5, y = c.level + 0.03 + R() * (c.baseY - c.level - 0.07);
+    out += `<circle cx="${c.X(x)}" cy="${c.X(y)}" r="${c.X(0.006 + R() * 0.005)}" fill="none" stroke="#ffffff" stroke-opacity=".9" stroke-width="${c.thin}" clip-path="url(#${c.uid}-clip)"/>`;
+  }
+  return out;
+};
+BOTTLE_INSIDES.worm = c => {
+  const y = c.baseY - 0.06, pts = Array.from({length: 9}, (_, i) => [0.5 - 0.06 + i * 0.015, y - 0.018 * Math.sin(i / 8 * Math.PI * 1.4)]);
+  const d = 'M ' + pts.map(([x, yy]) => c.X(x) + ' ' + c.X(yy)).join(' L ');
+  return `<path d="${d}" fill="none" stroke="${INK_HEX}" stroke-width="${c.X(0.03)}" stroke-linecap="round"/>`
+    + `<path d="${d}" fill="none" stroke="${c.col('#e3cfa0')}" stroke-width="${c.X(0.022)}" stroke-linecap="round"/>`
+    + pts.slice(1, -1).map(([x, yy]) => `<line x1="${c.X(x)}" y1="${c.X(yy - 0.01)}" x2="${c.X(x)}" y2="${c.X(yy + 0.01)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${c.thin}"/>`).join('');
+};
+const CONDIMENT_LOOKS = {
+  ketchup: ['squeeze', '#b8361f'], mustard: ['squeeze', '#dcc33c'], bbqsauce: ['squeeze', '#6e2c18'],
+  // a wide jar of white mayonnaise, the label low so the white shows
+  mayonnaise: ['jar', '#f3eed8', {lab: [0.72, 0.84]}],
+  // soy in a table dispenser under an orange-red cap; teriyaki thicker,
+  // sesame seeds in it; oyster sauce in a broad squat bottle, near black
+  soysauce: ['dispenser', '#2e1a10', {capHex: '#c4532c', level: 0.52}],
+  teriyaki: ['sauce', '#5a3018', {inside: ['seeds', '#efe3c0']}],
+  oystersauce: ['squat', '#3a2216', {level: 0.46, inside: ['clings', '#3a2216']}],
+  // hot sauce: a slim bottle, chili seeds and flakes in the red
+  hotsauce: ['woozy', '#c8431f', {inside: ['seeds', '#f0d48a'], level: 0.36}],
+  // dressings in a tall flip-top bottle, herbs flecked through them; the
+  // vinaigrette separated, oil over vinegar
+  dressing: ['dressing', '#e8c87a', {inside: ['flecks', '#55813a']}],
+  creamydressing: ['dressing', '#efeadb', {inside: ['flecks', '#4f7a34', 40]}],
+  vinaigrette: ['dressing', '#b8763a', {inside: ['oil', '#e2c650'], inside2: ['flecks', '#4f7a34', 30]}],
+  // jam: fruit seeds in the red, a gingham cloth tied over the lid
+  jam: ['jar', '#ad3127', {inside: ['seeds', '#e7b19a'], over: 'gingham'}],
+  // hoisin: a glossy red-brown sauce, a highlight across its surface
+  hoisin: ['smalljar', '#6e2618', {inside: ['oil', '#8a3a24']}],
+  jarredsalsa: ['jar', '#c4512b', {inside: ['dice', '#f1ecd8', 14, 0.014], inside2: ['dice', '#5f8f3e', 10, 0.011]}],
+  // pickles: whole spears standing in pale brine, label low on a tall jar
+  pickles: ['talljar', '#dcdca6', {inside: ['pickles']}],
+  // tahini: the oil separated on top of the paste
+  tahini: ['jar', '#ddcfae', {inside: ['oil', '#b58a3a'], inside2: ['seeds', '#f6f0dc']}],
+  // horseradish: a small jar of grated white root
+  horseradish: ['smalljar', '#ece6d4', {inside: ['shreds', '#a89a78'], inside2: ['shreds', '#c4b896']}],
+  pesto: ['smalljar', '#4f8c3c', {inside: ['flecks', '#9cc072', 30, 0.009]}],
+  // relish: a squeeze bottle of finely chopped green pickle
+  relish: ['jar', '#b3c24a', {inside: ['dice', '#6f9a2c', 40, 0.012], inside2: ['dice', '#e6e08a', 18, 0.01]}]
+};
+const CONDIMENT_LEVEL = {squeeze: 0.31, sauce: 0.40, jar: 0.48, dressing: 0.34, woozy: 0.36, dispenser: 0.52, squat: 0.5, smalljar: 0.6, talljar: 0.34};
+Object.entries(CONDIMENT_LOOKS).forEach(([k, [p, liquid, x = {}]]) => {
+  const level = x.level || CONDIMENT_LEVEL[p];
+  BOTTLES[k] = Object.assign({p, clear: true, liquid, solid: true}, x, {level});
+  BOTTLES[k + 'Open'] = Object.assign({p, clear: true, liquid, solid: true}, x, {level: level + 0.12, open: true});
 });
 Object.keys(BOTTLES).forEach(k => { PACKAGED_SHAPES[k] = 1; });
+// A package's blank label carries the food's plain generic name in tiny
+// capitals, as the leftovers tape carries the dish's name: what a real
+// one says first, never a brand, a logo or any other lettering. Short
+// words where the full name would be too long for a label (LABEL_WORDS);
+// otherwise the food's own English name. foodShapeMarkupLine sets
+// labelWord for the drawing it is making; every label (a bottle's, a
+// vessel's, a package's panel, a PARTS package's fade band) prints it.
+const LABEL_WORDS = {
+  cannedbeer: 'BEER', hardcider: 'CIDER', hardseltzer: 'SELTZER', redwine: 'RED WINE', whitewine: 'WHITE WINE',
+  sparklingwine: 'SPARKLING', creamliqueur: 'CREAM LIQUEUR',
+  mayonnaise: 'MAYO', soysauce: 'SOY', teriyaki: 'TERIYAKI', oystersauce: 'OYSTER', hoisin: 'HOISIN', hotsauce: 'HOT SAUCE',
+  saladdressing: 'DRESSING', creamydressing: 'RANCH', bbqsauce: 'BBQ', jarredsalsa: 'SALSA',
+  shreddedcheese: 'SHREDDED', heavycream: 'CREAM', halfandhalf: 'HALF & HALF', cottagecheese: 'COTTAGE',
+  creamcheese: 'CREAM CHEESE', sourcream: 'SOUR CREAM', stringcheese: 'STRING', egg: 'EGGS',
+  frozenberries: 'BERRIES', frozenveg: 'MIXED VEG', frozendumplings: 'DUMPLINGS', frozenpizza: 'PIZZA', icepops: 'ICE POPS',
+  flourtortilla: 'FLOUR', corntortilla: 'CORN', cookedrice: 'RICE', salsa: 'SALSA'
+};
+let labelWord = '', labelSize = 0;
+function labelWordOf(key, name){
+  if (key && LABEL_WORDS[key]) return LABEL_WORDS[key];
+  const en = key && FOODS[key] ? FOODS[key].en : name;
+  return String(en || '').toUpperCase();
+}
+// The word set in a label's box (px), centred, as large as fits: one line,
+// or two words on two lines when that fits larger. Fades with the label.
+function labelWordSvg(x0, y0, x1, y1, fade){
+  const word = labelWord, w = x1 - x0, h = y1 - y0;
+  if (!word || w <= 0 || h <= 0) return '';
+  const ADV = 0.66;  // a mono capital's advance, with the letter-spacing
+  // tiny: never larger than the leftovers tape's lettering (0.062 of the drawing)
+  const cap = labelSize ? labelSize * 0.062 : Infinity;
+  const one = Math.min(h * 0.5, w * 0.84 / (word.length * ADV), cap);
+  const words = word.split(' ');
+  const lines = words.length === 2 ? words : null;
+  const two = lines ? Math.min(h * 0.32, w * 0.84 / (Math.max(...lines.map(l => l.length)) * ADV), cap) : 0;
+  const rows = two > one * 1.15 ? lines : [word], fs = rows.length > 1 ? two : one;
+  if (fs < 1.4) return '';
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, lh = fs * 1.12;
+  const op = (0.78 * (1 - 0.55 * fade)).toFixed(2);
+  return rows.map((r, i) => `<text x="${cx.toFixed(2)}" y="${(cy + (i - (rows.length - 1) / 2) * lh + fs * 0.36).toFixed(2)}" text-anchor="middle" font-family="tonos-mono-vf, ui-monospace, monospace" font-weight="600" style="text-transform:none;letter-spacing:.06em" font-size="${fs.toFixed(2)}" fill="${INK_HEX}" fill-opacity="${op}">${esc(r)}</text>`).join('');
+}
+const ptsBox = q => [Math.min(...q.map(p => p[0])), Math.min(...q.map(p => p[1])), Math.max(...q.map(p => p[0])), Math.max(...q.map(p => p[1]))];
 const BOTTLE_LABEL_HEX = '#ECE8DC', BOTTLE_FADED_HEX = '#C4C2B8', CAP_HEX = '#B4B9B6', CORK_HEX = '#C9A46A',
   FOIL_HEX = '#BBA765', WOOD_HEX = '#6A4A31';
 function bottleOutline(prof, s){
@@ -5584,15 +7035,26 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
   } else if (b.clear){
     drink = hline(level, 0.06, 0.3);
   }
+  // a condiment's identity cue inside it
+  [b.inside, b.inside2].filter(Boolean).forEach(([name, ...args]) => {
+    const R = seededRand(name.length * 13 + (b.liquid || '').length);
+    const ctx = {X, s, thin, uid, level, baseY, bh,
+      col: hex => b.open || some != null ? natureColor(hex, fraction) : hex,
+      dots: (n, hex, r, stretch = 1) => Array.from({length: n}, () => {
+        const x = 0.5 + (R() - 0.5) * bh * 1.8, y = level + 0.02 + R() * (baseY - level - 0.05);
+        return `<ellipse cx="${X(x)}" cy="${X(y)}" rx="${X(r * stretch)}" ry="${X(r)}" fill="${ctx.col(hex)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${(thin * 0.6).toFixed(2)}" clip-path="url(#${uid}-clip)"/>`;
+      }).join('')};
+    drink += BOTTLE_INSIDES[name](ctx, ...args);
+  });
   // a clear bottle's thick glass base
   if (b.clear) drink += `<line x1="${X(0.5 - bh + 0.012)}" y1="${X(baseY - 0.03)}" x2="${X(0.5 + bh - 0.012)}" y2="${X(baseY - 0.03)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
   // the blank label, fading as the fraction climbs (packageSigns' timing):
   // paper dulling toward grey, its edge going faint -- opaque, so the
   // drink never shows through it
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
-  const [l0, l1] = prof.label;
-  const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
-    ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`);
+  const [l0, l1] = b.lab || prof.label;
+  const label = rect(0.5 - bh + 0.012, l0, 0.5 + bh - 0.012, l1, hexLerp(b.labHex || BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade),
+    ` stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}"`) + labelWordSvg(s * (0.5 - bh + 0.012), s * l0, s * (0.5 + bh - 0.012), s * l1, fade);
   // glass (or metal): a highlight down the body and the neck
   const hi = (x, y0, y1) => y1 > y0 ? `<line x1="${X(x)}" y1="${X(y0)}" x2="${X(x)}" y2="${X(y1)}" stroke="#ffffff" stroke-opacity="${b.clear ? '.8' : '.45'}" stroke-width="${Math.max(1, s * 0.012).toFixed(2)}" stroke-linecap="round"/>` : '';
   const shine = hi(0.5 - bh * 0.62, shoulderEnd + 0.03, l0 - 0.025) + hi(0.5 - bh * 0.62, l1 + 0.02, baseY - 0.05)
@@ -5647,6 +7109,14 @@ function bottleMarkupLine(shape, color, fraction, size, seed, some = null){
       + `<ellipse cx="${X(0.5 + w * 0.15)}" cy="${X(ly)}" rx="${X(w * 0.35)}" ry="${X(0.009)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}" stroke-opacity=".6"/>`;
   }
   if (some != null && prof.cap !== 'lid') cap = bottleOpened(prof, b, cap, color, s, thin, baseY, bh);
+  if (b.capHex) cap = cap.split(CAP_HEX).join(b.capHex);
+  // jam's gingham cloth over the lid, tied under it (not once it's opened)
+  if (b.over === 'gingham' && some == null){
+    const w = lh * 1.25, y0 = ly - 0.075, y1 = ly + 0.03, gid = uid + '-g';
+    cap += `<defs><pattern id="${gid}" width="${X(0.04)}" height="${X(0.04)}" patternUnits="userSpaceOnUse"><rect width="${X(0.04)}" height="${X(0.04)}" fill="#f2efe6"/><rect width="${X(0.02)}" height="${X(0.04)}" fill="#c96a5a" fill-opacity=".55"/><rect width="${X(0.04)}" height="${X(0.02)}" fill="#c96a5a" fill-opacity=".55"/></pattern></defs>`
+      + `<path d="M ${X(0.5 - w)} ${X(y1 + 0.03)} L ${X(0.5 - w * 0.86)} ${X(y0 + 0.01)} Q ${X(0.5)} ${X(y0 - 0.02)} ${X(0.5 + w * 0.86)} ${X(y0 + 0.01)} L ${X(0.5 + w)} ${X(y1 + 0.03)} L ${X(0.5 + w * 0.5)} ${X(y1)} L ${X(0.5)} ${X(y1 + 0.035)} L ${X(0.5 - w * 0.5)} ${X(y1)} Z" fill="url(#${gid})" stroke="${INK_HEX}" stroke-width="${thin}" stroke-linejoin="round"/>`
+      + `<line x1="${X(0.5 - lh * 1.05)}" y1="${X(ly + 0.012)}" x2="${X(0.5 + lh * 1.05)}" y2="${X(ly + 0.012)}" stroke="${INK_HEX}" stroke-width="${f1(s * 0.012)}"/>`;
+  }
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <path d="${d}" fill="${color}" fill-opacity="${b.clear ? '.55' : '1'}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
     <defs><clipPath id="${uid}-clip"><path d="${d}"/></clipPath></defs>
@@ -5719,7 +7189,7 @@ const BAG_BITS = {
 function vesselSigns(fraction, size, seed, labelPts, seam){
   const fade = Math.max(0, Math.min(1, (fraction - 0.35) / 0.6));
   const thin = Math.max(0.6, size * 0.005).toFixed(2);
-  const label = labelPts ? `<path d="${polyD(labelPts)}" fill="${hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}" stroke-width="${thin}"/>` : '';
+  const label = labelPts ? `<path d="${polyD(labelPts)}" fill="${hexLerp(BOTTLE_LABEL_HEX, BOTTLE_FADED_HEX, fade)}" stroke="${INK_HEX}" stroke-opacity="${(0.7 * (1 - 0.6 * fade)).toFixed(2)}" stroke-width="${thin}"/>` + labelWordSvg(...ptsBox(labelPts), fade) : '';
   let mold = '';
   if (seam && fraction > MOLD_START){
     const rand = seededRand(seed + 997), growT = Math.min(1, (fraction - MOLD_START) / (1 - MOLD_START));
@@ -5765,16 +7235,25 @@ const VESSELS = {
   // Used some: the lid set ajar, the ice cream inside showing.
   icecream: (color, fraction, size, seed, name, shape, some = null) => {
     const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
-    const top = 0.40, rim = 0.47, base = 0.86, rx = 0.32, rb = 0.27, ry = 0.06;
+    // a pint: taller than it is wide, the lid a shallow cap over the rim
+    const top = 0.26, rim = 0.33, base = 0.88, rx = 0.25, rb = 0.215, ry = 0.055;
     const hull = `M ${X(0.5 - rx)} ${X(top)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 + rx)} ${X(top)} L ${X(0.5 + rx)} ${X(rim)} L ${X(0.5 + rb)} ${X(base)} A ${X(rb)} ${X(ry * 0.8)} 0 0 1 ${X(0.5 - rb)} ${X(base)} L ${X(0.5 - rx)} ${X(rim)} Z`;
     let lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top)}" rx="${X(rx)}" ry="${X(ry)}" fill="${hexLerp(color, '#ffffff', 0.3)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
     if (some != null) lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top + 0.02)}" rx="${X(rx - 0.01)}" ry="${X(ry * 0.9)}" fill="${natureColor('#efe3c8', fraction)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
       + `<g transform="rotate(-13 ${X(0.5 - rx)} ${X(top)}) translate(0 ${X(-0.04)})">${lidTop}<path d="M ${X(0.5 - rx)} ${X(top)} L ${X(0.5 - rx)} ${X(top + 0.035)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(top + 0.035)} L ${X(0.5 + rx)} ${X(top)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${thin}"/></g>`;
     const rimLine = `<path d="M ${X(0.5 - rx)} ${X(rim)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(rim)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
-    const lbl = [[0.5 - rx + 0.05, 0.58], [0.5 + rx - 0.06, 0.58], [0.5 + rb - 0.03, 0.77], [0.5 - rb + 0.03, 0.77]];
+    const lbl = [[0.5 - rx + 0.04, 0.5], [0.5 + rx - 0.05, 0.5], [0.5 + rb - 0.03, 0.74], [0.5 - rb + 0.03, 0.74]];
+    // frost: a pale band of crystals under the lid's rim, fine ticks in it
+    const FR = seededRand(seed + 5);
+    const frost = `<path d="M ${X(0.5 - rx + 0.01)} ${X(rim + 0.01)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx - 0.01)} ${X(rim + 0.01)} L ${X(0.5 + rx - 0.015)} ${X(rim + 0.06)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 - rx + 0.015)} ${X(rim + 0.06)} Z" fill="#ffffff" fill-opacity=".55"/>`
+      // try 2: frost over the whole pint, and the cold breathing off the lid
+      + `<path d="${hull}" fill="#ffffff" fill-opacity=".28"/>`
+      + Array.from({length: 26}, () => { const x = 0.5 - rb + 0.02 + FR() * (2 * rb - 0.04), y = rim + 0.1 + FR() * (base - rim - 0.14); return `<circle cx="${X(x)}" cy="${X(y)}" r="${X(0.006 + FR() * 0.006)}" fill="#ffffff" fill-opacity=".85"/>`; }).join('')
+      + [0.4, 0.52, 0.62].map((x, k) => `<path d="M ${X(x)} ${X(top - 0.06)} q ${X(0.03)} ${X(-0.03)} 0 ${X(-0.06)} q ${X(-0.03)} ${X(-0.03)} 0 ${X(-0.06)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}" stroke-linecap="round"/>`).join('')
+      + Array.from({length: 14}, () => { const x = 0.5 - rx + 0.03 + FR() * (2 * rx - 0.06), y = rim + 0.03 + FR() * 0.05; return `<path d="M ${X(x - 0.008)} ${X(y)} L ${X(x + 0.008)} ${X(y)} M ${X(x)} ${X(y - 0.008)} L ${X(x)} ${X(y + 0.008)}" stroke="#ffffff" stroke-width="${thin}"/>`; }).join('');
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${hull}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
-      ${lidTop}${rimLine}
+      ${frost}${lidTop}${rimLine}
       ${vesselSigns(fraction, size, seed, scalePts(size, lbl), [[size * (0.5 - rx), size * rim], [size * (0.5 + rx), size * rim]])}
     </svg>`;
   },
@@ -5797,7 +7276,27 @@ const VESSELS = {
       }
     } else for (let i = 0; i < left(26); i++){
       const x = 0.24 + R() * 0.52, y = some != null ? 0.84 - R() * 0.37 * (0.4 + 0.6 * some) : 0.47 + R() * 0.37, r = 0.035 + R() * 0.025;
-      pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`;
+      const hex = bits[i % bits.length], c = natureColor(hex, fraction), ln = `stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"`;
+      if (shape === 'berrybag'){
+        if (hex === '#4b5f9e' || hex === '#3e3558'){
+          // a blueberry: round, its five-pointed crown
+          pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${c}" ${ln}/>`
+            + `<path d="M ${X(x - r * 0.35)} ${X(y - r * 0.3)} L ${X(x + r * 0.35)} ${X(y + r * 0.1)} M ${X(x + r * 0.35)} ${X(y - r * 0.3)} L ${X(x - r * 0.35)} ${X(y + r * 0.1)}" stroke="${INK_HEX}" stroke-opacity=".6" stroke-width="${thin}"/>`;
+        } else if (i % 3 === 0){
+          // a halved strawberry: a heart, pale core, seeds
+          pieces += `<path d="M ${X(x)} ${X(y + r * 1.1)} C ${X(x - r * 1.5)} ${X(y)} ${X(x - r * 0.9)} ${X(y - r * 1.1)} ${X(x)} ${X(y - r * 0.6)} C ${X(x + r * 0.9)} ${X(y - r * 1.1)} ${X(x + r * 1.5)} ${X(y)} ${X(x)} ${X(y + r * 1.1)} Z" fill="${c}" ${ln}/>`
+            + `<ellipse cx="${X(x)}" cy="${X(y)}" rx="${X(r * 0.3)}" ry="${X(r * 0.55)}" fill="${natureColor('#f0b8a8', fraction)}"/>`
+            + [-0.5, 0.5, 0, -0.3, 0.3].map((k, j) => `<circle cx="${X(x + k * r * 0.9)}" cy="${X(y - r * 0.2 + j * r * 0.15)}" r="${X(0.004)}" fill="#f6e7a0"/>`).join('');
+        } else {
+          // a raspberry: a cluster of drupelets
+          for (let j = 0; j < 7; j++){ const a = j * 0.9, rr = j ? r * 0.55 : 0; pieces += `<circle cx="${X(x + Math.cos(a) * rr)}" cy="${X(y + Math.sin(a) * rr)}" r="${X(r * 0.42)}" fill="${c}" ${ln}/>`; }
+        }
+      } else {
+        if (hex === '#d9894a') pieces += `<rect x="${X(x - r * 0.7)}" y="${X(y - r * 0.7)}" width="${X(r * 1.4)}" height="${X(r * 1.4)}" transform="rotate(${Math.round(R() * 60)} ${X(x)} ${X(y)})" fill="${c}" ${ln}/>`;
+        else if (hex === '#e2d36a') pieces += `<path d="M ${X(x - r * 0.5)} ${X(y + r * 0.5)} L ${X(x - r * 0.6)} ${X(y - r * 0.3)} Q ${X(x)} ${X(y - r * 0.9)} ${X(x + r * 0.6)} ${X(y - r * 0.3)} L ${X(x + r * 0.5)} ${X(y + r * 0.5)} Z" fill="${c}" ${ln}/>`;
+        else if (hex === '#4d9a45') pieces += `<rect x="${X(x - r * 1.3)}" y="${X(y - r * 0.4)}" width="${X(r * 2.6)}" height="${X(r * 0.8)}" rx="${X(r * 0.4)}" transform="rotate(${Math.round(R() * 180)} ${X(x)} ${X(y)})" fill="${c}" ${ln}/>`;
+        else pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r * 0.6)}" fill="${c}" ${ln}/>`;
+      }
     }
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${d}" fill="${color}" fill-opacity=".7" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
@@ -5880,19 +7379,73 @@ const VESSELS = {
     </svg>`;
   }
 };
+// Ice pops: three pops in their clear wrappers, fanned on their sticks,
+// each its own fruit colour. Used some: fewer of them.
+VESSELS.pops = (color, fraction, size, seed, name, shape, some = null) => {
+  const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const n = some != null ? Math.max(1, Math.round(3 * some)) : 3;
+  let out = '';
+  [['#d9603a', -16], ['#c9425a', 0], ['#7e5aa0', 16]].slice(0, n).forEach(([hex, rot], k) => {
+    const cx = 0.5 + (k - 1) * 0.1, top = 0.2, bot = 0.66, w = 0.085;
+    const pop = `<rect x="${X(cx - 0.012)}" y="${X(bot - 0.02)}" width="${X(0.024)}" height="${X(0.2)}" rx="${X(0.01)}" fill="#d8c08e" stroke="${INK_HEX}" stroke-width="${thin}"/>`
+      + `<path d="M ${X(cx - w)} ${X(bot)} L ${X(cx - w)} ${X(top + w)} A ${X(w)} ${X(w)} 0 0 1 ${X(cx + w)} ${X(top + w)} L ${X(cx + w)} ${X(bot)} Z" fill="${natureColor(hex, fraction * 0.5)}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>`
+      + `<line x1="${X(cx - w * 0.5)}" y1="${X(top + w * 0.6)}" x2="${X(cx - w * 0.5)}" y2="${X(bot - 0.04)}" stroke="#ffffff" stroke-opacity=".6" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>`
+      // the wrapper: a clear sleeve a little larger, crimped at the top
+      + `<path d="M ${X(cx - w - 0.02)} ${X(bot + 0.06)} L ${X(cx - w - 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(bot + 0.06)}" fill="${color}" fill-opacity=".25" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`
+      + `<path d="M ${X(cx - w - 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.045)} L ${X(cx - w - 0.02)} ${X(top - 0.045)} Z" fill="${color}" fill-opacity=".6" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+    out += `<g transform="rotate(${rot} ${X(cx)} ${X(0.9)})">${pop}</g>`;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${out}
+    ${vesselSigns(fraction, size, seed, scalePts(size, [[0.4, 0.42], [0.6, 0.42], [0.6, 0.5], [0.4, 0.5]]), null)}</svg>`;
+};
+// Frozen pizza: a round pizza shrink-wrapped on its cardboard disc, seen
+// from a little above: crust, sauce at the edge, cheese, pepperoni.
+// Used some: a slice gone, the wrap cut back.
+VESSELS.pizza = (color, fraction, size, seed, name, shape, some = null) => {
+  const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const cx = 0.5, cy = 0.62, rx = 0.4, ry = 0.21, R = seededRand(seed + 9);
+  const gone = some != null ? Math.PI * 2 * (1 - some) * 0.5 : 0;
+  const sector = (k, fill, extra = '') => gone
+    ? `<path d="M ${X(cx)} ${X(cy)} L ${X(cx + Math.cos(-gone / 2) * rx * k)} ${X(cy + Math.sin(-gone / 2) * ry * k)} A ${X(rx * k)} ${X(ry * k)} 0 1 0 ${X(cx + Math.cos(gone / 2) * rx * k)} ${X(cy + Math.sin(gone / 2) * ry * k)} Z" fill="${fill}"${extra}/>`
+    : `<ellipse cx="${X(cx)}" cy="${X(cy)}" rx="${X(rx * k)}" ry="${X(ry * k)}" fill="${fill}"${extra}/>`;
+  let pep = '';
+  for (let i = 0; i < 9; i++){
+    const a = i * 0.7 + R() * 0.3, rr = 0.25 + R() * 0.55;
+    if (gone && Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < gone / 2 + 0.2) continue;
+    pep += `<ellipse cx="${X(cx + Math.cos(a) * rx * 0.8 * rr)}" cy="${X(cy + Math.sin(a) * ry * 0.8 * rr)}" rx="${X(0.045)}" ry="${X(0.024)}" fill="${natureColor('#b8412c', fraction * 0.5)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <ellipse cx="${X(cx)}" cy="${X(cy + 0.02)}" rx="${X(rx + 0.03)}" ry="${X(ry + 0.03)}" fill="#cdbb98" stroke="${INK_HEX}" stroke-width="${thin}"/>
+    ${sector(1, natureColor('#d9a95e', fraction * 0.5), ` stroke="${INK_HEX}" stroke-width="${sw}"`)}
+    ${sector(0.86, natureColor('#c4532c', fraction * 0.5))}
+    ${sector(0.8, natureColor('#f0dc9a', fraction * 0.5), ` stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"`)}
+    ${pep}
+    ${some == null ? `<ellipse cx="${X(cx)}" cy="${X(cy + 0.01)}" rx="${X(rx + 0.035)}" ry="${X(ry + 0.035)}" fill="${color}" fill-opacity=".18" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>
+    <path d="M ${X(cx - rx * 0.6)} ${X(cy - ry * 0.7)} Q ${X(cx - rx * 0.2)} ${X(cy - ry * 0.95)} ${X(cx + rx * 0.2)} ${X(cy - ry * 0.85)}" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>` : ''}
+    ${vesselSigns(fraction, size, seed, scalePts(size, [[0.62, 0.74], [0.8, 0.72], [0.8, 0.78], [0.62, 0.8]]), null)}
+  </svg>`;
+};
 // Which vessel each shape is drawn as.
-const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'box', popbox: 'box', leftovers: 'leftovers'};
+const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'pizza', popbox: 'pops', leftovers: 'leftovers'};
 Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 
 // some: what's left after "Used some" (usedSomeOf; null for a whole
 // item) and key, the FOODS key, which picks a cut face before the shape.
 function foodShapeMarkupLine(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some = null, key = null, wrap = true){
+  const was = labelWord;
+  const wasSize = labelSize;
+  labelWord = labelWordOf(key, name); labelSize = size;
+  try { return foodShapeDrawing(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some, key, wrap); }
+  finally { labelWord = was; labelSize = wasSize; }
+}
+function foodShapeDrawing(shape, color, fraction, sagW, moldW, wrinkleW, size, seed, name, some, key, wrap){
   if (BOTTLES[shape]) return bottleMarkupLine(shape, color, fraction, size, seed, some);
   if (VESSEL_OF[shape]) return VESSELS[VESSEL_OF[shape]](color, fraction, size, seed, name, shape, some);
   if (PACKAGED_SHAPES[shape]) return packagedMarkupLine(shape, color, fraction, size, seed, some);
   let raw = catOutlinePoints(shape, size);
   if (some != null && shape === 'eggs') raw = eggsTaken(raw, some, size);
   const deformed = deformPoints(raw, fraction, sagW, wrinkleW, seed, size);
+  if (PARTS[shape]) return partsSvg(shape, raw, deformed, color, fraction, moldW, size, seed, some, key, wrap);
   const path = BOXY_SHAPES[shape] ? straightClosedPath(deformed) : smoothClosedPath(deformed);
   const uid = 'fline' + (fridgeShapeCounter++);
   const strokeW = Math.max(1, size * 0.008).toFixed(2);
@@ -5992,9 +7545,13 @@ const CUT_FACES = {
   babycarrot: {flesh: '#f08a2a', pat: 'corering', x: '#f5b25a'},
   mushroom: {flesh: '#efe6d6', pat: 'fibres'}, shiitake: {flesh: '#efe6d6', pat: 'fibres'},
   hardcheese: {pat: 'holes'},
+  cabbage: {flesh: '#eef2d6', pat: 'layers'}, napacabbage: {flesh: '#f2f2e2', pat: 'layers'},
   cucumber: {flesh: '#dfe9b8', pat: 'seedring', x: '#eef2d4'}, zucchini: {flesh: '#efeccb', pat: 'seedring', x: '#f6f2dc'},
   pepper: {pat: 'hollow', x: '#f2ead0'}, chineseeggplant: {flesh: '#efe6c4', pat: 'speckle', x: '#a89a6a'},
-  daikon: {flesh: '#f6f4ea', pat: 'plain'}, ginger: {flesh: '#ecd88a', pat: 'fibres'}
+  daikon: {flesh: '#f6f4ea', pat: 'plain'}, ginger: {flesh: '#ecd88a', pat: 'fibres'},
+  butternut: {flesh: '#f2a440', pat: 'seedcenter', x: '#efdca0'}, broccoli: {flesh: '#cfe0a8', pat: 'plain'},
+  cauliflower: {flesh: '#f3f1e6', pat: 'plain'}, corn: {flesh: '#f1dc84', pat: 'corering', x: '#efe6c0'},
+  taro: {flesh: '#ece4e6', pat: 'speckle', x: '#9a7a9a'}, sweetpotato: {flesh: '#f2a85a', pat: 'plain'}
 };
 // Clusters lose pieces instead of being cut: the rounds that stay, in
 // the order they were drawn (back first), and how they're joined.
@@ -6173,17 +7730,6 @@ function cutShape(shape, key, raw, deformed, color, fraction, size, seed, some){
     const kept = (kind === 'c' ? circleUnion(size, keep) : ellipseUnion(size, keep, 44)).map(p => ridePt(rider.raw, deformed, p));
     return {clip: smoothClosedPath(kept), outline: smoothClosedPath(kept), face: '', film: kept};
   }
-  // spinach, a loose bunch: fewer leaves -- the rightmost go, cut away at
-  // the stems where they gather (leaf tips 3, 9, 15, 21; stems 25, 26)
-  if (shape === 'spinach'){
-    const base = rfLerp(deformed[25], deformed[26], 0.5), ang = p => Math.atan2(p[1] - base[1], p[0] - base[0]);
-    const tips = [3, 9, 15, 21].map(i => deformed[i]).sort((p, q) => p[0] - q[0]);
-    const k = Math.max(1, Math.round(tips.length * some));
-    const cut = (ang(tips[k - 1]) + ang(tips[k])) / 2, far = size * 2, fan = [base];
-    for (let a = cut; a > -1.5 * Math.PI - 0.3; a -= 0.2) fan.push([base[0] + Math.cos(a) * far, base[1] + Math.sin(a) * far]);
-    const keep = deformed.filter(p => inPoly(fan, p));
-    return {clip: straightClosedPath(fan), face: '', film: keep.length > 2 ? keep : deformed};
-  }
   // a melon: a wedge from its centre down to the rind, the cut face to us
   if (spec.wedge){
     const sec = deformed.filter(([x, y]) => { const a = Math.atan2(y - c[1], x - c[0]); return a > 0.2 * Math.PI && a < 0.8 * Math.PI; })
@@ -6254,6 +7800,11 @@ function freezerBurnMarkup(svg, burn, seed){
   const m = svg.match(/^<svg width="([\d.]+)"[^]*?<path d="([^"]+)"/);
   if (!m) return svg;
   const s = +m[1], d = m[2], id = 'frost' + (fridgeShapeCounter++);
+  // a drawing in parts (partsSvg) frosts on its parts, not across the gaps
+  // between its leaves and stalks
+  const pm = svg.match(/<clipPath id="([^"]+-parts)">(.*?)<\/clipPath>/);
+  const ds = pm ? [...pm[2].matchAll(/d="([^"]+)"/g)].map(x => x[1]) : [d];
+  const clipRef = pm ? pm[1] : id;
   const thin = Math.max(0.6, s * 0.005).toFixed(2);
   const rim = s * (0.03 + 0.075 * burn);
   const R = seededRand(seed * 7 + 401);
@@ -6265,11 +7816,12 @@ function freezerBurnMarkup(svg, burn, seed){
       .map(([x, y]) => { const j = 0.75 + R() * 0.5; return [cx + (x - cx) * j, cy + (y - cy) * j]; });
     patches += `<path d="${smoothClosedPath(scalePts(s, pts))}" fill="${BURN_HEX}" fill-opacity="${(0.55 + 0.35 * burn).toFixed(2)}" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>`;
   }
+  const thinRim = pm ? 0.22 : 1;
   const extra = `<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs>
-    <g clip-path="url(#${id})" class="frost">
+    <g clip-path="url(#${clipRef})" class="frost">
       ${patches}
-      <path d="${d}" fill="none" stroke="${FROST_HEX}" stroke-opacity="${(0.75 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(rim * 2)}" stroke-linejoin="round"/>
-      <path d="${d}" fill="none" stroke="${INK_HEX}" stroke-opacity="${(0.3 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(s * 0.03)}" stroke-dasharray="${f1(s * 0.004)} ${f1(s * (0.045 - 0.02 * burn))}" stroke-linecap="round"/>
+      ${ds.map(dd => `<path d="${dd}" fill="none" stroke="${FROST_HEX}" stroke-opacity="${(0.75 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(rim * 2 * thinRim)}" stroke-linejoin="round"/>
+      <path d="${dd}" fill="none" stroke="${INK_HEX}" stroke-opacity="${(0.3 + 0.2 * burn).toFixed(2)}" stroke-width="${f1(s * 0.03 * thinRim)}" stroke-dasharray="${f1(s * 0.004)} ${f1(s * (0.045 - 0.02 * burn))}" stroke-linecap="round"/>`).join('')}
     </g>`;
   return svg.replace(/<\/svg>\s*$/, extra + '</svg>');
 }
@@ -8463,7 +10015,7 @@ function usualShape(key, i){
   if (st.name) it.name = st.name;
   try {
     const cat = fridgeCatOf(it);
-    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 64, 900 + i);
+    return foodShapeMarkupLine(fridgeShapeOf(it), foodBodyColor(it, 0), 0, cat.sag, cat.mold, cat.wrinkle, 64, 900 + i, null, null, key);
   } catch (e){ return ''; }
 }
 function usualButton(key, i){

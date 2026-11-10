@@ -261,15 +261,23 @@ the ochre's dull side. Greens lean leaf, away from the olive's dull side.
 Hue is what keeps a body from ever being misread as an urgency colour;
 lightness and saturation are free to follow the real food.
 
-natureColor(base, fraction) blends that base colour toward a shared decay
-brown as fraction climbs, but slowly: a food keeps its own hue clearly
+natureColor(base, fraction) blends that base colour toward brown as
+fraction climbs, but slowly: a food keeps its own hue clearly
 recognisable through roughly 60% decayed (discoloration spots appear on
-top of it well before that), and only closes out to brown by around 85%.
-Past that it goes darker still, but never to black — 100% decayed lands
-on a deep brown that still carries a trace of the food's own hue, so a
-rotten tomato reads dark red-brown, a rotten potato dark earth brown, a
-rotten banana dark brown with a trace of its own warmth, never the same
-black lump every food collapses into. This applies to the gone drawer
+top of it well before that), and only closes out to its own brown by
+around 85% (halfway between a shared decay brown and its end). 100%
+decayed is the food's own end colour (decayEndsOf), never one shared
+brown and never black: its own hue, turned a fifth of the way toward
+brown, with chroma cut to about 60% and lightness pulled down and
+squeezed together (0.2 + 0.4 L) -- so a rotten tomato reads dark brick
+red, a rotten lime dark olive green, a rotten blueberry dark slate
+violet, and a pale part (a white stalk, a cut face) still sits lighter
+than the dark part beside it, which keeps every identity cue readable
+at 100%. That end must never read as an urgency colour: if it lands
+within 0.085 (OKLab) of one of BUCKET_HEX, only its lightness moves, to
+the nearest value that clears them all (the 85% brown keeps at least
+the old shared brown's distance, 0.054). Shapes are not touched by
+this: only the colour. This applies to the gone drawer
 too, at fraction 1 through the same function — shrinking, collapse, and
 mold are what carry "gone," not blackness. Colour draining away is
 itself part of decay, not an early cue that fires before anything else
@@ -315,13 +323,17 @@ in small signs on it -- a bulging lid, a little mold at the seam, a
 label that fades. Bottles and cans (the drinks category) are packages
 too, drawn from a few shared forms (BOTTLE_PROFILES: long-neck, can,
 still wine, sparkling with foil and wire cage, tall spirit, short square
-whiskey, small green, sake), told apart by glass and drink colour
-(BOTTLES): the glass never changes, a blank plain label fades, and an
+whiskey, small green, sake, a round brandy decanter, a white porcelain
+baijiu bottle, a tall tequila bottle on a heavy foot), told apart by
+glass and drink colour
+(BOTTLES): the glass never changes, a plain label fades, and an
 opened wine (red, white, rosé, vermouth, sparkling) shows its wine
 darkening toward brown through the glass. Sparkling wine uses the
 sparkling form, rosé and vermouth the still wine form in clear glass,
-sake the sake form, soju the small green bottle. No
-brands, no lettering. Their square is drawn larger in the illustrated
+sake the sake form in frosted glass, soju the small green bottle; a
+cider and a sparkling wine show bubbles rising, a mezcal its worm
+(BOTTLE_INSIDES), and a label may carry its own colour (labHex). No
+brands, no logos. Their square is drawn larger in the illustrated
 fridge (BOTTLE_BOX), since a bottle is a narrow sliver of it.
 Frozen food doesn't rot: it is drawn at the decay it had when frozen
 (it.decayFrom; fresh if it went in fresh) and shows freezer
@@ -339,17 +351,36 @@ one and a half times the bin front's height (binItemU; a wine bottle a
 little more, a jar, a can or butter less), its width from its own form,
 and the bin's front and solid lip are drawn over its lower part, so it
 stands inside the bin. On a phone the door opens only to square and its
-bins can't be seen: these stand on the upper shelf, sized by urgency. They are packages drawn from three more shared bottle forms
-(squeeze bottle, glass jar, narrow sauce bottle; CONDIMENT_LOOKS) and
+bins can't be seen: these stand on the upper shelf, sized by urgency. They are packages drawn from more shared bottle forms
+(squeeze bottle, glass jar, narrow sauce bottle, dressing bottle, slim
+hot-sauce bottle, soy dispenser, squat sauce bottle, small and tall
+jars; CONDIMENT_LOOKS), each with one cue inside it where the real one
+shows it (BOTTLE_INSIDES: pickle spears, herb flecks, chili seeds,
+sesame, a separated oil layer, diced relish, thick sauce clinging to the
+glass; a gingham cloth over the jam's lid), and
 the butter block: the contents show through clear plastic or glass in
 their natural colour, the blank label fades, and an opened one is used
 down a little, its contents darkening toward brown as its time runs
-out. Frozen packages and leftovers are vessels (VESSELS): an ice cream
-tub, a freezer bag with its pieces showing (berries, vegetables,
-dumplings), a flat
-box (pizza, ice pops), and a clear lidded container whose food browns
-and molds, with a strip of tape carrying the dish's name -- the one
-place a drawing has lettering, because a real one would.
+out. Frozen packages and leftovers are vessels (VESSELS): a pint of
+ice cream under frost, a freezer bag with its pieces showing in their
+own shapes (blueberries with crowns, raspberry drupelets, strawberry
+halves, carrot cubes, corn kernels, dumplings), three ice pops on
+sticks in their wrappers, a shrink-wrapped pizza (a slice gone after
+Used some), and a clear lidded container whose food browns
+and molds, with a strip of tape carrying the dish's name.
+Every package's plain label carries the food's plain generic name the
+same way, in tiny capitals ("SOY", "OYSTER", "CIDER", "TAHINI",
+"CREAM", "ICE CREAM"): never a brand, a logo or any other lettering,
+never larger than the tape's lettering (0.062 of the drawing), fading
+with the label. LABEL_WORDS holds the short words; otherwise it is the
+food's English name. foodShapeMarkupLine sets labelWord for each
+drawing, and every label prints it (labelWordSvg): a bottle's, a
+vessel's, a generic package's panel, and a PARTS package's label -- its
+spec.lab box if it has one, else its largest fade part. Packages with
+no label in real life (an egg carton, a wedge of cheese) stay
+unlettered; a meat tray carries the supermarket's small printed sticker
+on its film (filmParts), with the meat's plain name -- GROUND TURKEY,
+CHICKEN THIGHS -- and no brand or price.
 tools/fridge-contents-study.js shows them all.
 After Used some (it.part below 1) an item is drawn as what's left of it,
 from its own drawing. Whole food is cut: clipped where the knife went,
@@ -368,6 +399,44 @@ open, a box's flap up, butter shorter with its end bare. What can be seen
 inside is used down (a bottle's level, a bag's pieces, the eggs left in
 the carton). tools/used-some-study.js shows every food whole, half,
 quarter and half at 60% decayed.
+
+Drawing spec. Every FOODS entry has a drawing of its own that a person
+can name without a label; a FoodKeeper-only (fallback) item keeps its
+category's generic shape. The approved drawings are the quality bar and
+the style reference, and are not redrawn: mushroom, potato, apple,
+banana, tomato, lemon, lime, mango, watermelon, kiwi, guava. Rules:
+- Real silhouettes from explicit geometry (circles, ellipses,
+  superellipses, arcs, unions of them; polarRing, circleUnion,
+  ellipseUnion), never a generic rounded box. Nothing distorts the base
+  outline at 0% decay (deformPoints returns it unchanged).
+- One or two identity cues per food, the feature it is recognised by (a
+  stem and leaf, a calyx, seeds, a crown, netting, a carton's gable top,
+  a head's ribs, florets), plus enough detail lines to read as that
+  food -- a field-guide plate, not a cartoon.
+- Natural colour per the visual system above, distinct by hue from the
+  urgency colours. Real relative sizes: within its square a lime is
+  smaller than a lemon, a lemon than an orange, a bunch of herbs than a
+  head of cabbage.
+- It must still read at phone shelf size (40 CSS px) and at 100% decay.
+- Packaged foods are drawn in their real package (carton, tub, jar,
+  tray, bag, brick, sleeve); plain labels with the food's generic name in
+  tiny capitals, no brands, no logos.
+  Where the real package is clear (a bag of shredded cheese, a clamshell
+  of berries, a deli tub of salsa) the food shows through it.
+- Same line weight (max(1, size x 0.008)) and the fridge's wobble filter
+  as the approved drawings. Similar foods share path pieces (leaf, stalk,
+  floret, tray, tub, carton helpers) to keep the file small.
+- References: photos in tools/references/ come first. Otherwise one or
+  two clear photographs per food from Wikimedia Commons (real photos with
+  free licences; no stock sites, watermarks, AI images or other people's
+  illustrations) are downloaded to tools/references/web/ (gitignored,
+  never committed) and looked at before drawing, for shape, proportion
+  and identifying features only. Drawings are our own line-and-wash,
+  never traced or copied from a photo or illustration.
+- Checked by tools/drawings-study.js: labelled sheets, every context
+  (cut and wrapped, opened, freezer burn, in a dish), and an unlabelled
+  blind test (fresh large, 100% decayed, phone size, confusable pairs
+  side by side) for an observer who hasn't seen the names.
 
 Dishes (DISHES) carry the meals they suit (meals: breakfast, lunch,
 dinner, snack), a vessel (bowl, plate, glass, mug, toast, pan) and
