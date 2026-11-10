@@ -1375,7 +1375,7 @@ const FOODS = {
   softcheese: {en:'Soft cheese',    aliases:['cheese','mozzarella','fresh mozzarella','brie','feta','feta cheese','goat cheese','camembert','burrata'], shelf:14, fk:7, g:250, usd:5.50, cat:'dairy', shape:'softcheese', base:'#ecebe4'},
   // In the door's butter compartment (RF_DOOR_KEYS), drawn as a wrapped block.
   butter:     {en:'Butter',         shelf:60, fk:1, g:200, usd:4.00, cat:'dairy', shape:'butter', base:'#d7d0a2'},
-  cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', base:'#dddbd5'},
+  cookedrice: {en:'Cooked rice',    shelf:6, fk:178, g:500, usd:1.00, cat:'cooked', shape:'cookedrice', base:'#dddbd5'},
   // Sourced from USDA FoodKeeper (either an exact entry or the same species
   // under a generic FoodKeeper entry, e.g. Chinese eggplant via the generic
   // "Eggplant" entry). fk is the FoodKeeper product id; see CLAUDE.md for
@@ -1511,16 +1511,16 @@ const FOODS = {
   chickenthigh:  {en:'Chicken thighs',    aliases:['chicken thigh','chicken legs','chicken drumsticks'], shelf:2, fk:118, g:680, usd:5.99, estPrice:true, cat:'protein', plural:true, shape:'chickenthigh', base:'#d5a796'},
   porkchop:      {en:'Pork chops',        aliases:['pork chop','boneless pork chops','pork loin chops'], shelf:5, fk:64, g:680, usd:6.49, estPrice:true, cat:'protein', plural:true, shape:'porkchop', base:'#d8a493'},
   steak:         {en:'Steak',             aliases:['ribeye','ribeye steak','sirloin','sirloin steak','beef steak','new york strip'], shelf:5, fk:40, g:454, usd:14.99, estPrice:true, cat:'protein', shape:'steak', base:'#a8463a'},
-  rotisserie:    {en:'Rotisserie chicken', shelf:4, fk:141, g:1360, usd:4.99, cat:'cooked', base:'#c58a52'},
+  rotisserie:    {en:'Rotisserie chicken', shelf:4, fk:141, g:1360, usd:4.99, cat:'cooked', shape:'rotisserie', base:'#c58a52'},
   // #181 is commercial (pasteurized) hummus; traditional (#183) is 7 days.
-  hummus:        {en:'Hummus',            shelf:90, fk:181, g:907, usd:7.99, estPrice:true, cat:'cooked', base:'#d8c08e'},
-  salsa:         {en:'Fresh salsa',       aliases:['pico de gallo','refrigerated salsa'], shelf:7, fk:572, g:454, usd:4.99, estPrice:true, cat:'cooked', base:'#d0573a'},
-  bread:         {en:'Bread',             aliases:['sliced bread','sandwich bread','loaf of bread'], shelf:18, fk:195, store:'pantry', g:1300, usd:8.99, estPrice:true, cat:'cooked', base:'#d6aa6c'},
+  hummus:        {en:'Hummus',            shelf:90, fk:181, g:907, usd:7.99, estPrice:true, cat:'cooked', shape:'hummus', base:'#d8c08e'},
+  salsa:         {en:'Fresh salsa',       aliases:['pico de gallo','refrigerated salsa'], shelf:7, fk:572, g:454, usd:4.99, estPrice:true, cat:'cooked', shape:'salsa', base:'#d0573a'},
+  bread:         {en:'Bread',             aliases:['sliced bread','sandwich bread','loaf of bread'], shelf:18, fk:195, store:'pantry', g:1300, usd:8.99, estPrice:true, cat:'cooked', shape:'bread', base:'#d6aa6c'},
   // FoodKeeper #196 gives flour tortillas only a pantry figure (3 months),
   // no refrigerator one, so the printed date governs. "Tortillas" alone
   // asks which of these two.
-  flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, base:'#e6d8b6'},
-  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, base:'#e2c97e'},
+  flourtortilla: {en:'Flour tortillas',   aliases:['flour tortilla','tortilla','tortillas'], shelf:null, fk:196, pkgDate:true, g:1400, usd:5.99, estPrice:true, cat:'cooked', plural:true, shape:'flourtortilla', base:'#e6d8b6'},
+  corntortilla:  {en:'Corn tortillas',    aliases:['corn tortilla','tortilla','tortillas'], shelf:90, fk:553, g:850, usd:3.49, estPrice:true, cat:'cooked', plural:true, shape:'corntortilla', base:'#e2c97e'},
   // Drinks (cat 'drinks'). Where they stand follows the shelf-life column,
   // as onCounter does for food, but never in the bowl: a drink counted by
   // a pantry figure (store:'pantry' -- spirits, unopened wine, cream
@@ -6481,6 +6481,128 @@ Object.assign(PARTS, {
     });
     return {parts, fewer: true};
   }
+});
+
+// Cooked and deli. Each is drawn as it comes home or sits in the fridge:
+// rice heaped in a grey bowl under cling film, a rotisserie chicken in its
+// clear dome on a black base, a sliced loaf in its bag, flour tortillas
+// stacked in a clear bag, corn tortillas in a paper wrap, fresh salsa in a
+// clear deli tub. The food decays; bowl, dome, bag and tub are rigid.
+const DELI_CLEAR_HEX = '#e4ebea', BAG_CLEAR_HEX = '#eef1ee';
+Object.assign(PARTS, {
+  // Cooked rice: a heap of short oval grains in a grey glazed bowl.
+  cookedrice: () => {
+    const parts = [], R = seededRand(41);
+    parts.push(PKG([[0.16, 0.5], [0.84, 0.5], ...ovalPts([0.5, 0.5], 0.34, 0.36, 0, 24).slice(1, 12), [0.16, 0.5]], '#c9cfcc', {w: 1}));
+    parts.push(PKG(ovalPts([0.5, 0.5], 0.34, 0.05, 0, 24), '#b9c0bd', {w: 0.8}));
+    parts.push(PF([...cloudPts([0.5, 0.44], 0.31, 0.12, 7, 0.07, 36).filter(p => p[1] < 0.5), [0.19, 0.51], [0.81, 0.51]].sort((a, b) => Math.atan2(a[1] - 0.48, a[0] - 0.5) - Math.atan2(b[1] - 0.48, b[0] - 0.5)), '#f4f2ea', 0));
+    for (let k = 0; k < 46; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R());
+      const c = [0.5 + Math.cos(a) * rr * 0.26, 0.43 + Math.sin(a) * rr * 0.06 - (1 - rr) * 0.06];
+      parts.push(PF(ovalPts(c, 0.017, 0.008, R() * Math.PI, 8), '#fbfaf5', 0, {w: 0.5, op: 0.9}));
+    }
+    parts.push(PL([[0.27, 0.66], [0.33, 0.78]], 0.35, {w: 0.7, rigid: true}));
+    parts.push(PL([[0.22, 0.4], [0.4, 0.36]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    parts.push(PL([[0.62, 0.38], [0.76, 0.42]], 0.7, {stroke: '#ffffff', w: 1.6, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.84, 0.5], [0.84, 0.36], [0.7, 0.4], [0.68, 0.5]]};
+  },
+  // Rotisserie chicken: the whole roast bird, breast up, drumsticks
+  // toward us, under a clear dome on a black base.
+  rotisserie: () => {
+    const parts = [];
+    parts.push(PKG([[0.08, 0.78], [0.92, 0.78], [0.88, 0.88], [0.12, 0.88]], '#3a3b3a', {sharp: true}));
+    parts.push(PKG([[0.1, 0.78], ...ovalPts([0.5, 0.78], 0.4, 0.46, 0, 40).slice(21, 40), [0.9, 0.78]], DELI_CLEAR_HEX, {op: 0.35, w: 0.9}));
+    parts.push(PF(blobPts([0.5, 0.6], 0.27, 0.17, a => 1 + 0.06 * Math.cos(2 * a), 0, 34), '#c88a4e', 0));
+    parts.push(PF(ovalPts([0.32, 0.68], 0.1, 0.06, 0.5, 18), '#bd7c42', 0));
+    parts.push(PF(ovalPts([0.68, 0.68], 0.1, 0.06, -0.5, 18), '#bd7c42', 0));
+    parts.push(PF(ovalPts([0.25, 0.73], 0.025, 0.02, 0, 10), '#ecdcc0', 0, {w: 0.7}));
+    parts.push(PF(ovalPts([0.75, 0.73], 0.025, 0.02, 0, 10), '#ecdcc0', 0, {w: 0.7}));
+    parts.push(PF(ovalPts([0.25, 0.56], 0.06, 0.035, -0.3, 14), '#b9773e', 0));
+    parts.push(PF(ovalPts([0.75, 0.56], 0.06, 0.035, 0.3, 14), '#b9773e', 0));
+    parts.push(PL([[0.5, 0.45], [0.5, 0.62]], 0.45, {w: 0.8}));
+    parts.push(PL([[0.38, 0.5], [0.44, 0.58]], 0.3));
+    parts.push(PL([[0.62, 0.5], [0.56, 0.58]], 0.3));
+    parts.push(PL([[0.2, 0.42], [0.3, 0.28]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.9, 0.78], [0.86, 0.5], [0.7, 0.36], [0.62, 0.5]]};
+  },
+  // Bread: a sliced sandwich loaf lying in its bag, domed crust, slice
+  // lines down its side, the bag gathered with a twist tie at the end.
+  bread: () => {
+    const parts = [], x0 = 0.12, x1 = 0.76, y1 = 0.84, y0 = 0.5;
+    parts.push(PKG([[0.08, 0.4], [0.8, 0.4], [0.86, 0.55], [0.94, 0.5], [0.94, 0.74], [0.86, 0.7], [0.8, 0.88], [0.08, 0.88]], BAG_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.8}));
+    const loaf = [[x0, y1], [x0, y0 + 0.04]];
+    for (let i = 0; i <= 14; i++) loaf.push([x0 + (x1 - x0) * i / 14, y0 - 0.07 * Math.sin(Math.PI * i / 14) + 0.01]);
+    loaf.push([x1, y1]);
+    parts.push(PF(loaf, '#c99a5e', 0));
+    // the cut end toward us: a pale slice face, square below, domed above
+    const face = [[x0 + 0.015, y1 - 0.015]];
+    for (let i = 0; i <= 8; i++) face.push(polarPt([x0 + 0.11, y0 + 0.08], Math.PI + i / 8 * Math.PI, 0.095).map((v, j) => j ? y0 + 0.08 + (v - y0 - 0.08) * 0.75 : v));
+    face.push([x0 + 0.205, y1 - 0.015]);
+    parts.push(PF(face, '#efe2c2', 0, {w: 0.7}));
+    for (let i = 3; i < 9; i++) parts.push(PL([[x0 + (x1 - x0) * i / 9, y0 + 0.01 - 0.07 * Math.sin(Math.PI * i / 9)], [x0 + (x1 - x0) * i / 9, y1]], 0.4, {w: 0.7}));
+    parts.push(PKG([[0.86, 0.58], [0.89, 0.56], [0.89, 0.69], [0.86, 0.67]], '#c9b98a', {sharp: true, w: 0.7}));
+    parts.push(PL([[0.14, 0.44], [0.36, 0.42]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.94, 0.5], [0.94, 0.74], [0.8, 0.8], [0.8, 0.44]]};
+  },
+  // Flour tortillas: a stack of thin pale rounds, the top one freckled
+  // with brown griddle spots, in a clear zip bag.
+  flourtortilla: () => {
+    const parts = [], R = seededRand(77);
+    parts.push(PKG([[0.06, 0.34], [0.94, 0.34], [0.94, 0.88], [0.06, 0.88]], BAG_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.8}));
+    parts.push(PKG([[0.06, 0.38], [0.94, 0.38]], '#ffffff', {open: true, op: 0.7, stroke: '#b5bfbb', w: 1.4}));
+    for (let k = 5; k >= 0; k--) parts.push(PF(ovalPts([0.5, 0.6 + k * 0.03], 0.38, 0.17, 0, 30), k ? '#e2d2ac' : '#ecdfbf', 0, {w: k ? 0.7 : 1}));
+    for (let k = 0; k < 16; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R()) * 0.85;
+      parts.push(PF(blobPts([0.5 + Math.cos(a) * rr * 0.38, 0.6 + Math.sin(a) * rr * 0.17], 0.012 + R() * 0.012, 0.007 + R() * 0.006, b => 1 + 0.25 * Math.sin(3 * b + k), R(), 10), '#b9864e', 0, {w: 0.4, op: 0.9}));
+    }
+    parts.push(PL([[0.14, 0.44], [0.32, 0.4]], 0.8, {stroke: '#ffffff', w: 2, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true, peel: [[0.94, 0.34], [0.94, 0.52], [0.8, 0.42], [0.76, 0.34]]};
+  },
+  // Corn tortillas: a smaller, thicker stack of yellow rounds with their
+  // fine dimpled surface, wrapped in white paper folded back at the top.
+  corntortilla: () => {
+    const parts = [], R = seededRand(19);
+    parts.push(PKG([[0.12, 0.5], [0.88, 0.5], [0.84, 0.88], [0.16, 0.88]], '#f3f1ea', {sharp: true}));
+    for (let k = 9; k >= 0; k--) parts.push(PF(ovalPts([0.5, 0.46 + k * 0.025], 0.29, 0.12, 0, 28), k ? '#d8bd72' : '#e2c97e', 0, {w: k ? 0.6 : 1}));
+    for (let k = 0; k < 22; k++){
+      const a = R() * Math.PI * 2, rr = Math.sqrt(R()) * 0.85;
+      parts.push(dotPart([0.5 + Math.cos(a) * rr * 0.29, 0.46 + Math.sin(a) * rr * 0.12], 0.006, '#c4a55c', 0, 0.8));
+    }
+    parts.push(PKG([[0.1, 0.62], [0.9, 0.62], [0.84, 0.88], [0.16, 0.88]], '#f3f1ea', {sharp: true}));
+    parts.push(PKG([[0.1, 0.62], [0.24, 0.7], [0.42, 0.66], [0.6, 0.71], [0.78, 0.65], [0.9, 0.62]], '#f3f1ea', {open: true, op: 0.5, w: 0.8}));
+    return {parts, fewer: false, pkg: true, peel: [[0.88, 0.5], [0.88, 0.62], [0.74, 0.6], [0.72, 0.5]]};
+  },
+  // Fresh salsa: a clear deli tub full of diced tomato, white onion and
+  // cilantro, the chunks showing through its sides and under the lid.
+  salsa: () => {
+    const parts = [], R = seededRand(23);
+    parts.push(PF([[0.18, 0.44], [0.82, 0.44], [0.77, 0.86], [0.23, 0.86]], '#cf5a3c', 0, {sharp: true}));
+    const chunk = (c, s, fill, rot) => PF([[-1, -1], [1, -0.8], [0.9, 1], [-0.8, 0.9]].map(([x, y]) => [c[0] + (x * Math.cos(rot) - y * Math.sin(rot)) * s, c[1] + (x * Math.sin(rot) + y * Math.cos(rot)) * s]), fill, 0, {w: 0.5, sharp: true});
+    for (let k = 0; k < 44; k++){
+      const t = R(), y = 0.47 + R() * 0.36, half = 0.32 - (y - 0.44) * 0.12;
+      const c = [0.5 + (t - 0.5) * 2 * (half - 0.04), y], v = R();
+      parts.push(chunk(c, 0.022 + R() * 0.01, v < 0.45 ? '#d8452e' : v < 0.75 ? '#f3efe2' : '#5f8f3e', R() * 3));
+    }
+    parts.push(PKG(ovalPts([0.5, 0.42], 0.34, 0.06, 0, 24), DELI_CLEAR_HEX, {op: 0.55, w: 0.9}));
+    parts.push(PKG([[0.16, 0.42], [0.84, 0.42], [0.84, 0.46], [0.16, 0.46]], DELI_CLEAR_HEX, {sharp: true, op: 0.6, w: 0.9}));
+    parts.push(PL([[0.26, 0.52], [0.29, 0.78]], 0.8, {stroke: '#ffffff', w: 1.8, rigid: true, film: true}));
+    return {parts, fewer: false, pkg: true};
+  },
+  // Hummus: a round tub, lid off beside it, seen from a little above: the
+  // pale swirl with a well of olive oil, a dusting of paprika and a few
+  // whole chickpeas in the middle.
+  hummus: () => {
+    const parts = [], R = seededRand(31);
+    parts.push(PKG([[0.16, 0.5], [0.84, 0.5], [0.79, 0.86], [0.21, 0.86]], TUB_PLASTIC_HEX, {sharp: true}));
+    parts.push(PKG([[0.16, 0.62], [0.84, 0.62], [0.82, 0.76], [0.18, 0.76]], '#d9cfb4', {sharp: true, fade: true, w: 0.6}));
+    parts.push(PKG(ovalPts([0.5, 0.5], 0.34, 0.15, 0, 30), TUB_PLASTIC_HEX, {w: 0.9}));
+    parts.push(PF(ovalPts([0.5, 0.5], 0.31, 0.13, 0, 30), '#d8c08e', 0));
+    parts.push(PL(Array.from({length: 22}, (_, i) => { const a = i * 0.62, r = 0.04 + i * 0.011; return [0.5 + Math.cos(a) * r, 0.5 + Math.sin(a) * r * 0.42]; }), 0.45, {w: 0.8}));
+    parts.push(PF(blobPts([0.5, 0.5], 0.09, 0.035, a => 1 + 0.12 * Math.sin(3 * a), 0, 20), '#c9a63a', 0, {w: 0.6, op: 0.85}));
+    for (let k = 0; k < 18; k++){ const a = R() * 6.28, r = 0.1 + R() * 0.16; parts.push(dotPart([0.5 + Math.cos(a) * r, 0.5 + Math.sin(a) * r * 0.42], 0.006, '#b4512a', 0, 0)); }
+    [[0.47, 0.49], [0.53, 0.51], [0.5, 0.47]].forEach(c => parts.push(PF(ovalPts(c, 0.016, 0.012, 0, 10), '#e0c58c', 0, {w: 0.6})));
+    return {parts, fewer: false, pkg: true};
+  },
 });
 
 const IDENTITY_CUES = {leafy: leafyRibs, soft: softStem, veg: vegLines, dairy: tubBand, protein: wrappedTray,
