@@ -7117,16 +7117,25 @@ const VESSELS = {
   // Used some: the lid set ajar, the ice cream inside showing.
   icecream: (color, fraction, size, seed, name, shape, some = null) => {
     const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
-    const top = 0.40, rim = 0.47, base = 0.86, rx = 0.32, rb = 0.27, ry = 0.06;
+    // a pint: taller than it is wide, the lid a shallow cap over the rim
+    const top = 0.26, rim = 0.33, base = 0.88, rx = 0.25, rb = 0.215, ry = 0.055;
     const hull = `M ${X(0.5 - rx)} ${X(top)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 + rx)} ${X(top)} L ${X(0.5 + rx)} ${X(rim)} L ${X(0.5 + rb)} ${X(base)} A ${X(rb)} ${X(ry * 0.8)} 0 0 1 ${X(0.5 - rb)} ${X(base)} L ${X(0.5 - rx)} ${X(rim)} Z`;
     let lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top)}" rx="${X(rx)}" ry="${X(ry)}" fill="${hexLerp(color, '#ffffff', 0.3)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
     if (some != null) lidTop = `<ellipse cx="${X(0.5)}" cy="${X(top + 0.02)}" rx="${X(rx - 0.01)}" ry="${X(ry * 0.9)}" fill="${natureColor('#efe3c8', fraction)}" stroke="${INK_HEX}" stroke-width="${thin}"/>`
       + `<g transform="rotate(-13 ${X(0.5 - rx)} ${X(top)}) translate(0 ${X(-0.04)})">${lidTop}<path d="M ${X(0.5 - rx)} ${X(top)} L ${X(0.5 - rx)} ${X(top + 0.035)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(top + 0.035)} L ${X(0.5 + rx)} ${X(top)}" fill="${color}" stroke="${INK_HEX}" stroke-width="${thin}"/></g>`;
     const rimLine = `<path d="M ${X(0.5 - rx)} ${X(rim)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx)} ${X(rim)}" fill="none" stroke="${INK_HEX}" stroke-width="${thin}"/>`;
-    const lbl = [[0.5 - rx + 0.05, 0.58], [0.5 + rx - 0.06, 0.58], [0.5 + rb - 0.03, 0.77], [0.5 - rb + 0.03, 0.77]];
+    const lbl = [[0.5 - rx + 0.04, 0.5], [0.5 + rx - 0.05, 0.5], [0.5 + rb - 0.03, 0.74], [0.5 - rb + 0.03, 0.74]];
+    // frost: a pale band of crystals under the lid's rim, fine ticks in it
+    const FR = seededRand(seed + 5);
+    const frost = `<path d="M ${X(0.5 - rx + 0.01)} ${X(rim + 0.01)} A ${X(rx)} ${X(ry)} 0 0 0 ${X(0.5 + rx - 0.01)} ${X(rim + 0.01)} L ${X(0.5 + rx - 0.015)} ${X(rim + 0.06)} A ${X(rx)} ${X(ry)} 0 0 1 ${X(0.5 - rx + 0.015)} ${X(rim + 0.06)} Z" fill="#ffffff" fill-opacity=".55"/>`
+      // try 2: frost over the whole pint, and the cold breathing off the lid
+      + `<path d="${hull}" fill="#ffffff" fill-opacity=".28"/>`
+      + Array.from({length: 26}, () => { const x = 0.5 - rb + 0.02 + FR() * (2 * rb - 0.04), y = rim + 0.1 + FR() * (base - rim - 0.14); return `<circle cx="${X(x)}" cy="${X(y)}" r="${X(0.006 + FR() * 0.006)}" fill="#ffffff" fill-opacity=".85"/>`; }).join('')
+      + [0.4, 0.52, 0.62].map((x, k) => `<path d="M ${X(x)} ${X(top - 0.06)} q ${X(0.03)} ${X(-0.03)} 0 ${X(-0.06)} q ${X(-0.03)} ${X(-0.03)} 0 ${X(-0.06)}" fill="none" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}" stroke-linecap="round"/>`).join('')
+      + Array.from({length: 14}, () => { const x = 0.5 - rx + 0.03 + FR() * (2 * rx - 0.06), y = rim + 0.03 + FR() * 0.05; return `<path d="M ${X(x - 0.008)} ${X(y)} L ${X(x + 0.008)} ${X(y)} M ${X(x)} ${X(y - 0.008)} L ${X(x)} ${X(y + 0.008)}" stroke="#ffffff" stroke-width="${thin}"/>`; }).join('');
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${hull}" fill="${color}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
-      ${lidTop}${rimLine}
+      ${frost}${lidTop}${rimLine}
       ${vesselSigns(fraction, size, seed, scalePts(size, lbl), [[size * (0.5 - rx), size * rim], [size * (0.5 + rx), size * rim]])}
     </svg>`;
   },
@@ -7149,7 +7158,27 @@ const VESSELS = {
       }
     } else for (let i = 0; i < left(26); i++){
       const x = 0.24 + R() * 0.52, y = some != null ? 0.84 - R() * 0.37 * (0.4 + 0.6 * some) : 0.47 + R() * 0.37, r = 0.035 + R() * 0.025;
-      pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${natureColor(bits[i % bits.length], fraction)}" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`;
+      const hex = bits[i % bits.length], c = natureColor(hex, fraction), ln = `stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"`;
+      if (shape === 'berrybag'){
+        if (hex === '#4b5f9e' || hex === '#3e3558'){
+          // a blueberry: round, its five-pointed crown
+          pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r)}" fill="${c}" ${ln}/>`
+            + `<path d="M ${X(x - r * 0.35)} ${X(y - r * 0.3)} L ${X(x + r * 0.35)} ${X(y + r * 0.1)} M ${X(x + r * 0.35)} ${X(y - r * 0.3)} L ${X(x - r * 0.35)} ${X(y + r * 0.1)}" stroke="${INK_HEX}" stroke-opacity=".6" stroke-width="${thin}"/>`;
+        } else if (i % 3 === 0){
+          // a halved strawberry: a heart, pale core, seeds
+          pieces += `<path d="M ${X(x)} ${X(y + r * 1.1)} C ${X(x - r * 1.5)} ${X(y)} ${X(x - r * 0.9)} ${X(y - r * 1.1)} ${X(x)} ${X(y - r * 0.6)} C ${X(x + r * 0.9)} ${X(y - r * 1.1)} ${X(x + r * 1.5)} ${X(y)} ${X(x)} ${X(y + r * 1.1)} Z" fill="${c}" ${ln}/>`
+            + `<ellipse cx="${X(x)}" cy="${X(y)}" rx="${X(r * 0.3)}" ry="${X(r * 0.55)}" fill="${natureColor('#f0b8a8', fraction)}"/>`
+            + [-0.5, 0.5, 0, -0.3, 0.3].map((k, j) => `<circle cx="${X(x + k * r * 0.9)}" cy="${X(y - r * 0.2 + j * r * 0.15)}" r="${X(0.004)}" fill="#f6e7a0"/>`).join('');
+        } else {
+          // a raspberry: a cluster of drupelets
+          for (let j = 0; j < 7; j++){ const a = j * 0.9, rr = j ? r * 0.55 : 0; pieces += `<circle cx="${X(x + Math.cos(a) * rr)}" cy="${X(y + Math.sin(a) * rr)}" r="${X(r * 0.42)}" fill="${c}" ${ln}/>`; }
+        }
+      } else {
+        if (hex === '#d9894a') pieces += `<rect x="${X(x - r * 0.7)}" y="${X(y - r * 0.7)}" width="${X(r * 1.4)}" height="${X(r * 1.4)}" transform="rotate(${Math.round(R() * 60)} ${X(x)} ${X(y)})" fill="${c}" ${ln}/>`;
+        else if (hex === '#e2d36a') pieces += `<path d="M ${X(x - r * 0.5)} ${X(y + r * 0.5)} L ${X(x - r * 0.6)} ${X(y - r * 0.3)} Q ${X(x)} ${X(y - r * 0.9)} ${X(x + r * 0.6)} ${X(y - r * 0.3)} L ${X(x + r * 0.5)} ${X(y + r * 0.5)} Z" fill="${c}" ${ln}/>`;
+        else if (hex === '#4d9a45') pieces += `<rect x="${X(x - r * 1.3)}" y="${X(y - r * 0.4)}" width="${X(r * 2.6)}" height="${X(r * 0.8)}" rx="${X(r * 0.4)}" transform="rotate(${Math.round(R() * 180)} ${X(x)} ${X(y)})" fill="${c}" ${ln}/>`;
+        else pieces += `<circle cx="${X(x)}" cy="${X(y)}" r="${X(r * 0.6)}" fill="${c}" ${ln}/>`;
+      }
     }
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <path d="${d}" fill="${color}" fill-opacity=".7" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>
@@ -7232,8 +7261,54 @@ const VESSELS = {
     </svg>`;
   }
 };
+// Ice pops: three pops in their clear wrappers, fanned on their sticks,
+// each its own fruit colour. Used some: fewer of them.
+VESSELS.pops = (color, fraction, size, seed, name, shape, some = null) => {
+  const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const n = some != null ? Math.max(1, Math.round(3 * some)) : 3;
+  let out = '';
+  [['#d9603a', -16], ['#c9425a', 0], ['#7e5aa0', 16]].slice(0, n).forEach(([hex, rot], k) => {
+    const cx = 0.5 + (k - 1) * 0.1, top = 0.2, bot = 0.66, w = 0.085;
+    const pop = `<rect x="${X(cx - 0.012)}" y="${X(bot - 0.02)}" width="${X(0.024)}" height="${X(0.2)}" rx="${X(0.01)}" fill="#d8c08e" stroke="${INK_HEX}" stroke-width="${thin}"/>`
+      + `<path d="M ${X(cx - w)} ${X(bot)} L ${X(cx - w)} ${X(top + w)} A ${X(w)} ${X(w)} 0 0 1 ${X(cx + w)} ${X(top + w)} L ${X(cx + w)} ${X(bot)} Z" fill="${natureColor(hex, fraction * 0.5)}" stroke="${INK_HEX}" stroke-width="${sw}" stroke-linejoin="round"/>`
+      + `<line x1="${X(cx - w * 0.5)}" y1="${X(top + w * 0.6)}" x2="${X(cx - w * 0.5)}" y2="${X(bot - 0.04)}" stroke="#ffffff" stroke-opacity=".6" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>`
+      // the wrapper: a clear sleeve a little larger, crimped at the top
+      + `<path d="M ${X(cx - w - 0.02)} ${X(bot + 0.06)} L ${X(cx - w - 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(bot + 0.06)}" fill="${color}" fill-opacity=".25" stroke="${INK_HEX}" stroke-opacity=".45" stroke-width="${thin}"/>`
+      + `<path d="M ${X(cx - w - 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.01)} L ${X(cx + w + 0.02)} ${X(top - 0.045)} L ${X(cx - w - 0.02)} ${X(top - 0.045)} Z" fill="${color}" fill-opacity=".6" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+    out += `<g transform="rotate(${rot} ${X(cx)} ${X(0.9)})">${pop}</g>`;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${out}
+    ${vesselSigns(fraction, size, seed, scalePts(size, [[0.4, 0.42], [0.6, 0.42], [0.6, 0.5], [0.4, 0.5]]), null)}</svg>`;
+};
+// Frozen pizza: a round pizza shrink-wrapped on its cardboard disc, seen
+// from a little above: crust, sauce at the edge, cheese, pepperoni.
+// Used some: a slice gone, the wrap cut back.
+VESSELS.pizza = (color, fraction, size, seed, name, shape, some = null) => {
+  const X = u => f1(u * size), thin = Math.max(0.6, size * 0.005).toFixed(2), sw = Math.max(1, size * 0.008).toFixed(2);
+  const cx = 0.5, cy = 0.62, rx = 0.4, ry = 0.21, R = seededRand(seed + 9);
+  const gone = some != null ? Math.PI * 2 * (1 - some) * 0.5 : 0;
+  const sector = (k, fill, extra = '') => gone
+    ? `<path d="M ${X(cx)} ${X(cy)} L ${X(cx + Math.cos(-gone / 2) * rx * k)} ${X(cy + Math.sin(-gone / 2) * ry * k)} A ${X(rx * k)} ${X(ry * k)} 0 1 0 ${X(cx + Math.cos(gone / 2) * rx * k)} ${X(cy + Math.sin(gone / 2) * ry * k)} Z" fill="${fill}"${extra}/>`
+    : `<ellipse cx="${X(cx)}" cy="${X(cy)}" rx="${X(rx * k)}" ry="${X(ry * k)}" fill="${fill}"${extra}/>`;
+  let pep = '';
+  for (let i = 0; i < 9; i++){
+    const a = i * 0.7 + R() * 0.3, rr = 0.25 + R() * 0.55;
+    if (gone && Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < gone / 2 + 0.2) continue;
+    pep += `<ellipse cx="${X(cx + Math.cos(a) * rx * 0.8 * rr)}" cy="${X(cy + Math.sin(a) * ry * 0.8 * rr)}" rx="${X(0.045)}" ry="${X(0.024)}" fill="${natureColor('#b8412c', fraction * 0.5)}" stroke="${INK_HEX}" stroke-opacity=".5" stroke-width="${thin}"/>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <ellipse cx="${X(cx)}" cy="${X(cy + 0.02)}" rx="${X(rx + 0.03)}" ry="${X(ry + 0.03)}" fill="#cdbb98" stroke="${INK_HEX}" stroke-width="${thin}"/>
+    ${sector(1, natureColor('#d9a95e', fraction * 0.5), ` stroke="${INK_HEX}" stroke-width="${sw}"`)}
+    ${sector(0.86, natureColor('#c4532c', fraction * 0.5))}
+    ${sector(0.8, natureColor('#f0dc9a', fraction * 0.5), ` stroke="${INK_HEX}" stroke-opacity=".3" stroke-width="${thin}"`)}
+    ${pep}
+    ${some == null ? `<ellipse cx="${X(cx)}" cy="${X(cy + 0.01)}" rx="${X(rx + 0.035)}" ry="${X(ry + 0.035)}" fill="${color}" fill-opacity=".18" stroke="${INK_HEX}" stroke-opacity=".35" stroke-width="${thin}"/>
+    <path d="M ${X(cx - rx * 0.6)} ${X(cy - ry * 0.7)} Q ${X(cx - rx * 0.2)} ${X(cy - ry * 0.95)} ${X(cx + rx * 0.2)} ${X(cy - ry * 0.85)}" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="${f1(Math.max(1, size * 0.012))}" stroke-linecap="round"/>` : ''}
+    ${vesselSigns(fraction, size, seed, scalePts(size, [[0.62, 0.74], [0.8, 0.72], [0.8, 0.78], [0.62, 0.8]]), null)}
+  </svg>`;
+};
 // Which vessel each shape is drawn as.
-const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'box', popbox: 'box', leftovers: 'leftovers'};
+const VESSEL_OF = {butter: 'butter', icecream: 'icecream', berrybag: 'bag', vegbag: 'bag', dumplingbag: 'bag', pizzabox: 'pizza', popbox: 'pops', leftovers: 'leftovers'};
 Object.keys(VESSEL_OF).forEach(k => { PACKAGED_SHAPES[k] = 1; });
 
 // some: what's left after "Used some" (usedSomeOf; null for a whole

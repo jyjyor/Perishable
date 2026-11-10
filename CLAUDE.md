@@ -353,10 +353,12 @@ glass; a gingham cloth over the jam's lid), and
 the butter block: the contents show through clear plastic or glass in
 their natural colour, the blank label fades, and an opened one is used
 down a little, its contents darkening toward brown as its time runs
-out. Frozen packages and leftovers are vessels (VESSELS): an ice cream
-tub, a freezer bag with its pieces showing (berries, vegetables,
-dumplings), a flat
-box (pizza, ice pops), and a clear lidded container whose food browns
+out. Frozen packages and leftovers are vessels (VESSELS): a pint of
+ice cream under frost, a freezer bag with its pieces showing in their
+own shapes (blueberries with crowns, raspberry drupelets, strawberry
+halves, carrot cubes, corn kernels, dumplings), three ice pops on
+sticks in their wrappers, a shrink-wrapped pizza (a slice gone after
+Used some), and a clear lidded container whose food browns
 and molds, with a strip of tape carrying the dish's name -- the one
 place a drawing has lettering, because a real one would.
 tools/fridge-contents-study.js shows them all.
