@@ -1,158 +1,242 @@
 # Drawings report — branch `drawings`
 
 Every FOODS entry was audited with a blind recognition test. The ones that
-failed were redrawn one category at a time, retested blind, and redrawn
-again up to three tries. Anything that still failed is flagged below.
-Fallback (FoodKeeper-only) items keep their category's generic shape. The
-hand-tuned drawings were not touched: mushroom, potato, apple, banana,
-tomato, lemon, lime, mango, watermelon, kiwi, guava, milk, eggs, hard
-cheese, butter, tofu and the leftovers.
+failed were redrawn one category at a time and retested, up to three
+tries each. After that, three changes went in:
+- The 100% decay colour keeps each food's own hue.
+- Package labels print the food's plain name.
+- The migration test was brought up to date.
 
-One commit per category: leafy greens, vegetables, fruit, protein, dairy,
-cooked and deli, condiments, drinks, frozen. The drawing spec is in
-CLAUDE.md under "Drawing spec". Main was never merged or pushed.
+Then all 163 foods were tested again, mixed together. Fallback
+(FoodKeeper-only) items keep their category's generic shape. Apart from
+the shared decay colour, the hand-tuned drawings were not touched: mushroom,
+potato, apple, banana, tomato, lemon, lime, mango, watermelon, kiwi,
+guava, milk, eggs, hard cheese, butter, tofu and the leftovers. Their
+shapes are exactly as they were.
+
+The work is in one commit per category, plus one commit each for the
+decay colour, the labels and the migration test. The drawing spec is in
+CLAUDE.md under "Drawing spec". Nothing was merged into main and nothing
+was pushed.
+
+**Suite: 96 of 96 scenarios passed** (it was 95 of 96 before the
+migration test was updated; see below).
+
+## The result: all 163 foods, mixed
+
+The final test showed all 163 foods together, not grouped by category, so
+the category gave nothing away. It was run by four fresh subagents that
+never saw the code or the names, one per condition:
+- each drawing alone and unlabelled, fresh at large size
+- each drawing at 100% decay
+- each drawing at phone shelf size
+- the 54 confusable pairs side by side, "which is which?"
+
+The question was open-ended: what food is this? A reasonable name counted
+as correct. The prompts were the same, word for word, as in the before
+test, which was also all 163 mixed. So this table compares like with like.
+
+"All" counts drawings that passed every way and every pair they're in.
+"Pairs" counts pair checks: each pair is counted once for each of its two
+foods.
+
+| Category | n | Before: fresh / 100% / phone / pairs / **all** | Now: fresh / 100% / phone / pairs / **all** |
+|---|---|---|---|
+| Leafy greens | 18 | 0 / 1 / 1 / 0/18 / **0** | 15 / 12 / 15 / 18/18 / **11** |
+| Vegetables | 32 | 8 / 7 / 8 / 11/21 / **4** | 31 / 27 / 32 / 21/21 / **26** |
+| Fruit | 32 | 31 / 16 / 30 / 17/17 / **15** | 32 / 29 / 32 / 17/17 / **29** |
+| Protein | 10 | 4 / 1 / 4 / 6/12 / **1** | 9 / 7 / 8 / 12/12 / **6** |
+| Dairy | 13 | 4 / 5 / 4 / 2/12 / **2** | 13 / 12 / 13 / 12/12 / **12** |
+| Cooked, deli & leftovers | 9 | 4 / 4 / 3 / 5/5 / **3** | 9 / 6 / 9 / 5/5 / **6** |
+| Condiments | 19 | 6 / 9 / 5 / 5/11 / **3** | 19 / 19 / 19 / 11/11 / **19** |
+| Drinks | 24 | 14 / 11 / 12 / 4/8 / **9** | 24 / 24 / 23 / 8/8 / **23** |
+| Frozen | 6 | 3 / 1 / 3 / 4/4 / **1** | 6 / 6 / 6 / 4/4 / **6** |
+| **Total** | **163** | **74 / 55 / 70 / 27 of 54 pairs / 38** | **158 / 142 / 157 / 54 of 54 pairs / 138** |
+
+**Read this honestly.** The packaged categories now carry their name on
+the label: dairy, condiments, drinks, frozen, and some of cooked. The
+agents said so ("the bottles, jars and packages with labels were easy to
+name"). Their jump, from 15 to 60 of 62 all-pass, is mostly the label
+being read, not the drawing being recognised. The drawing-only result is
+the fresh food, which has no label:
+
+| | Before | Now |
+|---|---|---|
+| Leafy greens, vegetables, fruit and protein: no labels (92 foods) | 20 | 72 |
+| Packaged categories (62 foods) | 15 | 60 |
+
+Even with labels, two packages fail: baijiu at phone size (its word is
+unreadable on a red label at 40 px, so it read as kefir) and fresh salsa
+at decay. Packages with no label in life stay unlettered: the egg carton,
+the meat trays, the cheese wedge and wheel, and string cheese.
+
+**The decay colour shows in the 100% column.** Fruit at 100% went from 21
+of 32 in the category retests to 29 now. Leafy greens went from 9 to 12.
+Those categories carry no labels, so this gain is the colour.
+
+### Still failing (25 of 163)
+
+Most of these are a single miss at 100% decay.
+
+At decay only:
+- **Vegetables:**
+  - baby carrots read as dates
+  - daikon read as parsnip
+  - sweet potato read as sausages
+  - winter melon read as zucchini
+  - shiitake read as portobello
+- **Leafy greens:**
+  - basil read as mint
+  - choy sum read as oregano
+  - gai lan read as basil
+  - scallion read as lemongrass
+- **Fruit:**
+  - grapefruit read as orange
+  - honeydew read as lime
+  - mandarin read as figs
+- **Protein:**
+  - beef read as brownies
+  - chicken thighs read as potatoes (thighs was the second guess)
+- **Cooked:**
+  - cooked rice read as oatmeal
+  - corn tortillas read as "tortillas (pita bread)"
+  - fresh salsa read as chili
+  - soft cheese read as "cheese wheel (gouda)"
+
+More than one way:
+- cilantro reads as watercress every way
+- water spinach reads as lemongrass fresh and at phone size, and as garlic
+  scapes at decay
+- kale reads as perilla or mustard greens fresh and at phone size (it
+  passes at decay)
+- ground turkey reads as ground pork every way, with turkey as the second
+  guess
+
+Fresh or phone only:
+- cherry tomatoes read as "tomatoes on the vine" (strict grading: they
+  are on the vine)
+- pork chops at phone size read as chicken breasts
+- baijiu at phone size read as kefir
+
+The grading is strict. "Tortillas", "cheese wheel" and "tomatoes on the
+vine" are arguably right and are still counted as misses. The flagged
+sheet shows these 25 foods.
+
+## The three follow-up changes
+
+### 1. Migration: no real data was at risk; the test was out of date
+
+`migrationScenario` builds saved data on `origin/main`, which is what the
+phone runs, and loads it into the working tree. It was written when
+`origin/main` was pre-bin. Since the bin was pushed (21305e5), a toss on
+`origin/main` goes into `tossLog` and shows in this month's bin as an
+item. The test still expected it in the "Earlier, before the bin kept
+each item" total, which is why it failed.
+
+I checked the real transitions the phone went through, using real saved
+states built by each version's own code:
+- **Pre-bin (7b00e88) → current:**
+  - the ledger came through unchanged (600 g · $6.20 thrown away · 1125 g
+    rescued in the check)
+  - the "earlier" line shows exactly those totals
+  - every fridge item and usual came through
+  - `tossLog` starts empty, because pre-bin tosses had no item, date or
+    decay to keep. That is by design, not a loss.
+- **Pre-bin, then used and re-saved:** `logStart` survives the re-save,
+  the earlier line doesn't change, and new tosses go into the bin.
+- **Bin (21305e5) → current:** the ledger, `logStart` and `tossLog`
+  came through byte for byte, and the bin draws each saved toss.
+
+So the phone would lose nothing: not the thrown-away or rescued totals,
+and not the toss log. The test now checks both shapes:
+- When `origin/main`'s data has a `tossLog`, it must come through exactly,
+  and so must `logStart`. The bin must draw each saved toss with its
+  weight, and the earlier line shows only for a pre-bin total.
+- The pre-bin check is kept as its own leg. The same data without
+  `tossLog`/`logStart` must still show its whole totals as the earlier
+  line, with no invented bin items.
+
+This is stricter than before, not weaker. The fix is on branch
+`migration-test` (one commit off main, not merged) and cherry-picked onto
+`drawings`.
+
+### 2. 100% decay keeps each food's own hue
+
+Before, every food closed out to one shared brown at 85% and a near-black
+rot at 100%. Now each food has its own end colour (`decayEndsOf`):
+- its own hue, turned a fifth of the way toward brown
+- chroma cut to about 60%
+- lightness pulled down and squeezed (0.2 + 0.4 L), so a pale part stays
+  lighter than a dark part and identity cues still show
+
+A rotten tomato reads dark brick red, a lime dark olive green, a
+blueberry dark slate violet. It never reads as an urgency colour: an end
+within 0.085 (OKLab) of one moves only its lightness until it clears
+them all. The old browns came as close as 0.048. Foods are twice as far
+apart at 100% (mean pairwise distance 0.046 → 0.111). This applies to the
+approved drawings too, but only their colour changed; no shape did.
+
+### 3. Package labels print the food's plain name
+
+Each package's plain label carries the food's generic name in tiny
+capitals, lettered like the leftovers tape: SOY, OYSTER, CIDER, TAHINI,
+CREAM, ICE CREAM, MAYO, BBQ, RANCH, HALF & HALF. There are no brands and
+no logos. The word is never larger than the tape's lettering and fades
+with the label. It appears on bottles, jars, tubs, cartons, bags, the
+ice-cream pint, the pops and the pizza.
 
 ## Sheets (tools/screenshots/, gitignored)
 
 | What | Where |
 |---|---|
 | Before, per category (main's index.html) | `before/sheet-<category>.png` |
-| After, per category | `after/sheet-<category>.png` |
-| Everything flagged | `flagged/sheet-<category>.png` |
+| After, per category (current) | `after/sheet-<category>.png` |
+| Still failing (the 25 above) | `flagged/sheet-<category>.png` |
 | Every place each food is drawn (shelf, door bin, used some, cling film, freezer burn, dish) | `drawings/contexts-<category>.png` |
 | Final unlabelled sheets, to run the test with people | `blind-final/sheet-{fresh,decayed,phone}-N.png`, `blind-final/pairs/`, answers in `blind-final/key.json` |
 
 `node tools/drawings-study.js sheet <out> [key,key…]` renders a labelled
-sheet; given keys, it renders only those foods (that is how the flagged
-sheet is made). `blind <name>` renders the unlabelled sets.
+sheet; given keys, it renders only those foods. `blind <name>` renders
+the unlabelled sets.
 
-## Blind test, before and after
+## History: the per-category retests
 
-The test was run by separate subagents that never saw the code or the
-names. Each drawing was shown alone and unlabelled, and the question was
-open-ended: what food is this? A reasonable name counted as correct. Each
-drawing was shown three ways: fresh at large size, at 100% decay, and at
-phone shelf size. Confusable pairs were also shown side by side, with
-"which is which?". Each round used four fresh agents.
+While redrawing, each category was retested on its own, with only its
+own foods in the set, up to three rounds. These numbers are optimistic,
+because the agents could guess the category. The mixed test above
+replaces them. Where a later try scored worse, the earlier one was kept
+(leafy round 3, cooked try 2, drinks try 2, frozen try 2).
 
-"All" counts drawings that passed every way and every pair they're in.
-"Pairs" counts pair checks: each pair is counted once for each of its two
-foods. The "after" column is the round that was kept.
+| Category | Rounds, all-pass |
+|---|---|
+| Leafy greens (18) | 5, 8, 7 |
+| Vegetables (32) | 24, 25, 29 |
+| Fruit (32) | 21 |
+| Protein (10) | 6, 9, 6 |
+| Dairy (13) | 7, 8, 9 |
+| Cooked, deli & leftovers (9) | 7, 8, 7 |
+| Condiments (19) | 12, 13, 14 |
+| Drinks (24) | 13, 15, 14 |
+| Frozen (6) | 4, 5, 4 |
 
-| Category | n | Before: fresh / 100% / phone / pairs / **all** | After: fresh / 100% / phone / pairs / **all** | Rounds (all) |
-|---|---|---|---|---|
-| Leafy greens | 18 | 0 / 1 / 1 / 0/18 / **0** | 15 / 9 / 13 / 18/18 / **7** | 5, 8, 7 (kept 3) |
-| Vegetables | 32 | 8 / 7 / 8 / 11/21 / **4** | 32 / 29 / 32 / 20/20 / **29** | 24, 25, 29 |
-| Fruit | 32 | 31 / 16 / 30 / 17/17 / **15** | 32 / 21 / 32 / 16/16 / **21** | 21 |
-| Protein | 10 | 4 / 1 / 4 / 6/12 / **1** | 9 / 8 / 9 / 10/12 / **6** | 6, 9, 6 |
-| Dairy | 13 | 4 / 5 / 4 / 2/12 / **2** | 11 / 12 / 10 / 12/12 / **9** | 7, 8, 9 |
-| Cooked & deli | 9 | 4 / 4 / 3 / 5/5 / **3** | 9 / 8 / 9 / 4/4 / **8** | 7, 8, 7 (kept 2) |
-| Condiments | 19 | 6 / 9 / 5 / 5/11 / **3** | 15 / 16 / 16 / 8/10 / **14** | 12, 13, 14 |
-| Drinks | 24 | 14 / 11 / 12 / 4/8 / **9** | 19 / 21 / 16 / 6/8 / **15** | 13, 15, 14 (kept 2) |
-| Frozen | 6 | 3 / 1 / 3 / 4/4 / **1** | 5 / 6 / 5 / 4/4 / **5** | 4, 5, 4 (kept 2) |
-| **Total** | **163** | **74 / 55 / 70 / — / 38** | **147 / 130 / 142 / — / 114** | |
+**Protein's score, corrected.** The protein commit message (ba667cd) says
+"best of three rounds: all-pass 9/10". That was round 2's score. The
+drawings that shipped are round 3's, which scored **6 of 10** all-pass;
+in the mixed test protein is also **6 of 10**. Round 3 differs from
+round 2 only in ground turkey's colour, and turkey failed both rounds. The
+commit message can't be changed without rewriting history, so this
+report is the correct record.
 
-The pair sets changed a little between rounds as new confusables turned
-up, so the pair denominators are not always the same before and after.
+## Notes
 
-Where a later try scored worse, the better earlier try was kept: leafy
-round 3, cooked try 2, drinks try 2, frozen try 2. Protein ships round
-3's drawings. They differ from round 2's (9/10 all-pass) only in ground
-turkey's colour, and turkey failed both rounds. Round 3's lower score
-comes from the chicken breast/thigh pair (a coin flip) and one beef miss
-at decay, on drawings that didn't change. (The protein commit message
-says "best of three: 9/10"; that was round 2's score, not the shipped
-round's.)
-
-## Flagged (still failing after three tries, or noted)
-
-Leafy greens. Every flag below is a single miss, mostly at 100% decay,
-when all the greens have browned:
-- celery read as asparagus
-- napa cabbage read as romaine hearts (also at phone size)
-- gai lan read as basil
-- water spinach read as tarragon
-- cabbage read as iceberg lettuce
-- choy sum read as Thai basil
-- cilantro read as watercress
-- basil read as mint (decayed and phone)
-- kale fresh and phone read as perilla or collards
-- romaine fresh read as yu choy once (it passed rounds 1–2)
-- garlic chives at phone size read as garlic scapes
-
-Vegetables, at decay only:
-- baby carrots read as fava beans
-- winter melon read as papaya or chayote
-- daikon read as parsnip
-
-Fruit, at decay only: avocado, honeydew, guava, coconut, mandarin,
-grapefruit, fig, orange, persimmon, blackberry and raspberry. These are
-mostly approved drawings. At 100% every fruit browns toward the same
-hue, so the shape is all that's left (see the recommendation below).
-
-Protein:
-- ground turkey reads as ground pork (turkey was the second guess)
-- beef at decay read as ground pork once
-- the chicken breast / chicken thigh pair is only a guess
-
-Dairy:
-- heavy cream: a blank gable carton is told from milk only by its size
-  and band colour; it read as eggnog once
-- cottage cheese at phone size reads as yogurt with granola
-- cream cheese at phone size read as butter, and as tofu at decay; it
-  never failed the same way twice
-- milk (unchanged) read as buttermilk once
-
-Cooked and deli:
-- fresh salsa at 100% decay reads as diced fruit, because every colour
-  browns together
-- hummus at decay read as coffee once
-
-Condiments:
-- tahini reads as peanut butter or hummus
-- oyster sauce reads as soy or Worcestershire; in real life dark sauces
-  are told apart by their labels
-- teriyaki read as sesame dressing or Worcestershire in round 3
-- soy sauce read as Worcestershire once
-- jarred salsa at phone size reads as marinara
-
-Drinks:
-- hard cider reads as lager beer every way
-- tequila reads as white wine, grappa or white rum
-- vermouth reads as rosé or orange wine
-- rum reads as whisky; the darker try read as soy sauce
-- baijiu reads as red wine or sake
-- gin, cream liqueur and mezcal fail only at phone size
-
-Frozen:
-- ice cream: a blank pint reads as yogurt or milk; the cold mist read as
-  steam
-- frozen dumplings (unchanged) read as cookie dough once
-
-The pattern behind most of the rest: without lettering, a bottle or carton
-is told apart only by its form and colour. Real people tell oyster sauce
-from soy sauce, or cider from lager, by reading the label.
-
-## Notes and recommendations
-
-- **Decay hue (HUE_TRACE).** Most of the remaining misses happen at 100%
-  decay. natureColor pulls every food toward the same brown, so a fruit or
-  green keeps only its silhouette. I'd suggest keeping a trace of each
-  food's own hue at 100% (a fraction of the fresh hue mixed into the decay
-  brown). It is not done here because it would recolour approved drawings.
-- **The suite is 95 of 96 on every commit, as on main.** The one failure,
-  migrationScenario ("ledger lost in migration"), fails on main too and is
-  unrelated to drawings.
-- **Test bias.** Each category was retested with only its own foods in the
-  set, so the agents may have guessed the category. The before test
-  covered every food at once, which makes it slightly harder. The after
-  numbers are optimistic by that much.
 - **Grader.** The answer patterns for frozen berries and frozen
-  vegetables were widened to accept "mixed berries" and "mixed
-  vegetables". Regrading the before test with them changed nothing.
-- **Agent variance.** A drawing that wasn't changed sometimes failed once
-  (milk, frozen dumplings, hummus). Single misses like these are noted
-  but weren't redrawn.
+  vegetables accept "mixed berries" and "mixed vegetables". Regrading the
+  before test with them changed nothing.
+- **Agent variance.** A drawing that wasn't changed sometimes fails once.
+  A single miss at decay (beef, chicken thighs, cooked rice) may not
+  repeat.
+- **Ice cream** still has its cold mist, which an agent read as steam. The
+  label now says ICE CREAM, so it passed anyway.
 - **References.** tools/fetch-references.js puts Wikimedia Commons photos
   in tools/references/web/. That folder is gitignored and nothing in it
   was committed.
